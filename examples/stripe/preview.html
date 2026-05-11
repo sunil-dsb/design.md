@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DESIGN.md Preview https://stripe.com</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          "sohne-var",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #ffffff;
+        color: #000000;
+        line-height: 1.5;
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+        font-weight: 700;
+      }
+      h2 {
+        font-size: 1.25rem;
+        margin: 2.5rem 0 1rem;
+        font-weight: 600;
+        border-bottom: 1px solid #533afd40;
+        padding-bottom: 0.5rem;
+      }
+      .section {
+        margin-bottom: 3rem;
+      }
+
+      /* Color Swatches */
+      .color-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+      .color-swatch {
+        width: 120px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #00000020;
+      }
+      .color-swatch__block {
+        height: 60px;
+      }
+      .color-swatch__info {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+      }
+      .color-swatch__hex {
+        font-family: monospace;
+        font-weight: 600;
+      }
+      .color-swatch__freq {
+        opacity: 0.6;
+      }
+
+      /* Typography Scale */
+      .typo-row {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        border-left: 3px solid #533afd;
+        background: #00000005;
+      }
+      .typo-meta {
+        font-size: 0.75rem;
+        opacity: 0.6;
+        font-family: monospace;
+        margin-top: 0.25rem;
+      }
+
+      /* Components */
+      .btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.625rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: opacity 0.15s;
+        font-family: inherit;
+      }
+      .btn:hover {
+        opacity: 0.85;
+      }
+      .btn--primary {
+        background: #533afd;
+        color: #fff;
+      }
+      .btn--secondary {
+        background: transparent;
+        color: #000000;
+        border: 1px solid #00000030;
+      }
+
+      /* Shadow Showcase */
+      .shadow-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+      }
+      .shadow-card {
+        width: 160px;
+        height: 100px;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-family: monospace;
+        word-break: break-all;
+        padding: 0.5rem;
+        border: 1px solid #00000010;
+      }
+
+      /* Input */
+      .input-demo {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-start;
+      }
+      .input {
+        padding: 0.625rem 0.875rem;
+        border: 1px solid #00000030;
+        background: #ffffff;
+        color: #000000;
+        font-size: 0.875rem;
+        font-family: inherit;
+        outline: none;
+        width: 280px;
+      }
+
+      /* Card */
+      .card {
+        padding: 1.5rem;
+        background: #ffffff;
+        border: 1px solid #00000015;
+        max-width: 360px;
+      }
+      .card h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+      .card p {
+        font-size: 0.875rem;
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DESIGN.md Preview</h1>
+    <p style="opacity: 0.6; margin-bottom: 2rem">
+      Auto-generated from tokens.json https://stripe.com
+    </p>
+
+    <!-- Color Palette -->
+    <section class="section">
+      <h2>Color Palette (20 tokens)</h2>
+      <div class="color-grid">
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #000000"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#000000</div>
+            <div class="color-swatch__freq">freq: 5464</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #533afd"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#533afd</div>
+            <div class="color-swatch__freq">freq: 2782</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #50617a"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#50617a</div>
+            <div class="color-swatch__freq">freq: 1029</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #061b31"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#061b31</div>
+            <div class="color-swatch__freq">freq: 899</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #ffffff"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#ffffff</div>
+            <div class="color-swatch__freq">freq: 504</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #64748d"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#64748d</div>
+            <div class="color-swatch__freq">freq: 494</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #0000ee"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#0000ee</div>
+            <div class="color-swatch__freq">freq: 216</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #3c4f69"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#3c4f69</div>
+            <div class="color-swatch__freq">freq: 127</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #273951"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#273951</div>
+            <div class="color-swatch__freq">freq: 113</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #e5edf5"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#e5edf5</div>
+            <div class="color-swatch__freq">freq: 111</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #ff6118"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#ff6118</div>
+            <div class="color-swatch__freq">freq: 100</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #1a2c44"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#1a2c44</div>
+            <div class="color-swatch__freq">freq: 99</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #7389ff"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#7389ff</div>
+            <div class="color-swatch__freq">freq: 85</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #7d8ba4"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#7d8ba4</div>
+            <div class="color-swatch__freq">freq: 49</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #b9b9f9"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#b9b9f9</div>
+            <div class="color-swatch__freq">freq: 40</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #d6d9fc"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#d6d9fc</div>
+            <div class="color-swatch__freq">freq: 37</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #839bc8"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#839bc8</div>
+            <div class="color-swatch__freq">freq: 28</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #7f7dfc"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#7f7dfc</div>
+            <div class="color-swatch__freq">freq: 27</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #a3b5d6"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#a3b5d6</div>
+            <div class="color-swatch__freq">freq: 21</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #101010"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#101010</div>
+            <div class="color-swatch__freq">freq: 20</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Typography Scale -->
+    <section class="section">
+      <h2>Typography Scale (8 levels)</h2>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;sohne-var&quot;, system-ui;
+            font-size: 56px;
+            font-weight: 300;
+            line-height: 57.68px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">sohne-var · 56px · 300 · 57.68px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;sohne-var&quot;, system-ui;
+            font-size: 48px;
+            font-weight: 300;
+            line-height: 49.44px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">sohne-var · 48px · 300 · 49.44px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;sohne-var&quot;, system-ui;
+            font-size: 48px;
+            font-weight: 400;
+            line-height: 48px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">sohne-var · 48px · 400 · 48px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;sohne-var&quot;, system-ui;
+            font-size: 44px;
+            font-weight: 300;
+            line-height: 50.6px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">sohne-var · 44px · 300 · 50.6px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;sohne-var&quot;, system-ui;
+            font-size: 32px;
+            font-weight: 300;
+            line-height: 35.2px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">sohne-var · 32px · 300 · 35.2px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;sohne-var&quot;, system-ui;
+            font-size: 26px;
+            font-weight: 400;
+            line-height: normal;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">sohne-var · 26px · 400 · normal</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;sohne-var&quot;, system-ui;
+            font-size: 26px;
+            font-weight: 300;
+            line-height: 29.12px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">sohne-var · 26px · 300 · 29.12px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;sohne-var&quot;, system-ui;
+            font-size: 22px;
+            font-weight: 300;
+            line-height: 24.2px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">sohne-var · 22px · 300 · 24.2px</div>
+      </div>
+    </section>
+
+    <!-- Components -->
+    <section class="section">
+      <h2>Buttons</h2>
+      <div class="btn-row">
+        <button class="btn btn--primary" style="border-radius: 4px">
+          Primary Action
+        </button>
+        <button class="btn btn--secondary" style="border-radius: 4px">
+          Secondary
+        </button>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Input</h2>
+      <div class="input-demo">
+        <input
+          class="input"
+          style="border-radius: 4px"
+          placeholder="Email address"
+        />
+        <button class="btn btn--primary" style="border-radius: 4px">
+          Submit
+        </button>
+      </div>
+    </section>
+
+    <!-- Shadows -->
+    <section class="section">
+      <h2>Shadow System (3 levels)</h2>
+      <div class="shadow-grid">
+        <div
+          class="shadow-card"
+          style="
+            box-shadow: rgba(23, 23, 23, 0.08) 0px 15px 35px 0px;
+            border-radius: 4px;
+          "
+        >
+          complex-stack
+        </div>
+        <div
+          class="shadow-card"
+          style="
+            box-shadow: rgba(50, 50, 93, 0.12) 0px 16px 32px 0px;
+            border-radius: 4px;
+          "
+        >
+          complex-stack
+        </div>
+        <div
+          class="shadow-card"
+          style="
+            box-shadow: rgba(23, 23, 23, 0.06) 0px 3px 6px 0px;
+            border-radius: 4px;
+          "
+        >
+          complex-stack
+        </div>
+      </div>
+    </section>
+
+    <!-- Card -->
+    <section class="section">
+      <h2>Card</h2>
+      <div
+        class="card"
+        style="
+          border-radius: 4px;
+          box-shadow: rgba(23, 23, 23, 0.08) 0px 15px 35px 0px;
+        "
+      >
+        <h3>Example Card</h3>
+        <p>
+          This card uses the extracted tokens background, border, shadow, and
+          radius values all come from the site's design system.
+        </p>
+      </div>
+    </section>
+  </body>
+</html>

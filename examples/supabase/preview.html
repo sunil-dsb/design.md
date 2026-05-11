@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DESIGN.md Preview https://supabase.com</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          "Circular",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #fafafa;
+        color: #171717;
+        line-height: 1.5;
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+        font-weight: 700;
+      }
+      h2 {
+        font-size: 1.25rem;
+        margin: 2.5rem 0 1rem;
+        font-weight: 600;
+        border-bottom: 1px solid #3ecf8e40;
+        padding-bottom: 0.5rem;
+      }
+      .section {
+        margin-bottom: 3rem;
+      }
+
+      /* Color Swatches */
+      .color-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+      .color-swatch {
+        width: 120px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #17171720;
+      }
+      .color-swatch__block {
+        height: 60px;
+      }
+      .color-swatch__info {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+      }
+      .color-swatch__hex {
+        font-family: monospace;
+        font-weight: 600;
+      }
+      .color-swatch__freq {
+        opacity: 0.6;
+      }
+
+      /* Typography Scale */
+      .typo-row {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        border-left: 3px solid #3ecf8e;
+        background: #17171705;
+      }
+      .typo-meta {
+        font-size: 0.75rem;
+        opacity: 0.6;
+        font-family: monospace;
+        margin-top: 0.25rem;
+      }
+
+      /* Components */
+      .btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.625rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: opacity 0.15s;
+        font-family: inherit;
+      }
+      .btn:hover {
+        opacity: 0.85;
+      }
+      .btn--primary {
+        background: #3ecf8e;
+        color: #fff;
+      }
+      .btn--secondary {
+        background: transparent;
+        color: #171717;
+        border: 1px solid #17171730;
+      }
+
+      /* Shadow Showcase */
+      .shadow-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+      }
+      .shadow-card {
+        width: 160px;
+        height: 100px;
+        background: #fafafa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-family: monospace;
+        word-break: break-all;
+        padding: 0.5rem;
+        border: 1px solid #17171710;
+      }
+
+      /* Input */
+      .input-demo {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-start;
+      }
+      .input {
+        padding: 0.625rem 0.875rem;
+        border: 1px solid #17171730;
+        background: #fafafa;
+        color: #171717;
+        font-size: 0.875rem;
+        font-family: inherit;
+        outline: none;
+        width: 280px;
+      }
+
+      /* Card */
+      .card {
+        padding: 1.5rem;
+        background: #fafafa;
+        border: 1px solid #17171715;
+        max-width: 360px;
+      }
+      .card h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+      .card p {
+        font-size: 0.875rem;
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DESIGN.md Preview</h1>
+    <p style="opacity: 0.6; margin-bottom: 2rem">
+      Auto-generated from tokens.json https://supabase.com
+    </p>
+
+    <!-- Color Palette -->
+    <section class="section">
+      <h2>Color Palette (17 tokens)</h2>
+      <div class="color-grid">
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #2e2e2e"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#2e2e2e</div>
+            <div class="color-swatch__freq">freq: 25197</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #fafafa"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#fafafa</div>
+            <div class="color-swatch__freq">freq: 11803</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #898989"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#898989</div>
+            <div class="color-swatch__freq">freq: 2894</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #4d4d4d"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#4d4d4d</div>
+            <div class="color-swatch__freq">freq: 1892</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #b4b4b4"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#b4b4b4</div>
+            <div class="color-swatch__freq">freq: 1834</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #393939"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#393939</div>
+            <div class="color-swatch__freq">freq: 889</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #171717"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#171717</div>
+            <div class="color-swatch__freq">freq: 453</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #3ecf8e"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#3ecf8e</div>
+            <div class="color-swatch__freq">freq: 272</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #000000"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#000000</div>
+            <div class="color-swatch__freq">freq: 116</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #242424"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#242424</div>
+            <div class="color-swatch__freq">freq: 108</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #006239"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#006239</div>
+            <div class="color-swatch__freq">freq: 20</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #0f0f0f"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#0f0f0f</div>
+            <div class="color-swatch__freq">freq: 13</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #00c573"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#00c573</div>
+            <div class="color-swatch__freq">freq: 12</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #85e0ba"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#85e0ba</div>
+            <div class="color-swatch__freq">freq: 6</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #db8e00"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#db8e00</div>
+            <div class="color-swatch__freq">freq: 4</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #002918"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#002918</div>
+            <div class="color-swatch__freq">freq: 2</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch__block" style="background: #93c5fd"></div>
+          <div class="color-swatch__info">
+            <div class="color-swatch__hex">#93c5fd</div>
+            <div class="color-swatch__freq">freq: 1</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Typography Scale -->
+    <section class="section">
+      <h2>Typography Scale (8 levels)</h2>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;Circular&quot;, system-ui;
+            font-size: 72px;
+            font-weight: 400;
+            line-height: 72px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">Circular · 72px · 400 · 72px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;Source Code Pro&quot;, system-ui;
+            font-size: 48px;
+            font-weight: 400;
+            line-height: 48px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">Source Code Pro · 48px · 400 · 48px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;Circular&quot;, system-ui;
+            font-size: 36px;
+            font-weight: 400;
+            line-height: 40px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">Circular · 36px · 400 · 40px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;Source Code Pro&quot;, system-ui;
+            font-size: 36px;
+            font-weight: 400;
+            line-height: 40px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">Source Code Pro · 36px · 400 · 40px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;Circular&quot;, system-ui;
+            font-size: 30px;
+            font-weight: 400;
+            line-height: 36px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">Circular · 30px · 400 · 36px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;Circular&quot;, system-ui;
+            font-size: 24px;
+            font-weight: 400;
+            line-height: 32px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">Circular · 24px · 400 · 32px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;Source Code Pro&quot;, system-ui;
+            font-size: 24px;
+            font-weight: 400;
+            line-height: 32px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">Source Code Pro · 24px · 400 · 32px</div>
+      </div>
+      <div class="typo-row">
+        <div
+          style="
+            font-family: &quot;Circular&quot;, system-ui;
+            font-size: 24px;
+            font-weight: 500;
+            line-height: 32px;
+          "
+        >
+          The quick brown fox
+        </div>
+        <div class="typo-meta">Circular · 24px · 500 · 32px</div>
+      </div>
+    </section>
+
+    <!-- Components -->
+    <section class="section">
+      <h2>Buttons</h2>
+      <div class="btn-row">
+        <button class="btn btn--primary" style="border-radius: 9999px">
+          Primary Action
+        </button>
+        <button class="btn btn--secondary" style="border-radius: 9999px">
+          Secondary
+        </button>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Input</h2>
+      <div class="input-demo">
+        <input
+          class="input"
+          style="border-radius: 9999px"
+          placeholder="Email address"
+        />
+        <button class="btn btn--primary" style="border-radius: 9999px">
+          Submit
+        </button>
+      </div>
+    </section>
+
+    <!-- Shadows -->
+    <section class="section">
+      <h2>Shadow System (4 levels)</h2>
+      <div class="shadow-grid">
+        <div
+          class="shadow-card"
+          style="
+            box-shadow:
+              rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+              rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+              rgba(0, 0, 0, 0) 0px 0px 0px 0px;
+            border-radius: 9999px;
+          "
+        >
+          complex-stack
+        </div>
+        <div
+          class="shadow-card"
+          style="
+            box-shadow:
+              rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+              rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+              rgba(0, 0, 0, 0.1) 0px 10px 15px -3px,
+              rgba(0, 0, 0, 0.1) 0px 4px 6px -4px;
+            border-radius: 9999px;
+          "
+        >
+          complex-stack
+        </div>
+        <div
+          class="shadow-card"
+          style="
+            box-shadow:
+              rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+              rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+              rgba(0, 0, 0, 0.1) 0px 1px 3px 0px,
+              rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
+            border-radius: 9999px;
+          "
+        >
+          complex-stack
+        </div>
+        <div
+          class="shadow-card"
+          style="
+            box-shadow:
+              rgb(255, 255, 255) 0px 0px 0px 0px,
+              rgba(147, 197, 253, 0.5) 0px 0px 0px 0px,
+              rgba(0, 0, 0, 0.1) 0px 10px 15px -3px,
+              rgba(0, 0, 0, 0.1) 0px 4px 6px -4px;
+            border-radius: 9999px;
+          "
+        >
+          complex-stack
+        </div>
+      </div>
+    </section>
+
+    <!-- Card -->
+    <section class="section">
+      <h2>Card</h2>
+      <div
+        class="card"
+        style="
+          border-radius: 9999px;
+          box-shadow:
+            rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+            rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+            rgba(0, 0, 0, 0) 0px 0px 0px 0px;
+        "
+      >
+        <h3>Example Card</h3>
+        <p>
+          This card uses the extracted tokens background, border, shadow, and
+          radius values all come from the site's design system.
+        </p>
+      </div>
+    </section>
+  </body>
+</html>

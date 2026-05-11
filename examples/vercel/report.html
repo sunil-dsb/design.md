@@ -1,0 +1,1326 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design Extraction Report https://vercel.com</title>
+    <!-- Note: Geist, Geist Mono may be proprietary. Typography preview uses system fallback. -->
+    <style>
+      :root {
+        --bg: #fafafa;
+        --surface: #ffffff;
+        --text: #1a1a2e;
+        --text-muted: #6b7280;
+        --border: #e5e7eb;
+        --primary: #0068d6;
+        --radius: 10px;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          "Inter",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        font-size: 15px;
+      }
+
+      /* ── Header ─────────────────────────────────── */
+      .report-header {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #fff;
+        padding: 3rem 2rem 2.5rem;
+      }
+      .report-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+      }
+      .report-header .subtitle {
+        opacity: 0.7;
+        font-size: 0.9rem;
+      }
+      .report-header .meta-row {
+        display: flex;
+        gap: 2rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+      }
+      .meta-chip {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+      }
+      .meta-chip strong {
+        display: block;
+        font-size: 1.1rem;
+      }
+
+      /* ── Layout ─────────────────────────────────── */
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+      }
+      @media (max-width: 768px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ── Cards ──────────────────────────────────── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .card h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .card h2 .icon {
+        font-size: 1.2rem;
+      }
+
+      /* ── Score Ring ─────────────────────────────── */
+      .score-ring {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        margin: 0 auto 1rem;
+        position: relative;
+      }
+      .score-ring::before {
+        content: "";
+        position: absolute;
+        inset: 4px;
+        border-radius: 50%;
+        background: var(--surface);
+      }
+      .score-num {
+        position: relative;
+        font-size: 2rem;
+        font-weight: 800;
+      }
+      .score-label {
+        position: relative;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* ── Validation Items ──────────────────────── */
+      .check-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0;
+        font-size: 0.85rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .check-item:last-child {
+        border-bottom: none;
+      }
+      .badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+      }
+      .badge--pass {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .badge--fail {
+        background: #fef2f2;
+        color: #991b1b;
+      }
+      .badge--warn {
+        background: #fefce8;
+        color: #854d0e;
+      }
+
+      /* ── Color Swatches ────────────────────────── */
+      .color-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .swatch {
+        width: 80px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        font-size: 0.65rem;
+        text-align: center;
+      }
+      .swatch__color {
+        height: 48px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0.2rem;
+        font-family: monospace;
+        font-weight: 600;
+      }
+      .swatch__meta {
+        padding: 0.3rem;
+        color: var(--text-muted);
+      }
+
+      /* ── Typography Scale ──────────────────────── */
+      .typo-row {
+        display: flex;
+        align-items: baseline;
+        gap: 1rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .typo-row:last-child {
+        border-bottom: none;
+      }
+      .typo-sample {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .typo-spec {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        font-family: monospace;
+        white-space: nowrap;
+      }
+
+      /* ── Shadow & Radius ───────────────────────── */
+      .shadow-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .shadow-demo {
+        width: 100px;
+        height: 64px;
+        background: var(--surface);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6rem;
+        font-family: monospace;
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+      }
+      .radius-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+      .radius-demo {
+        width: 56px;
+        height: 56px;
+        background: var(--primary);
+        opacity: 0.2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        color: var(--text);
+      }
+
+      /* ── Component Summary ─────────────────────── */
+      .comp-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+      .comp-table th {
+        text-align: left;
+        font-weight: 600;
+        padding: 0.5rem;
+        border-bottom: 2px solid var(--border);
+      }
+      .comp-table td {
+        padding: 0.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .comp-table td:last-child {
+        text-align: right;
+        color: var(--text-muted);
+      }
+
+      /* ── DESIGN.md Preview ─────────────────────── */
+      .md-preview {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 2rem;
+        font-family: "Georgia", serif;
+        font-size: 0.9rem;
+        line-height: 1.8;
+        max-height: 600px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      /* ── Footer ────────────────────────────────── */
+      .report-footer {
+        text-align: center;
+        padding: 2rem;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ═══════════════ HEADER ═══════════════ -->
+    <header class="report-header">
+      <h1>Design Extraction Report</h1>
+      <div class="subtitle">https://vercel.com</div>
+      <div class="meta-row">
+        <div class="meta-chip"><strong>42</strong> Colors</div>
+        <div class="meta-chip"><strong>26</strong> Type Levels</div>
+        <div class="meta-chip"><strong>14</strong> Shadows</div>
+        <div class="meta-chip"><strong>3</strong> Pages</div>
+        <div class="meta-chip"><strong>4309</strong> Elements</div>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- ═══════════════ VALIDATION ═══════════════ -->
+
+      <div class="grid-2">
+        <div class="card">
+          <h2><span class="icon">📊</span> Quality Score</h2>
+          <div
+            class="score-ring"
+            style="
+              background: conic-gradient(#22c55e 360deg, var(--border) 0deg);
+            "
+          >
+            <span class="score-num" style="color: #22c55e">100</span>
+            <span class="score-label">Excellent</span>
+          </div>
+          <p
+            style="
+              text-align: center;
+              font-size: 0.8rem;
+              color: var(--text-muted);
+            "
+          >
+            5/5 checks passed
+          </p>
+        </div>
+        <div class="card">
+          <h2><span class="icon">✅</span> Validation Details</h2>
+          <div class="check-item">
+            <span class="badge badge--pass">PASS</span> phantom-color
+          </div>
+          <div class="check-item">
+            <span class="badge badge--pass">PASS</span> unknown-font
+          </div>
+          <div class="check-item">
+            <span class="badge badge--pass">PASS</span> format-consistency
+          </div>
+          <div class="check-item">
+            <span class="badge badge--pass">PASS</span> section-completeness
+          </div>
+          <div class="check-item">
+            <span class="badge badge--pass">PASS</span> content-checks
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ COLOR PALETTE ═══════════════ -->
+      <div class="card">
+        <h2><span class="icon">🎨</span> Color Palette (top 30)</h2>
+        <div class="color-grid">
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #171717; color: #ffffff"
+            >
+              #171717
+            </div>
+            <div class="swatch__meta">bg, text, border<br />×13325</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #4d4d4d; color: #ffffff"
+            >
+              #4d4d4d
+            </div>
+            <div class="swatch__meta">text, border<br />×7999</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #ebebeb; color: #000000"
+            >
+              #ebebeb
+            </div>
+            <div class="swatch__meta">
+              bg, border, shadow, gradient<br />×4753
+            </div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #666666; color: #ffffff"
+            >
+              #666666
+            </div>
+            <div class="swatch__meta">bg, text, border<br />×1162</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #808080; color: #ffffff"
+            >
+              #808080
+            </div>
+            <div class="swatch__meta">text, border<br />×784</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #ffffff; color: #000000"
+            >
+              #ffffff
+            </div>
+            <div class="swatch__meta">
+              bg, text, border, shadow, icon<br />×681
+            </div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #8f8f8f; color: #000000"
+            >
+              #8f8f8f
+            </div>
+            <div class="swatch__meta">bg, text, border<br />×341</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #a8a8a8; color: #000000"
+            >
+              #a8a8a8
+            </div>
+            <div class="swatch__meta">text, border<br />×146</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #0068d6; color: #ffffff"
+            >
+              #0068d6
+            </div>
+            <div class="swatch__meta">bg, text, border<br />×44</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #bd2864; color: #ffffff"
+            >
+              #bd2864
+            </div>
+            <div class="swatch__meta">text, border<br />×42</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #52aeff; color: #000000"
+            >
+              #52aeff
+            </div>
+            <div class="swatch__meta">bg, text, border, icon<br />×35</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #e5484d; color: #ffffff"
+            >
+              #e5484d
+            </div>
+            <div class="swatch__meta">
+              bg, text, border, gradient, icon<br />×35
+            </div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #45dec5; color: #000000"
+            >
+              #45dec5
+            </div>
+            <div class="swatch__meta">bg, text, border, icon<br />×33</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #ffb224; color: #000000"
+            >
+              #ffb224
+            </div>
+            <div class="swatch__meta">text, border<br />×28</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #297a3a; color: #ffffff"
+            >
+              #297a3a
+            </div>
+            <div class="swatch__meta">text, border<br />×28</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #d4eef7; color: #000000"
+            >
+              #d4eef7
+            </div>
+            <div class="swatch__meta">bg, gradient<br />×26</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #c7f5e2; color: #000000"
+            >
+              #c7f5e2
+            </div>
+            <div class="swatch__meta">gradient<br />×24</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #f7ead4; color: #000000"
+            >
+              #f7ead4
+            </div>
+            <div class="swatch__meta">gradient<br />×24</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #006bff; color: #ffffff"
+            >
+              #006bff
+            </div>
+            <div class="swatch__meta">border<br />×18</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #7820bc; color: #ffffff"
+            >
+              #7820bc
+            </div>
+            <div class="swatch__meta">bg, text, border<br />×16</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #999999; color: #000000"
+            >
+              #999999
+            </div>
+            <div class="swatch__meta">text, border<br />×6</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #ebf5ff; color: #000000"
+            >
+              #ebf5ff
+            </div>
+            <div class="swatch__meta">bg<br />×4</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #ff990a; color: #000000"
+            >
+              #ff990a
+            </div>
+            <div class="swatch__meta">bg, icon<br />×4</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #ff0000; color: #ffffff"
+            >
+              #ff0000
+            </div>
+            <div class="swatch__meta">icon<br />×3</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #00dc82; color: #000000"
+            >
+              #00dc82
+            </div>
+            <div class="swatch__meta">icon<br />×3</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #ff3e00; color: #ffffff"
+            >
+              #ff3e00
+            </div>
+            <div class="swatch__meta">icon<br />×3</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #398e4a; color: #ffffff"
+            >
+              #398e4a
+            </div>
+            <div class="swatch__meta">bg<br />×2</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #45a557; color: #ffffff"
+            >
+              #45a557
+            </div>
+            <div class="swatch__meta">bg<br />×2</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #bf89ec; color: #000000"
+            >
+              #bf89ec
+            </div>
+            <div class="swatch__meta">bg<br />×2</div>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__color"
+              style="background: #ea3e83; color: #ffffff"
+            >
+              #ea3e83
+            </div>
+            <div class="swatch__meta">bg<br />×2</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ TYPOGRAPHY ═══════════════ -->
+      <div class="card">
+        <h2><span class="icon">🔤</span> Typography Scale</h2>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(48px, 2rem);
+              font-weight: 600;
+              line-height: 56px;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 48px w600</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(40px, 2rem);
+              font-weight: 600;
+              line-height: 48px;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 40px w600</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(32px, 2rem);
+              font-weight: 400;
+              line-height: 48px;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 32px w400</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(32px, 2rem);
+              font-weight: 600;
+              line-height: 40px;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 32px w600</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(24px, 2rem);
+              font-weight: 600;
+              line-height: 32px;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 24px w600</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(24px, 2rem);
+              font-weight: 500;
+              line-height: 32px;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 24px w500</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(20px, 2rem);
+              font-weight: 400;
+              line-height: 36px;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 20px w400</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(18px, 2rem);
+              font-weight: 400;
+              line-height: 27.36px;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 18px w400</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist Mono&quot;, system-ui;
+              font-size: min(16px, 2rem);
+              font-weight: 400;
+              line-height: normal;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist Mono 16px w400</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(16px, 2rem);
+              font-weight: 400;
+              line-height: normal;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 16px w400</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(16px, 2rem);
+              font-weight: 500;
+              line-height: 24px;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 16px w500</span>
+        </div>
+        <div class="typo-row">
+          <span
+            class="typo-sample"
+            style="
+              font-family: &quot;Geist&quot;, system-ui;
+              font-size: min(16px, 2rem);
+              font-weight: 600;
+              line-height: 24px;
+            "
+            >The quick brown fox jumps</span
+          >
+          <span class="typo-spec">Geist 16px w600</span>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- ═══════════════ SHADOWS ═══════════════ -->
+
+        <div class="card">
+          <h2><span class="icon">🌑</span> Shadows (8)</h2>
+          <div class="shadow-row">
+            <div
+              class="shadow-demo"
+              style="box-shadow: rgba(0, 0, 0, 0.04) 0px 1px 2px 0px"
+            >
+              complex-stack
+            </div>
+            <div
+              class="shadow-demo"
+              style="box-shadow: rgba(0, 0, 0, 0.04) 0px 2px 2px 0px"
+            >
+              complex-stack
+            </div>
+            <div
+              class="shadow-demo"
+              style="box-shadow: rgb(235, 235, 235) 0px 0px 0px 1px"
+            >
+              complex-stack
+            </div>
+            <div
+              class="shadow-demo"
+              style="box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px"
+            >
+              complex-stack
+            </div>
+            <div
+              class="shadow-demo"
+              style="
+                box-shadow:
+                  rgba(0, 0, 0, 0.08) 0px 0px 0px 1px,
+                  rgba(0, 0, 0, 0.04) 0px 2px 2px 0px,
+                  rgb(250, 250, 250) 0px 0px 0px 1px;
+              "
+            >
+              complex-stack
+            </div>
+            <div
+              class="shadow-demo"
+              style="
+                box-shadow:
+                  rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+                  rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+                  rgba(0, 0, 0, 0.08) 0px 0px 0px 1px,
+                  rgba(0, 0, 0, 0.04) 0px 2px 2px 0px,
+                  rgba(0, 0, 0, 0.04) 0px 8px 8px -8px,
+                  rgb(250, 250, 250) 0px 0px 0px 1px;
+              "
+            >
+              complex-stack
+            </div>
+            <div
+              class="shadow-demo"
+              style="box-shadow: rgb(234, 234, 234) 0px -1px 0px 0px inset"
+            >
+              complex-stack
+            </div>
+            <div
+              class="shadow-demo"
+              style="
+                box-shadow:
+                  rgba(0, 0, 0, 0.08) 0px 0px 0px 1px,
+                  rgb(250, 250, 250) 0px 0px 0px 1px;
+              "
+            >
+              complex-stack
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════ RADIUS ═══════════════ -->
+
+        <div class="card">
+          <h2><span class="icon">◼️</span> Border Radius (8)</h2>
+          <div class="radius-row">
+            <div class="radius-demo" style="border-radius: 4px">4px</div>
+            <div class="radius-demo" style="border-radius: 6px">6px</div>
+            <div class="radius-demo" style="border-radius: 9999px">9999px</div>
+            <div class="radius-demo" style="border-radius: 50%">50%</div>
+            <div class="radius-demo" style="border-radius: 100px">100px</div>
+            <div class="radius-demo" style="border-radius: 8px">8px</div>
+            <div class="radius-demo" style="border-radius: 2px">2px</div>
+            <div class="radius-demo" style="border-radius: 64px">64px</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ COMPONENTS ═══════════════ -->
+
+      <div class="card">
+        <h2><span class="icon">🧩</span> Components Detected</h2>
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Variants</th>
+              <th>Total Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Link</td>
+              <td>Ghost</td>
+              <td>402</td>
+            </tr>
+            <tr>
+              <td>Button</td>
+              <td>Ghost, Secondary, Primary</td>
+              <td>59</td>
+            </tr>
+            <tr>
+              <td>Badge</td>
+              <td>Primary, Secondary</td>
+              <td>25</td>
+            </tr>
+            <tr>
+              <td>Navigation</td>
+              <td>Ghost, Secondary</td>
+              <td>13</td>
+            </tr>
+            <tr>
+              <td>Footer</td>
+              <td>Ghost</td>
+              <td>12</td>
+            </tr>
+            <tr>
+              <td>Input</td>
+              <td>Ghost, Secondary</td>
+              <td>7</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ═══════════════ DARK MODE ═══════════════ -->
+
+      <!-- ═══════════════ DESIGN.MD PREVIEW ═══════════════ -->
+
+      <div class="card">
+        <h2><span class="icon">📄</span> DESIGN.md Content</h2>
+        <div class="md-preview">
+          &lt;!-- Generated: 2026-04-05 | Source: https://vercel.com | Pages: 3
+          | Framework: tailwind --&gt; &lt;!-- This is not the official design
+          system. Colors, fonts, and spacing may not be 100% accurate. --&gt; #
+          Design System: Vercel ## 1. Visual Theme &amp; Atmosphere Vercel's
+          website is the visual thesis of developer infrastructure made
+          invisible -- a design system so restrained it borders on
+          philosophical. The page is overwhelmingly white (`#ffffff`) with
+          near-black (`#171717`) text, creating a gallery-like emptiness where
+          every element earns its pixel. This is not minimalism as decoration;
+          it is minimalism as engineering principle. The Geist design system
+          treats the interface like a compiler treats code -- every unnecessary
+          token is stripped until only structure remains. The custom `Geist`
+          font family is the crown jewel. `Geist` Sans uses aggressive negative
+          letter-spacing (`-2.88px` at 48px display, `-2.4px` at 40px) creating
+          headlines that feel compressed, urgent, and engineered -- like code
+          minified for production. At body sizes the tracking relaxes to normal,
+          but the geometric precision persists. `Geist Mono` completes the
+          system as the monospace companion for code blocks, terminal output,
+          and technical labels. Both fonts enable OpenType `&quot;liga&quot;`
+          globally, adding a layer of typographic sophistication that rewards
+          close reading. What distinguishes Vercel from other monochrome design
+          systems is its shadow-as-border philosophy. Instead of traditional CSS
+          borders, Vercel uses `box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px`
+          -- a zero-offset, zero-blur, 1px-spread shadow that creates a
+          border-like line without box model implications. This technique allows
+          borders to exist in the shadow layer, enabling smoother transitions
+          and subtler visual weight. The entire depth system is built on
+          multi-value shadow stacks where each layer serves a distinct
+          architectural purpose: one for the border, one for soft elevation, and
+          an inner `rgb(250, 250, 250)` ring for the subtle glow that makes
+          cards feel built from within. **Key Characteristics:** - `Geist` Sans
+          with extreme negative letter-spacing (`-2.88px` at 48px, `-2.4px` at
+          40px) -- text as compressed infrastructure - `Geist Mono` for code and
+          technical labels with OpenType `&quot;liga&quot;` globally and
+          `uppercase` at 12px for section markers - Shadow-as-border technique:
+          `box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px` replaces traditional
+          borders throughout - Multi-layer shadow stacks for nuanced depth
+          (border + elevation + inner `rgb(250, 250, 250)` ring in single
+          declarations) - Near-pure white canvas with `#171717` text -- not pure
+          black, creating micro-contrast softness - Workflow-specific accent
+          colors: Ship Red (`#e5484d`), Preview Pink (`#bd2864`), Develop Blue
+          (`#0068d6`) - Status colors for dashboards: teal (`#45dec5`), amber
+          (`#ffb224`), green (`#297a3a`), purple (`#7820bc`) - Pill badges
+          (`9999px` radius) with tinted blue backgrounds (`#ebf5ff`) for feature
+          labels - Three weights with strict roles: 400 (body), 500
+          (UI/interactive), 600 (headings) -- no bold except micro-badges ## 2.
+          Color Palette &amp; Roles ### Primary - **Vercel Black** (`#171717`):
+          `--ds-gray-1000`. Primary text, headings, navigation, dark surface
+          backgrounds. Not pure black -- the equal-channel warmth (RGB 23,23,23)
+          prevents harshness and creates micro-contrast softness against white.
+          - **Pure White** (`#ffffff`): `--ds-background-100`. Page background,
+          card surfaces, button text on dark. The dominant canvas color by area.
+          - **True Black** (`#000000`): `--ds-black`, `--geist-foreground`.
+          Secondary use in console contexts and shadow layers (at `0.08` opacity
+          for borders, `0.04` for elevation). ### Workflow Accent Colors -
+          **Develop Blue** (`#0068d6`): The development workflow step -- a
+          focused, saturated blue used for badge text and pipeline markers. Also
+          appears as the badge text color on `#ebf5ff` pill backgrounds. -
+          **Preview Pink** (`#bd2864`): The preview deployment workflow -- a
+          deep magenta-pink. Rich and vivid enough to read against white without
+          competing with the Develop Blue. - **Ship Red** (`#e5484d`): The
+          production deployment step -- a warm coral-red. Used sparingly for
+          text, borders, and gradient accents in the Ship pipeline stage. ###
+          Status &amp; Data Colors - **Sky Blue** (`#52aeff`): Status indicator,
+          icon color, data visualization accent. A lighter, more approachable
+          blue than Develop Blue. - **Teal** (`#45dec5`): Success/positive
+          status in dashboards and data displays. Bright and distinct from the
+          greens. - **Amber** (`#ffb224`): Warning/caution status. Used as text
+          color and border accent in status contexts. - **Forest Green**
+          (`#297a3a`): Secondary success state. Darker and more muted than teal
+          -- used for text labels rather than backgrounds. - **Violet**
+          (`#7820bc`): Tertiary accent for data categories and console syntax
+          highlighting. Deep and saturated. ### Neutral Scale - **Gray 1000**
+          (`#171717`): `--ds-gray-1000`. Primary text, headings, navigation
+          text. Frequency 13,325 -- the most-used color in the system. - **Gray
+          900** (`#4d4d4d`): `--ds-gray-900`. Secondary text, description copy,
+          body paragraphs. Frequency 7,999. - **Gray 800** (`#808080`):
+          `--ds-gray-800`. Placeholder text, disabled states, muted UI labels.
+          Mid-gray. - **Gray 700** (`#8f8f8f`): `--ds-gray-700`. Tertiary text,
+          subtle labels. Slightly lighter than Gray 800. - **Gray 600**
+          (`#a8a8a8`): `--ds-gray-600`. Faint text, decorative borders.
+          Approaching invisible. - **Gray 200** (`#ebebeb`): `--ds-gray-200`.
+          Borders, card outlines, dividers, gradient stops. Frequency 4,753 --
+          the primary border color. - **Gray 100** (`#666666`): `--accents-5`.
+          Tertiary text, muted interactive elements. ### Surface &amp; Badge -
+          **Badge Blue Background** (`#ebf5ff`): Tinted blue surface for pill
+          badges. Soft enough to read dark blue text against. - **Badge Blue
+          Text** (`#0068d6`): Paired with `#ebf5ff` background for feature
+          labels and status pills. - **Gradient Pastels**: Soft atmospheric
+          washes -- ice blue (`#d4eef7`), mint (`#c7f5e2`), warm cream
+          (`#f7ead4`) -- used exclusively in hero gradient backgrounds. ###
+          Shadow Colors - **Border Shadow** (`rgba(0, 0, 0, 0.08)`): The
+          signature -- replaces traditional CSS borders throughout the system. -
+          **Elevation Shadow** (`rgba(0, 0, 0, 0.04)`): Minimal lift for cards
+          and containers at 2px offset. - **Inner Ring** (`rgb(250, 250, 250)`):
+          The inner glow that distinguishes Vercel's card shadows from generic
+          shadows. - **Light Ring** (`rgb(235, 235, 235)`): Lighter border ring
+          for buttons, tabs, and image containers. ## 3. Typography Rules ###
+          Font Family - **Primary**: `Geist`, variable font (weight 100-900).
+          Loaded as single woff2 file. - **Monospace**: `Geist Mono`, variable
+          font (weight 100-900). Used for code blocks, technical labels, and
+          section markers. - **OpenType Features**: `&quot;liga&quot;` enabled
+          globally on all `Geist` text. `&quot;calt&quot; 0, &quot;rlig&quot;`
+          on certain heading and UI variants. ### Hierarchy | Role | Font | Size
+          | Weight | Line Height | Letter Spacing | Notes |
+          |------|------|------|--------|-------------|----------------|-------|
+          | Display Hero | Geist | 48px (3.00rem) | 600 | 56px (1.17) | -2.88px
+          | Maximum compression, billboard impact | | Section Heading | Geist |
+          40px (2.50rem) | 600 | 48px (1.20) | -2.4px | Feature section titles |
+          | Sub-heading Bold | Geist | 32px (2.00rem) | 600 | 40px (1.25) |
+          -1.28px | Card headings, `&quot;calt&quot; 0, &quot;rlig&quot;` | |
+          Sub-heading Light | Geist | 32px (2.00rem) | 400 | 48px (1.50) |
+          -1.28px | Testimonial quotes, lighter sub-sections | | Card Title |
+          Geist | 24px (1.50rem) | 600 | 32px (1.33) | -0.96px | Feature cards,
+          section sub-titles | | Card Title Light | Geist | 24px (1.50rem) | 500
+          | 32px (1.33) | -0.96px | Secondary card headings, descriptions | |
+          Body Large | Geist | 20px (1.25rem) | 400 | 36px (1.80 relaxed) |
+          normal | Introductions, feature descriptions | | Body | Geist | 18px
+          (1.13rem) | 400 | 27.36px (1.52) | normal | Standard reading text,
+          paragraphs | | Body Standard | Geist | 16px (1.00rem) | 400 | normal |
+          normal | Default UI text, base body | | Body Medium | Geist | 16px
+          (1.00rem) | 500 | 24px (1.50) | normal | Navigation links, CTA text,
+          `&quot;calt&quot; 0, &quot;rlig&quot;` | | Body Semibold | Geist |
+          16px (1.00rem) | 600 | 24px (1.50) | normal | Strong labels, active
+          states, `&quot;calt&quot; 0, &quot;rlig&quot;` | | Button / Link |
+          Geist | 14px (0.88rem) | 400 | 20px (1.43) | normal | Buttons,
+          navigation items, dropdown labels | | Button Medium | Geist | 14px
+          (0.88rem) | 500 | 20px (1.43) | normal | Emphasized buttons, secondary
+          nav links | | Caption | Geist | 12px (0.75rem) | 400 | 16px (1.33) |
+          normal | Metadata, descriptions, tags | | Caption Medium | Geist |
+          12px (0.75rem) | 500 | 16px (1.33) | normal | `text-transform:
+          capitalize`. Category labels | | Mono Body | Geist Mono | 16px
+          (1.00rem) | 400 | normal | normal | Code blocks, inline code | | Mono
+          Code | Geist Mono | 14px (0.88rem) | 400 | 20px (1.43) | normal |
+          Inline code links | | Mono Label | Geist Mono | 13px (0.81rem) | 500 |
+          20px (1.54) | normal | Code snippets, line numbers | | Mono Small |
+          Geist Mono | 12px (0.75rem) | 500 | 12px (1.00 tight) | normal |
+          `text-transform: uppercase`. Section markers (&quot;GET STARTED&quot;,
+          &quot;BUILD&quot;) | | Mono Micro | Geist Mono | 8px (0.50rem) | 600 |
+          8px (1.00 tight) | normal | `text-transform: uppercase`.
+          &quot;New&quot; badges on nav items | | Micro Badge | Geist | 7px
+          (0.44rem) | 700 | 7px (1.00 tight) | normal | `text-transform:
+          uppercase`. Tiny product badges (&quot;SDK&quot;, &quot;GATEWAY&quot;)
+          | ### Principles - **Compression as identity**: `Geist` at display
+          sizes uses `-2.88px` letter-spacing at 48px and `-2.4px` at 40px --
+          among the most aggressive negative tracking in any major design
+          system. The tracking progressively relaxes: `-1.28px` at 32px,
+          `-0.96px` at 24px, and `normal` at 16px and below. Text tightens as it
+          scales up; it loosens as it scales down. - **Ligatures everywhere**:
+          Every `Geist` text element enables OpenType `&quot;liga&quot;`.
+          Ligatures are structural, not decorative -- they create tighter, more
+          efficient glyph combinations that reinforce the compressed aesthetic.
+          - **Three weights, strict roles**: 400 (body/reading), 500
+          (UI/interactive), 600 (headings/emphasis). Weight 700 appears only on
+          7px micro-badges. This narrow range creates hierarchy through size and
+          tracking rather than weight. - **Mono for identity**: `Geist Mono` in
+          uppercase with `&quot;liga&quot;` serves as the developer console
+          voice -- compact technical labels (12px weight 500) that bridge the
+          marketing site and the product. The 8px/600 &quot;New&quot; badges are
+          the smallest type in the system. ## 4. Component Stylings ### Buttons
+          **Ghost Button (Primary Variant)** - Background: transparent (`rgba(0,
+          0, 0, 0)`) - Text: `#4d4d4d` - Padding: 8px 12px - Radius: `9999px`
+          (full pill) - Font: 14px `Geist` weight 400 - Transition: `color`,
+          `background-color` - Use: Secondary actions, filter buttons,
+          navigation pills **Primary Dark (Inferred from Geist system)** -
+          Background: `#171717` - Text: `#ffffff` - Padding: 8px 16px - Radius:
+          6px - Font: 16px `Geist` weight 500, `&quot;calt&quot; 0,
+          &quot;rlig&quot;` - Use: Primary CTA (&quot;Start Deploying&quot;,
+          &quot;Get a Demo&quot;) **Shadow-Bordered White** - Background:
+          `#ffffff` - Text: `#171717` - Shadow: `rgb(235, 235, 235) 0px 0px 0px
+          1px` (light ring border) - Radius: 6px - Padding: 0px 6px (minimal --
+          content-driven width) - Use: Standard secondary button, link-like
+          actions ### Cards &amp; Containers **Standard Card** - Background:
+          `#ffffff` - Border: none (via shadow) - Shadow: `rgba(0, 0, 0, 0.08)
+          0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px 0px, rgb(250, 250,
+          250) 0px 0px 0px 1px` - Radius: 8px - Use: Feature cards, list items,
+          content panels **Featured Card (Full Stack)** - Shadow: `rgba(0, 0, 0,
+          0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0,
+          0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px 0px, rgba(0, 0,
+          0, 0.04) 0px 8px 8px -8px, rgb(250, 250, 250) 0px 0px 0px 1px` -
+          Radius: 8px - Use: Image cards, highlighted panels, product
+          screenshots **Image Card** - Border: `1px solid #ebebeb` - Radius:
+          `12px 12px 0px 0px` (top-rounded only) - Use: Dashboard screenshots,
+          code preview images ### Badges / Pills **Feature Badge** - Background:
+          `#ebf5ff` - Text: `#0068d6` - Padding: 0px 10px - Radius: `9999px` -
+          Font: 12px `Geist` weight 500 - Use: Status badges, feature labels,
+          product tags ### Navigation - White sticky header, horizontal layout -
+          Links: 16px `Geist` weight 400, `#171717` text - CTA: Dark pill
+          (&quot;Start Deploying&quot;) right-aligned, `#171717` background -
+          Active: weight 500-600 or underline differentiation - Mobile:
+          hamburger collapse - Shadow border on bottom: `rgba(0, 0, 0, 0.08) 0px
+          0px 0px 1px` ### Inputs &amp; Forms - Fieldset shadow: `rgba(0, 0, 0,
+          0.08) 0px 0px 0px 1px, rgb(250, 250, 250) 0px 0px 0px 1px` - Radio
+          focus: `rgb(235, 235, 235) 0px 0px 0px 1px, rgba(0, 0, 0, 0.05) 0px
+          1px 2px 0px` - Border: via shadow technique, not traditional border ##
+          5. Layout Principles ### Spacing System - Base unit: 4px - Scale: 4,
+          8, 12, 16, 20, 24, 32, 36, 40, 44, 48, 64, 96 - High-frequency values:
+          2px (freq 825), 8px (freq 503), 12px (freq 774), 4px (freq 425), 16px
+          (freq 249) - Section-level spacing: 48px, 90px, 96px, 135px, 165px --
+          gallery-level vertical rhythm ### Grid &amp; Container - Max content
+          width: full-width with internal containment - Column system: 1, 2, 3,
+          6, 12 columns detected - Hero: centered single-column with generous
+          top padding - Feature sections: 2-3 column card grids - Full-width
+          dividers using `border-bottom: 1px solid #171717` ### Whitespace
+          Philosophy - **Gallery emptiness**: Section spacing reaches 90-165px
+          between major content blocks. The white space IS the design -- it
+          communicates that Vercel has nothing to prove and nothing to hide. -
+          **Compressed text, expanded space**: The aggressive negative
+          letter-spacing on headlines (`-2.88px` at 48px) is counterbalanced by
+          vast surrounding whitespace. Text is dense; space around it is
+          expansive. - **Monochrome separation**: White sections alternate with
+          white sections. There is no background color variation. Separation
+          comes from shadow-borders and spacing alone. ### Border Radius Scale -
+          Micro (2px): Inline code snippets, small decorative elements - Subtle
+          (4px): Small containers, keyboard shortcuts, tags (freq 136) -
+          Standard (6px): Buttons, links, functional elements (freq 127) -
+          Comfortable (8px): Cards, list items, panels (freq 22) - Image Top
+          (12px 12px 0px 0px): Featured image containers, top-rounded - Large
+          (64px): Tab navigation pills (freq 12) - XL (100px): Large navigation
+          links (freq 22) - Full Pill (9999px): Badges, status pills, button
+          pills (freq 57) - Circle (50%): Menu toggle, avatar containers (freq
+          28) ## 6. Depth &amp; Elevation | Level | Treatment | Use |
+          |-------|-----------|-----| | Flat (Level 0) | No shadow | Page
+          background, text blocks | | Ring (Level 1) | `rgba(0, 0, 0, 0.08) 0px
+          0px 0px 1px` | Shadow-as-border for most elements | | Light Ring
+          (Level 1b) | `rgb(235, 235, 235) 0px 0px 0px 1px` | Lighter ring for
+          buttons, tabs | | Subtle Card (Level 2) | Ring + `rgba(0, 0, 0, 0.04)
+          0px 2px 2px 0px` + inner `rgb(250, 250, 250) 0px 0px 0px 1px` |
+          Standard cards with minimal lift | | Full Card (Level 3) | Ring +
+          `rgba(0, 0, 0, 0.04) 0px 2px 2px 0px` + `rgba(0, 0, 0, 0.04) 0px 8px
+          8px -8px` + inner `rgb(250, 250, 250) 0px 0px 0px 1px` | Featured
+          cards, image panels | | Inset (Level 0b) | `rgb(234, 234, 234) 0px
+          -1px 0px 0px inset` | Subtle inset divider within containers |
+          **Shadow Philosophy**: Vercel uses multi-value shadow stacks where
+          each layer has a distinct architectural purpose. The first layer
+          creates the &quot;border&quot; (`rgba(0, 0, 0, 0.08)` at 1px spread).
+          The second adds ambient softness (`rgba(0, 0, 0, 0.04)` at 2px blur).
+          On featured cards, a third layer handles depth at distance (`rgba(0,
+          0, 0, 0.04)` at 8px blur with `-8px` negative spread). The inner ring
+          (`rgb(250, 250, 250)`) creates a subtle highlight that makes cards
+          glow from within. This layered approach means cards feel constructed,
+          not floating -- depth is built architecturally, not applied as
+          decoration. ### Decorative Depth - Hero gradient: soft pastel
+          multi-color gradient wash behind hero content -- ice blue (`#d4eef7`),
+          mint (`#c7f5e2`), warm cream (`#f7ead4`). Atmospheric, barely visible.
+          - Section borders: `1px solid #171717` (full dark line) between major
+          sections - No background color variation -- depth comes entirely from
+          shadow layering and border contrast ## 6.5. Motion &amp; Transitions
+          ### Duration Scale | Label | Value | Use | |-------|-------|-----| |
+          Micro | 90ms | Instant feedback, toggle states | | Small | 160ms |
+          Button hovers, link interactions (freq 97 -- most common) | | Medium |
+          350ms | Panel transitions, content reveals | | Large | 500ms | Overlay
+          animations, complex state changes | ### Timing Functions -
+          **Primary**: `ease` (freq 157 -- dominant) - **Smooth decel**:
+          `cubic-bezier(.4, 0, .2, 1)` (freq 33) -- Material-style deceleration
+          - **Exit**: `ease-out` (freq 11) - **Balanced**: `ease-in-out` (freq
+          6) ## 7. Do's and Don'ts ### Do - Use `Geist` Sans with aggressive
+          negative letter-spacing at display sizes (`-2.88px` at 48px, `-2.4px`
+          at 40px) - Use shadow-as-border (`rgba(0, 0, 0, 0.08) 0px 0px 0px
+          1px`) instead of traditional CSS borders - Enable `&quot;liga&quot;`
+          on all `Geist` text -- ligatures are structural, not optional - Use
+          the three-weight system: 400 (body), 500 (UI), 600 (headings) - Apply
+          workflow accent colors (Red `#e5484d` / Pink `#bd2864` / Blue
+          `#0068d6`) only in their pipeline context - Use multi-layer shadow
+          stacks for cards -- border + elevation + inner `rgb(250, 250, 250)`
+          ring - Keep the color palette achromatic -- grays from `#171717` to
+          `#ffffff` are the system - Use `#171717` instead of `#000000` for
+          primary text -- the micro-warmth matters - Use `Geist Mono` 12px
+          weight 500 uppercase for technical section labels (&quot;GET
+          STARTED&quot;, &quot;BUILD&quot;, &quot;SCALE&quot;) - Use `9999px`
+          radius for badges and pills with `#ebf5ff` background and `#0068d6`
+          text ### Don't - Don't use positive letter-spacing on `Geist` Sans --
+          it runs negative or normal, never positive - Don't use weight 700 on
+          body or heading text -- 600 is the maximum; 700 appears only on 7px
+          micro-badges - Don't use traditional CSS `border` on cards -- use the
+          shadow-border technique throughout - Don't introduce warm colors
+          (oranges, yellows, greens) into UI chrome -- the system is achromatic
+          with functional exceptions only - Don't apply workflow accent colors
+          (`#e5484d`, `#bd2864`, `#0068d6`) decoratively -- they mark pipeline
+          stages exclusively - Don't use heavy shadows (opacity &gt; 0.08) --
+          the shadow system operates at whisper-level opacity (`0.04`-`0.08`) -
+          Don't increase body text letter-spacing -- `Geist` is designed to run
+          at `normal` below 24px - Don't use pill radius (`9999px`) on primary
+          action buttons -- pills are for badges, tags, and filter controls -
+          Don't skip the inner `rgb(250, 250, 250)` ring in card shadows -- it
+          is the glow that makes the elevation system work - Don't mix
+          `&quot;liga&quot;` and `&quot;calt&quot; 0, &quot;rlig&quot;` feature
+          settings arbitrarily -- `&quot;liga&quot;` is for standard text;
+          `&quot;calt&quot; 0, &quot;rlig&quot;` is for UI/heading variants ##
+          8. Responsive Behavior ### Breakpoints | Name | Width | Key Changes |
+          |------|-------|-------------| | Mobile Small | &lt;400px | Tight
+          single column, minimal padding | | Mobile | 400-600px | Standard
+          mobile, stacked layout | | Tablet Small | 600-768px | 2-column grids
+          begin | | Tablet | 768-1024px | Full card grids, expanded padding | |
+          Desktop Small | 1024-1200px | Standard desktop layout | | Desktop |
+          1200-1400px | Full layout, max content width | | Large Desktop |
+          &gt;1400px | Centered, generous margins | ### Touch Targets - Ghost
+          buttons use 8px 12px padding for comfortable tap targets - Navigation
+          links at 14-16px with adequate spacing - Pill badges have 10px
+          horizontal padding for touch accessibility - Mobile menu toggle uses
+          `50%` radius circular button ### Collapsing Strategy - Hero: 48px
+          display -&gt; scales down proportionally, maintains negative tracking
+          ratio - Navigation: horizontal links + CTAs -&gt; hamburger menu -
+          Feature cards: 3-column -&gt; 2-column -&gt; single column stacked -
+          Code screenshots: maintain aspect ratio, may horizontally scroll -
+          Trust bar logos: grid -&gt; horizontal scroll - Footer: multi-column
+          -&gt; stacked single column - Section spacing: 90-165px -&gt;
+          condensed on mobile ### Image Behavior - Dashboard screenshots
+          maintain `1px solid #ebebeb` border at all sizes - Hero gradient
+          pastels (`#d4eef7`, `#c7f5e2`, `#f7ead4`) soften on mobile - Product
+          screenshots use `12px 12px 0px 0px` top-rounded radius consistently -
+          Full-width sections maintain edge-to-edge treatment ## 9. Agent Prompt
+          Guide ### Quick Color Reference - Primary CTA background: Vercel Black
+          (`#171717`) - Page background: Pure White (`#ffffff`) - Heading text:
+          Vercel Black (`#171717`) - Body text: Gray 900 (`#4d4d4d`) - Muted
+          text: Gray 800 (`#808080`) - Border (shadow): `rgba(0, 0, 0, 0.08) 0px
+          0px 0px 1px` - Border (light): `rgb(235, 235, 235) 0px 0px 0px 1px` -
+          Badge background: `#ebf5ff` - Badge text: `#0068d6` - Develop Blue:
+          `#0068d6` - Preview Pink: `#bd2864` - Ship Red: `#e5484d` ### Example
+          Component Prompts - &quot;Create a hero section on white (`#ffffff`)
+          background. Headline at 48px `Geist` weight 600, line-height 56px,
+          letter-spacing -2.88px, color `#171717`, `font-feature-settings:
+          &quot;liga&quot;`. Subtitle at 20px `Geist` weight 400, line-height
+          36px, color `#4d4d4d`. Dark CTA button (`#171717` background,
+          `#ffffff` text, 6px radius, 8px 16px padding, 16px weight 500) and
+          ghost button (transparent background, `#4d4d4d` text, `9999px` radius,
+          8px 12px padding).&quot; - &quot;Design a card: white background, no
+          CSS border. Use shadow stack: `rgba(0, 0, 0, 0.08) 0px 0px 0px 1px,
+          rgba(0, 0, 0, 0.04) 0px 2px 2px 0px, rgb(250, 250, 250) 0px 0px 0px
+          1px`. Radius 8px. Title at 24px `Geist` weight 600, letter-spacing
+          -0.96px, line-height 32px, color `#171717`. Body at 16px weight 400,
+          color `#4d4d4d`, `&quot;liga&quot;` enabled.&quot; - &quot;Build a
+          pill badge: `#ebf5ff` background, `#0068d6` text, `9999px` radius, 0px
+          10px padding, 12px `Geist` weight 500, line-height 16px,
+          `&quot;liga&quot;` enabled.&quot; - &quot;Create navigation: white
+          sticky header with `rgba(0, 0, 0, 0.08) 0px 0px 0px 1px` shadow-border
+          on bottom. Links at 14px `Geist` weight 400, `#171717` text,
+          line-height 20px. Dark pill CTA 'Start Deploying' right-aligned:
+          `#171717` background, `#ffffff` text, 16px weight 500, 8px 16px
+          padding, `9999px` radius.&quot; - &quot;Design a workflow section
+          showing three pipeline steps. Each step uses a `Geist Mono` 12px
+          weight 500 uppercase label plus 24px `Geist` weight 600 title
+          (letter-spacing -0.96px, line-height 32px) plus 16px weight 400
+          description in `#4d4d4d`. Step colors: Develop (`#0068d6`), Preview
+          (`#bd2864`), Ship (`#e5484d`). Steps connected with lines on white
+          background.&quot; - &quot;Build a featured image card: white
+          background, full shadow stack `rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+          rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px,
+          rgba(0, 0, 0, 0.04) 0px 2px 2px 0px, rgba(0, 0, 0, 0.04) 0px 8px 8px
+          -8px, rgb(250, 250, 250) 0px 0px 0px 1px`. Image container with `12px
+          12px 0px 0px` top radius and `1px solid #ebebeb` border. Title below
+          at 24px `Geist` weight 600, -0.96px tracking.&quot; ### Iteration
+          Guide 1. Always use shadow-as-border instead of CSS border -- `rgba(0,
+          0, 0, 0.08) 0px 0px 0px 1px` is the foundation of every contained
+          element 2. Letter-spacing scales with font size: `-2.88px` at 48px,
+          `-2.4px` at 40px, `-1.28px` at 32px, `-0.96px` at 24px, `normal` at
+          16px and below 3. Three weights only: 400 (read), 500 (interact), 600
+          (announce) -- weight 700 is reserved for 7px micro-badges 4. Color is
+          functional, never decorative -- workflow colors (`#e5484d`, `#bd2864`,
+          `#0068d6`) mark pipeline stages only; the UI is achromatic 5. The
+          inner `rgb(250, 250, 250)` ring in card shadows is what gives Vercel
+          cards their distinctive inner glow -- never omit it 6. `Geist Mono`
+          uppercase at 12px weight 500 is the developer console voice -- use for
+          section markers and technical labels 7. Transitions use `ease` timing
+          at 160ms for interactions and 350ms for content reveals -- no spring
+          physics or bounce curves 8. Pastel gradient backgrounds (`#d4eef7`,
+          `#c7f5e2`, `#f7ead4`) are atmospheric only -- they appear behind hero
+          content and nowhere else
+        </div>
+      </div>
+    </div>
+
+    <footer class="report-footer">
+      Generated by design-md-generator · 2026-04-17
+    </footer>
+  </body>
+</html>

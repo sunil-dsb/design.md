@@ -6,10 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run lib/engine/__tests__",
+    "test:watch": "vitest lib/engine/__tests__",
+    "engine:extract": "tsx bin/extract.ts",
+    "engine:proof": "tsx bin/proof.ts",
+    "engine:preview": "tsx bin/preview-gen.ts",
+    "engine:report": "tsx bin/report-gen.ts",
+    "engine:validate": "tsx bin/validate.ts"
   },
   "dependencies": {
+    "@icons-pack/react-simple-icons": "^13.13.0",
+    "css-tree": "^3.0.0",
+    "culori": "^4.0.0",
     "next": "16.2.6",
+    "playwright": "^1.50.0",
+    "playwright-extra": "^4.3.0",
+    "puppeteer-extra-plugin-stealth": "^2.11.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
@@ -21,6 +34,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.19.0",
+    "typescript": "^5",
+    "vitest": "^3.0.0"
   }
 }
