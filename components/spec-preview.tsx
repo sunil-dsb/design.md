@@ -1,8 +1,12 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { SpecTabs } from "./spec-tabs";
 
 // Showcased example. Both files live in /examples/<brand>/ and are read on
 // the server at render time (statically rendered → baked into the build).
+// The server component owns the file reads + the static chrome/status bar;
+// the actual tabs + editor pane are delegated to <SpecTabs> (client) so
+// users can switch between DESIGN.md / preview.html / tailwind / shadcn.
 const EXAMPLE_BRAND = "stripe";
 const EXAMPLE_LABEL = "stripe.com";
 
@@ -13,10 +17,11 @@ export async function SpecPreview() {
     fs.readFile(path.join(dir, "preview.html"), "utf8"),
   ]);
 
-  const lines = designMd.split("\n");
-  const lineCount = lines.length;
+  // Stats for the bottom status bar — derived once at render time.
+  const lineCount = designMd.split("\n").length;
   const sectionCount = (designMd.match(/^##\s/gm) || []).length;
-  const tokenCount = (designMd.match(/^\s{2,}[a-z][a-z0-9-]*:/gim) || []).length;
+  const tokenCount = (designMd.match(/^\s{2,}[a-z][a-z0-9-]*:/gim) || [])
+    .length;
   const sizeKb = (new TextEncoder().encode(designMd).length / 1024).toFixed(1);
 
   return (
@@ -31,7 +36,7 @@ export async function SpecPreview() {
         </h2>
         <p className="mt-2 text-sm text-white/60">
           A real DESIGN.md — markdown source on the left, rendered preview on
-          the right.
+          the right. Switch tabs to see what we&apos;ll emit alongside.
         </p>
       </header>
 
@@ -53,80 +58,21 @@ export async function SpecPreview() {
                 className="size-3 rounded-full bg-[#28c840]"
               />
             </span>
-            <span className="font-pixel text-xs uppercase tracking-widest text-white/60">
+            <span className="font-pixel text-xs tracking-widest text-white/60 uppercase">
               spec preview
             </span>
           </div>
-          <span className="shrink-0 font-pixel text-xs uppercase tracking-widest text-white">
+          <span className="shrink-0 font-pixel text-xs tracking-widest text-primary uppercase">
             {EXAMPLE_LABEL}
           </span>
         </figcaption>
 
-        {/* File-tabs bar */}
-        <div className="flex items-stretch border-b border-white/10 bg-black">
-          <span
-            aria-hidden="true"
-            className="flex items-center gap-2 border-r border-white/10 border-b-2 border-b-primary bg-white/3 px-4 py-2 font-mono text-xs text-white"
-          >
-            <span className="size-1.5 rounded-full bg-primary" />
-            DESIGN.md
-          </span>
-          <span
-            aria-hidden="true"
-            className="flex items-center gap-2 border-r border-white/10 px-4 py-2 font-mono text-xs text-white/40"
-          >
-            preview.html
-          </span>
-          <span className="flex-1" />
-          <span
-            aria-hidden="true"
-            className="hidden items-center px-4 py-2 font-pixel text-[10px] uppercase tracking-widest text-white/40 sm:flex"
-          >
-            split view
-          </span>
-        </div>
-
-        {/* Split view */}
-        <div className="grid grid-cols-1 lg:grid-cols-2">
-          {/* Editor pane */}
-          <div
-            tabIndex={0}
-            role="region"
-            aria-label={`${EXAMPLE_LABEL} DESIGN.md source`}
-            className="relative h-80 overflow-auto focus-visible:outline-2 focus-visible:outline-primary lg:h-112"
-          >
-            <div className="flex min-h-full">
-              <div
-                aria-hidden="true"
-                className="sticky left-0 select-none border-r border-white/10 bg-black px-3 py-5 text-right font-mono text-xs leading-relaxed text-white/25"
-              >
-                {Array.from({ length: lineCount }, (_, i) => (
-                  <div key={i}>{i + 1}</div>
-                ))}
-              </div>
-              <pre className="flex-1 px-4 py-5 text-left text-sm leading-relaxed text-white/85">
-                <code>{designMd}</code>
-              </pre>
-            </div>
-          </div>
-
-          {/* Preview pane */}
-          <div className="relative h-80 border-t border-white/15 lg:h-112 lg:border-t-0 lg:border-l">
-            <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 font-mono text-[10px] text-black/50">
-              <span aria-hidden="true" className="size-1.5 rounded-full bg-[#28c840]" />
-              <span className="truncate">
-                {EXAMPLE_LABEL}/DESIGN.md → rendered
-              </span>
-            </div>
-            <iframe
-              srcDoc={previewHtml}
-              title={`${EXAMPLE_LABEL} DESIGN.md rendered preview`}
-              sandbox=""
-              loading="lazy"
-              className="h-full w-full border-0 bg-white pt-8"
-            />
-          </div>
-        </div>
+        {/* Tabs + split view (client) */}
+        <SpecTabs
+          designMd={designMd}
+          previewHtml={previewHtml}
+          exampleLabel={EXAMPLE_LABEL}
+        />
 
         {/* Status bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-white/3 px-4 py-2 font-mono text-[10px] text-white/45">
@@ -151,7 +97,7 @@ export async function SpecPreview() {
               <span className="text-white/70">{sizeKb}</span> kb
             </span>
           </div>
-          <span className="font-pixel text-[10px] uppercase tracking-widest text-white/55">
+          <span className="font-pixel text-[10px] tracking-widest text-white/55 uppercase">
             spec v2
           </span>
         </div>

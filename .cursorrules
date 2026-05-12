@@ -1,0 +1,78 @@
+# Design MD Generator Cursor Rules
+
+You have access to a design system extraction tool. When the user asks you to match a website's visual style, build UI that looks like a specific site, or create a DESIGN.md:
+
+## Quick Start
+
+```bash
+# Extract design tokens from any website
+pnpm engine:extract https://example.com
+
+# Output appears in output/<domain>/tokens.json
+```
+
+## Using an Existing DESIGN.md
+
+If the user has a DESIGN.md file in the project root or provides one:
+
+1. Read the DESIGN.md file completely before writing any UI code
+2. Use ONLY the colors, fonts, sizes, and shadows specified in the DESIGN.md
+3. Do NOT invent colors or typography not present in the document
+4. Follow the "Agent Prompt Guide" (Section 13) for quick reference values
+5. Match interaction states (hover, focus, active) as documented in Section 4
+
+## Generating a New DESIGN.md
+
+If no DESIGN.md exists and the user wants to match a site's style:
+
+1. Run `pnpm engine:extract <url>` to extract design tokens
+2. Read the generated `tokens.json` from the output directory
+3. Use the extraction data to write a DESIGN.md following the 17-section v2 format (see SKILL.md):
+   - 0. Brand Context
+   - 1. Visual Theme & Atmosphere
+   - 2. Color Palette & Roles
+   - 2.5. Dark Mode System (when detected)
+   - 3. Typography Rules
+   - 4. Component Stylings
+   - 5. Layout Principles
+   - 6. Depth & Elevation
+   - 6.5. Motion System
+   - 7. Content & Voice
+   - 8. Do's and Don'ts
+   - 9. Accessibility Contract
+   - 10. Responsive Behavior
+   - 11. State Matrix
+   - 12. Iconography
+   - 13. Agent Prompt Guide
+
+## Critical Rules
+
+- ALL numerical values (hex colors, font sizes, weights, shadows) MUST come from the extraction data or DESIGN.md never hallucinate
+- Use 6-digit lowercase hex format (#ffffff, not #FFF or #FFFFFF)
+- Use numeric font weights (400, 700) not words (regular, bold)
+- When the DESIGN.md specifies a custom font, check if it's available; fall back to the documented fallback stack if not
+
+## Verification
+
+After generating UI, verify against the DESIGN.md:
+- Every hex color used should appear in Section 2
+- Every font-size/weight combination should appear in Section 3
+- Shadow values should match Section 6
+- Spacing should follow Section 5's scale
+
+## Post-Extraction Tools
+
+```bash
+# Visual preview of extracted tokens
+pnpm engine:preview output/<domain>/tokens.json output/<domain>/
+
+# Quality report with validation
+pnpm engine:report output/<domain>/tokens.json output/<domain>/ DESIGN.md
+
+# Validate DESIGN.md against extraction data
+pnpm engine:validate DESIGN.md output/<domain>/tokens.json
+```
+
+## Local environment notes
+
+This codebase runs Next.js 16. APIs and conventions may differ from training data — read `node_modules/next/dist/docs/` before editing `app/` or `components/`. Engine lives at `lib/engine/` (not `scripts/`). See [MIRROR.md](./MIRROR.md).

@@ -175,7 +175,13 @@ interface PageExtraction {
   interactions?: InteractionData;
 }
 
-async function extract(options: ExtractOptions): Promise<void> {
+// NOTE: return type widened from upstream's `Promise<void>` to
+// `Promise<PageExtraction[]>` so our visibility-weighting layer
+// (lib/engine/visibility-weight.ts) can recover per-element data after
+// extract finishes. Strictly additive — callers that previously ignored the
+// void return (CLI bin, upstream tests) keep working unchanged because
+// `await fn(): X` discards X. See MIRROR.md Part 2.13.
+async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
   const startTime = Date.now();
   console.log(`\n  Design MD Generator Extracting design tokens\n`);
   console.log(`  URLs: ${options.urls.join(', ')}`);
@@ -528,6 +534,11 @@ async function extract(options: ExtractOptions): Promise<void> {
   console.log(`  Output: ${path.resolve(options.output)}`);
   console.log(`  Files: tokens.json, extraction-report.json, ${crawlResult.pages.length * 5} screenshots`);
   console.log('');
+
+  // Return per-page extraction data so post-processing layers (visibility
+  // weighting, future scoreboard hooks) can use it without re-running
+  // Playwright. The CLI ignores this return value.
+  return pageExtractions;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

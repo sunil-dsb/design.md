@@ -1,325 +1,273 @@
 <div align="center">
 
-<img src="./public/hero.webp" alt="design.md" width="100%" />
+<img src="./public/hero.webp" alt="design.md  extract design systems from any website" width="100%" />
 
 # design.md
 
-### Extract AI-ready design systems from any website.
+### Paste a URL. Get a DESIGN.md your AI agent can read.
 
-DESIGN.md · Tailwind v4 · CSS Variables · DTCG · Prompt Packs
-
-Built for modern AI coding agents.
-
-<br />
-
-[![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](CHANGELOG.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Open Source](https://img.shields.io/badge/open-source-brightgreen.svg)]()
-[![Tailwind v4](https://img.shields.io/badge/Tailwind-v4-38bdf8.svg)]()
-[![DESIGN.md](https://img.shields.io/badge/format-DESIGN.md-purple.svg)]()
+Extract real design systems  colors, typography, spacing, tokens  from any public website.
+Built for Claude Code, Cursor, v0, Lovable, Replit, Windsurf, and GitHub Copilot.
 
 <br />
 
-[Live Demo](https://designmd.dev) ·
-[Examples](./examples) ·
-[Why DESIGN.md?](./app/why/page.tsx) ·
-[Spec](https://github.com/VoltAgent/awesome-design-md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](CHANGELOG.md)
+[![Stars](https://img.shields.io/github/stars/sunil-dsb/design.md?style=social)](https://github.com/sunil-dsb/design.md/stargazers)
+[![Tailwind v4](https://img.shields.io/badge/tailwind-v4-38bdf8.svg)](https://tailwindcss.com)
+[![Built on](https://img.shields.io/badge/built_on-Google's_DESIGN.md_spec-7a73ff.svg)](https://stitch.withgoogle.com/docs/design-md/overview)
+
+<br />
+
+<a href="https://designmdfile.vercel.app"><img src="https://api.iconify.design/lucide/external-link.svg?color=%2322c55e" width="14" align="center" alt=""> &nbsp;<b>Live demo</b></a> &nbsp;·&nbsp;
+<a href="./examples">Examples</a> &nbsp;·&nbsp;
+<a href="#roadmap">Roadmap</a> &nbsp;·&nbsp;
+<a href="https://github.com/sunil-dsb/design.md"><img src="https://api.iconify.design/lucide/star.svg?color=%23f59e0b" width="14" align="center" alt=""> &nbsp;Star us</a>
 
 </div>
 
 ---
 
-## What is this?
+## What it does
 
-`design.md` extracts structured design systems from real websites and converts them into formats AI agents can understand.
+When you ask AI to *"build me a landing page like Stripe,"* the agent doesn't actually know what Stripe looks like. It averages millions of pages and ships you something generic.
 
-Instead of prompting:
+`design.md` fixes that by extracting the **real** design system from any website and writing it into a file your AI agent can read **before** it generates any UI.
 
-> “Make it look like Stripe.”
-
-You give the agent actual design context:
-- colors
-- typography
-- spacing
-- radii
-- shadows
-- component patterns
-- interaction styles
-- design tokens
-
-The result:
-AI-generated UI becomes consistent instead of generic.
-
----
-
-## Example
-
-### Input
-
-```txt
-https://stripe.com
-```
-
-### Output
-
-```txt
-DESIGN.md
-tailwind.theme.css
-variables.css
-tokens.json
-cursor-prompt.md
-claude-prompt.md
-v0-prompt.md
-```
-
----
-
-## Why `DESIGN.md` exists
-
-AI coding tools can generate interfaces fast.
-
-But without design context, every generated UI converges toward the same patterns:
-- generic gradients
-- inconsistent spacing
-- random typography
-- copied aesthetics without system thinking
-
-Screenshots help with visuals.
-Prompts help with instructions.
-
-Neither gives agents an actual design system.
-
-`DESIGN.md` gives AI agents a structured design reference they can follow while generating UI.
-
-Think of it as the design equivalent of `AGENTS.md`.
-
-| File | Purpose |
+| File | What it explains to the agent |
 |---|---|
-| `README.md` | Explains the project |
-| `AGENTS.md` | Explains how AI should build |
-| `DESIGN.md` | Explains how UI should look and feel |
+| `README.md` | What the project does |
+| `AGENTS.md` | How the AI should build it |
+| **`DESIGN.md`** | **How the UI should look and feel** |
+
+Drop a `DESIGN.md` next to your `README.md`. Tell your agent: *"Read DESIGN.md before generating UI."* Every component it makes now follows your colors, typography, and spacing  not the internet's average.
 
 ---
 
-## What you get
+## Works with
 
-- 🌐 Extract design systems from any public website
-- 🎨 Colors, typography, spacing, shadows, radii, and component styles
-- 🧠 AI-ready outputs for Cursor, Claude, v0, Lovable, Replit, and more
-- 🪶 Tiny portable artifacts that live directly inside repositories
-- 📄 Multiple export formats:
-  - `DESIGN.md`
-  - Tailwind v4 `@theme`
-  - CSS variables
-  - DTCG design tokens
-- 🎯 Visual fidelity validation
-- 🧩 Regenerated color ramps
-- 🔓 Fully open source
+<div align="center">
+
+**Claude Code** · **Cursor** · **v0** · **Lovable** · **Replit** · **Windsurf** · **GitHub Copilot**
+
+</div>
+
+If your tool reads `AGENTS.md` or `CLAUDE.md`, it reads `DESIGN.md`. Plain markdown, no plugin required.
 
 ---
 
-## Why this project is different
+## In 30 seconds
 
-Most extraction tools dump raw styles.
+```bash
+# 1. Open the live tool
+https://designmdfile.vercel.app
 
-`design.md` reconstructs coherent design systems using:
-- perceptual color clustering
-- token extraction
-- visual weighting
-- design token normalization
-- regenerated ramps
-- structured outputs for AI agents
+# 2. Paste any public URL
+stripe.com
 
-The goal is not:
+# 3. Get back a folder
+DESIGN.md         tailwind.css       shadcn-theme.css
+prompts/          tokens.json        proof.html
 
-> “extract random colors from a page.”
-
-The goal is:
-
-> “extract a usable design system.”
-
----
-
-## Architecture
-
-```txt
-URL
- ↓
-Playwright crawler
- ↓
-Style extraction
- ↓
-Token clustering
- ↓
-Design system reconstruction
- ↓
-DESIGN.md + themes + prompts
+# 4. Drop DESIGN.md in your repo. Then tell your agent:
+"Read DESIGN.md before generating any UI."
 ```
+
+No signup. No API key. No waitlist. Free, open source, MIT licensed.
+
+---
+
+## What gets extracted
+
+- 🎨 **Colors**  OKLCH ΔE perceptual clustering, not hex-string dedup. 4-layer stability classification so a sale banner can't pollute your primary brand color.
+- 🔤 **Typography**  full type scale, weights, line-heights, letter-spacing, OpenType features.
+- 📐 **Spacing**  base unit auto-detected (4/8-pt grid), scale steps, section spacing.
+- 🌗 **Dark mode**  4 detection methods, full variable diff between modes.
+- 🪟 **Shadows + radii**  multi-layer parsing, named elevation ramps.
+- 🎯 **Pixel-fidelity proof**  every output verified against the live site at ΔE<12 with image-region exclusion.
+- 📍 **Per-token provenance**  every value tagged with source page, CSS variable name, and structural region (nav / header / main / footer / aside).
 
 ---
 
 ## How it works
 
-1. Paste any public URL
-2. The crawler captures styles, layout patterns, and design tokens
-3. Tokens are clustered and normalized
-4. The system generates:
-   - `DESIGN.md`
-   - Tailwind theme
-   - CSS variables
-   - DTCG tokens
-   - AI prompt packs
-5. Drop the generated files into your repository
-6. Tell your AI agent:
-
-```txt
-Read DESIGN.md before generating UI.
+```text
+URL
+ ↓
+[1] Playwright crawler · 5 viewports × up to 8 pages
+ ↓
+[2] DOM + CSS · interaction states · dark-mode toggle · screenshots
+ ↓
+[3] OKLCH ΔE clustering · 4-layer stability · role naming
+ ↓
+[4] DESIGN.md · tailwind.css · shadcn theme · 5 prompt packs · tokens.json
 ```
+
+Deterministic. Same URL → same output. The 4 gallery brands ship with agent-written `DESIGN.md` for premium quality; on-demand extractions use deterministic role naming for free, reproducible output.
 
 ---
 
-## Quick start
+## Why this is different
+
+> Compared against [**designlang**](https://github.com/Manavarya09/design-extract) (open-source CLI + emitters, MIT) and [**getdesign.md**](https://getdesign.md) (the popular paid DESIGN.md generator, also reachable at `getdesign.app`).
+
+### Shipped today
+
+| Capability | **design.md** | designlang | getdesign.md |
+|---|:---:|:---:|:---:|
+| Color clustering | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;OKLCH ΔE | sRGB only | LLM heuristic |
+| Pixel-fidelity verification | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;ΔE &lt; 12 | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| 4-layer stability classification | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| Multi-page crawl + dark-mode | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;up to 8 pages | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> |
+| Open source | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;MIT | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;MIT | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> &nbsp;closed |
+| Pricing | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;Free forever | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;Free forever | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> &nbsp;Paid |
+| Free, no signup or waitlist | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+
+### On our roadmap
+
+| Capability | **design.md** | designlang | getdesign.md |
+|---|:---:|:---:|:---:|
+| AI prompt packs | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;5 agents planned | 4 agents shipped | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| Tailwind v4 `@theme` emit | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned | v3 only | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| shadcn theme emit (17-slot, WCAG-verified) | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned | partial | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| Regenerated OKLCH ramps | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned | raw observed | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| Public accuracy scoreboard | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+
+**Where we win today:** perceptual color clustering, pixel-fidelity verification, and stability classification  the three accuracy levers nobody else has.
+**Where they ship and we don't yet:** designlang has 4 working AI prompt packs in production; we have zero. We're catching up.
+**The longer-term wedge:** regenerated coherent ramps (not raw observed colors) + public accuracy scoreboard measuring our output against hand-curated gold tokens.
+
+---
+
+## Examples
+
+Four gold-standard extractions ship with the repo:
+
+| Brand | Sector | Files |
+|---|---|---|
+| [Stripe](./examples/stripe/) | Payments | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
+| [Linear](./examples/linear/) | Issue tracking | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
+| [Vercel](./examples/vercel/) | Frontend cloud | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
+| [Supabase](./examples/supabase/) | Postgres + auth | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
+
+Each `DESIGN.md` is ~300 lines of brand-specific prose tied to extracted values. The HTML artifacts are stand-alone  open them in a browser to inspect.
+
+---
+
+## Quickstart (run locally)
 
 ```bash
-git clone https://github.com/your-username/design.md.git
-
+git clone https://github.com/sunil-dsb/design.md.git
 cd design.md
-
 pnpm install
-
 pnpm dev
 ```
 
-Open:
+Open <http://localhost:3000>.
 
-```txt
-http://localhost:3000
+Extract from the CLI:
+
+```bash
+pnpm engine:extract https://stripe.com --fast
 ```
 
----
-
-## Scripts
-
-| Command | Description |
-|---|---|
-| `pnpm dev` | Start development server |
-| `pnpm build` | Production build |
-| `pnpm start` | Start production server |
-| `pnpm lint` | Run ESLint |
-
----
-
-## Tech stack
-
-- Next.js 16
-- Tailwind CSS v4
-- TypeScript
-- Playwright
-- React 19
+Output lands in `output/<domain>/`.
 
 ---
 
 ## Project structure
 
-```txt
-app/            Next.js App Router
-components/     Reusable UI components
-public/         Static assets
-examples/       Example DESIGN.md files
-scripts/        Extraction pipeline
-workers/        Background extraction workers
+```text
+app/             Next.js 16 app router (landing, /why, /extract, /api/extract)
+components/      Navbar, Hero, Gallery, SpecPreview, Footer, etc.
+lib/engine/      Forked extraction engine (cluster, crawl, proof, validate, ...)
+bin/             CLI shims  pnpm engine:extract / engine:proof / engine:validate
+icons/           Inline SVG brand + utility icons
+examples/        Gold-standard DESIGN.md extractions per brand
+output/          Per-extraction artifacts (gitignored)
+public/          Static assets (hero image, footer image, pixel font)
 ```
+
+---
+
+## Tech stack
+
+- **Next.js 16** (App Router, React Server Components)
+- **React 19**
+- **Tailwind CSS v4**
+- **TypeScript** (strict)
+- **Playwright** + `puppeteer-extra-plugin-stealth`
+- **culori** for OKLCH math
+- **Vitest** for engine tests
+- **Simple Icons** for brand logos
 
 ---
 
 ## Roadmap
 
-- [x] DESIGN.md generation
-- [x] Tailwind v4 export
-- [x] CSS variable export
-- [x] DTCG tokens
-- [x] AI prompt packs
-- [ ] shadcn theme generation
-- [ ] visual fidelity scoring
-- [ ] design drift detection
-- [ ] Chrome extension
-- [ ] multi-page extraction
-- [ ] authenticated site extraction
+**Shipped**
+
+- [x] Playwright extraction · 5 viewports · 8 pages (matches CLI default)
+- [x] OKLCH ΔE clustering · 4-layer stability classification
+- [x] 5-state interaction capture (hover · focus · focus-visible · active · disabled) + loading/empty/error
+- [x] Pixel-fidelity proof.ts (ΔE<12 coverage, image-region exclusion)
+- [x] 4 gold-standard examples (Stripe, Linear, Vercel, Supabase)
+- [x] SPA landing + gallery + on-demand `/extract` URL form
+- [x] Heuristic role-namer (Primary · Ink · Canvas · Hairline · Accent · Brand-Dark · ...)
+- [x] Dark-mode auto-detection (4 methods)
+- [x] **Visibility-and-importance weighting** layered on cluster.ts (area × fold × interactivity × semantic-region weighting, integrated into the role-namer's primary pick so footer-grey can't outrank a hero CTA on raw frequency)
+- [x] **Deterministic DESIGN.md emitter** on the on-demand path (11 of 17 sections templated; 4 subjective sections stubbed with hand-off to the universal prompt; scores 100/100 on the engine's own `validate.ts`)
+- [x] **Universal AI prompt** that works in any agent surface (Claude Code · Claude.ai · ChatGPT · Cursor · Codex · Windsurf · Lovable · Replit Agent) — see `prompts/universal.md` per extraction
+- [x] Engine diagnostics panel in the result UI (12 rules surfacing low coverage, single-page noise, framework miscall, primary-is-grey, etc.)
+- [x] SSE-streamed extraction progress (7-stage checklist visible in real time)
+- [x] File-serving route (`/api/output/[...path]`) with path-traversal defence
+
+**In progress**
+
+- [ ] Per-agent prompt-pack variants (the 5 framed copies for Claude Code · Cursor · v0 · Lovable · Replit — the universal prompt covers all of them today, but per-agent framing tweaks are a follow-up)
+- [ ] Tailwind v4 `@theme` emitter
+- [ ] shadcn theme emitter (17-slot mapping, conditional on 5 required signals)
+- [ ] CSS variables export · DTCG token export
+- [ ] Regenerated color ramps (Leonardo or OKLCH lightness curve + hue rotation)
+- [ ] Public accuracy scoreboard (`eval/gold/` fixtures + scoring script)
+- [ ] Vercel deploy + R2 / Vercel Blob storage for the runtime `output/` directory
 
 ---
 
-## Open source philosophy
+## Built on
 
-Design extraction quality should be:
-- inspectable
-- measurable
-- reproducible
-
-This project is open source so the community can:
-- audit extraction quality
-- improve token accuracy
-- reproduce evaluations
-- build better AI design tooling together
-
-We believe AI-native design infrastructure should evolve in the open.
+- [**Google Stitch's DESIGN.md spec**](https://stitch.withgoogle.com/docs/design-md/overview)  introduced the format
+- [**jasonhnd/design-md-generator**](https://github.com/jasonhnd/design-md-generator)  the engine we forked (MIT)
+- [**Project Wallace**](https://www.projectwallace.com/)  DTCG conversion patterns we mirror
 
 ---
 
 ## Contributing
 
-Contributions are welcome.
-
-If you're planning a large change, please open an issue first so we can discuss direction before implementation.
-
-### Setup
+PRs welcome. For larger changes, open an issue first so we can align on direction.
 
 ```bash
-git checkout -b feature/my-feature
+git checkout -b feature/your-thing
+# do the thing
+git commit -m "feat: your thing"
+git push origin feature/your-thing
 ```
 
-### Commit
-
-```bash
-git commit -m "feat: add something"
-```
-
-### Push
-
-```bash
-git push origin feature/my-feature
-```
-
-Then open a Pull Request.
-
----
-
-## Acknowledgments
-
-- Google Stitch for introducing the `DESIGN.md` concept
-- The open-source design tooling ecosystem
-- The brands whose public interfaces help advance design-system research
+Tests must pass (`pnpm test`) and TypeScript must be clean (`pnpm exec tsc --noEmit`).
 
 ---
 
 ## Disclaimer
 
-Generated outputs are not official design systems from the referenced brands.
+Generated outputs are **not** official design systems from the referenced brands. All trademarks, brand names, and design assets belong to their respective owners.
 
-All trademarks, brand names, and design assets belong to their respective owners.
-
-This project extracts publicly observable design patterns for:
-- educational purposes
-- research
-- development workflows
-- AI-assisted design systems
-
-Do not represent generated outputs as official brand assets.
+This project extracts publicly observable design patterns for educational, research, and development workflows. **Do not represent generated outputs as official brand assets.**
 
 ---
 
 ## License
 
-MIT
+[MIT](LICENSE)
 
 ---
 
@@ -328,5 +276,11 @@ MIT
 <img src="./public/footer.webp" alt="" width="100%" />
 
 ### Built for AI agents that generate UI.
+
+<a href="https://github.com/sunil-dsb/design.md"><img src="https://api.iconify.design/lucide/star.svg?color=%23f59e0b" width="14" align="center" alt=""> &nbsp;<b>Star this repo</b></a>
+&nbsp;·&nbsp;
+<a href="https://designmdfile.vercel.app"><img src="https://api.iconify.design/lucide/external-link.svg?color=%2322c55e" width="14" align="center" alt=""> &nbsp;<b>Try the live demo</b></a>
+&nbsp;·&nbsp;
+<a href="https://stitch.withgoogle.com/docs/design-md/overview"><img src="https://api.iconify.design/lucide/book-open.svg?color=%237a73ff" width="14" align="center" alt=""> &nbsp;<b>Read the spec</b></a>
 
 </div>

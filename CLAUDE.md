@@ -1,1 +1,62 @@
-@AGENTS.md
+# Design MD Generator
+
+You have access to a design system extraction tool. When the user asks you to match a website's visual style, build UI that looks like a specific site, or create a DESIGN.md:
+
+**Run the full pipeline without stopping.** Do not ask "should I proceed?" between steps.
+
+## Full Pipeline (one command flow)
+
+```bash
+# 1. Extract design tokens
+pnpm engine:extract <URL>
+
+# 2. [YOU] Read tokens.json + screenshots, write DESIGN.md following SKILL.md spec
+#    Write all 14 core sections without pausing. Self-audit. Fix issues.
+
+# 3. Validate
+pnpm engine:validate output/<domain>/DESIGN.md output/<domain>/tokens.json
+
+# 4. Generate report + proof
+pnpm engine:preview output/<domain>/tokens.json output/<domain>/
+pnpm engine:proof <URL> output/<domain>/tokens.json output/<domain>/
+pnpm engine:report output/<domain>/tokens.json output/<domain>/ output/<domain>/DESIGN.md
+
+# 5. Open report for user
+open output/<domain>/report.html
+```
+
+## Using an Existing DESIGN.md
+
+If a DESIGN.md already exists in the project:
+
+1. Read it completely before writing any UI code
+2. Use ONLY the colors, fonts, sizes, and shadows specified in it
+3. Do NOT invent values not present in the document
+4. Follow Section 13 (Agent Prompt Guide) for quick reference
+
+## Critical Rules
+
+- ALL numerical values MUST come from tokens.json never hallucinate
+- 6-digit lowercase hex (#ffffff, not #FFF)
+- Numeric font weights (400, 700) not words (bold)
+- Do not stop between steps to ask for confirmation
+- Present only the final result
+
+## Full Specification
+
+See SKILL.md for the complete 21-step workflow, format spec, writing style guide, and quality checklist.
+
+---
+
+## Local environment notes (this codebase only — not upstream)
+
+### Next.js 16 breaking changes
+
+This codebase runs Next.js 16. APIs, conventions, and file structure may differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code in `app/` or `components/`. Heed deprecation notices.
+
+### File layout differences from upstream
+
+- Engine modules live at `lib/engine/*.ts` (upstream: `scripts/*.ts`)
+- CLI entry points are split into `bin/*.ts` thin wrappers
+- pnpm replaces npm (`pnpm engine:extract` not `npx ts-node scripts/extract.ts`)
+- See [MIRROR.md](./MIRROR.md) for the full divergence map and rebase procedure

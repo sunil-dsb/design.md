@@ -44,6 +44,36 @@ export type ColorRole =
   | 'info'
   | null;
 
+/**
+ * Display order for named colors when presenting the palette to a human.
+ * Primary first (the brand), then Accent (the supporting brand color),
+ * then text colors, surfaces, etc. Lower number = earlier in the list.
+ * Used by the SPA result panel and the DESIGN.md emitter so the brand
+ * identity shows up at the top of both surfaces.
+ */
+export const ROLE_PRIORITY: Record<NonNullable<ColorRole>, number> = {
+  primary: 0,
+  accent: 1,
+  'brand-dark': 2,
+  'brand-soft': 3,
+  ink: 4,
+  canvas: 5,
+  'canvas-alt': 6,
+  muted: 7,
+  hairline: 8,
+  success: 9,
+  warning: 10,
+  error: 11,
+  info: 12,
+  'on-primary': 13,
+};
+
+/** Score a token by its role for display ordering. Unrole'd tokens sink to 999. */
+export function rolePriority(role: ColorRole | undefined | null): number {
+  if (!role) return 999;
+  return ROLE_PRIORITY[role] ?? 99;
+}
+
 const COLOR_ROLE_LABELS: Record<NonNullable<ColorRole>, string> = {
   primary: 'Primary',
   'on-primary': 'On Primary',
@@ -106,14 +136,42 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
   };
 
   // ─── 1. PRIMARY ─────────────────────────────────────────────────────────
-  // High chroma + button-bg usage + bonus for --primary / --brand css var.
+  // High chroma + visual prominence + bonus for --primary / --brand css var.
+  //
+  // When visibility weighting has run (visibilityScore present on tokens),
+  // it replaces raw `usedAs.bgColor` count as the prominence signal — the
+  // weighted score captures "how visually prominent is this color across
+  // all the elements that paint it" (area × fold × interactivity × region),
+  // which is structurally better than counting bg-occurrences. dna.md §11.1
+  // explicitly identifies this as the fix for the "footer-grey beats brand
+  // color via frequency" failure mode.
+  //
+  // Falls back to the original bgColor count when visibilityScore is
+  // absent — preserves behaviour on legacy tokens.json (and the 4 gallery
+  // examples which were extracted before this layer existed).
   const primaryCandidates = withOklch
     .filter(({ oklch }) => oklch && oklch.c >= 0.1)
     .map((entry) => {
       const { color, oklch } = entry;
+      const visScore = (color as ColorToken & { visibilityScore?: number }).visibilityScore;
+      // Prominence signal:
+      //   Visibility path: log10(vis + 1) * 30 — grows with visibility but
+      //     with diminishing returns. The previous `min(vis*25, 60)` saturated
+      //     at vis ≈ 2.4, which collapsed all high-visibility tokens to the
+      //     same score and let chroma alone decide. On real data that picked
+      //     a campaign one-off with no usage (visScore 39) over the actual
+      //     button.Primary backgroundColor (visScore 880). log10 keeps
+      //     differentiation across the full 1-1000 visScore range observed
+      //     in real extractions.
+      //   Legacy path: min(usedAs.bgColor, 50) preserved for tokens.json
+      //     that predates the visibility-weighting layer.
+      const prominenceSignal =
+        typeof visScore === 'number'
+          ? Math.log10(Math.max(visScore, 0) + 1) * 30
+          : Math.min(color.usedAs.bgColor, 50);
       const score =
         (oklch!.c * 50) +
-        Math.min(color.usedAs.bgColor, 50) +
+        prominenceSignal +
         (cssVarMatches(color, /(?:^|[-_])(?:primary|brand|accent)(?:[-_]|$)/i) ? 200 : 0) +
         // Penalise pure black/white "high chroma" misreads (shouldn't trigger but defensive).
         (oklch!.l > 0.98 || oklch!.l < 0.05 ? -1000 : 0);
@@ -248,15 +306,24 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
 
   // ─── 9. ACCENT ──────────────────────────────────────────────────────────
   // Highest-chroma color in a hue family distinct from primary (ΔH > 30°).
+  // Visibility-aware: when a weighted score is present, prefer it over raw
+  // frequency. Same fallback logic as PRIMARY.
   const accentCandidates = withOklch
     .filter(({ color, oklch }) => oklch && oklch.c >= 0.1)
     .filter(({ color }) => !assigned.has(color.hex))
     .filter(({ oklch }) => !primaryOklch || hueDelta(oklch!.h, primaryOklch.h) > 30)
-    .map(({ color, oklch }) => ({
-      color,
-      oklch,
-      score: oklch!.c * 50 + Math.log(color.frequency + 1) * 10,
-    }))
+    .map(({ color, oklch }) => {
+      const visScore = (color as ColorToken & { visibilityScore?: number }).visibilityScore;
+      const prominenceSignal =
+        typeof visScore === 'number'
+          ? Math.min(visScore * 10, 30)
+          : Math.log(color.frequency + 1) * 10;
+      return {
+        color,
+        oklch,
+        score: oklch!.c * 50 + prominenceSignal,
+      };
+    })
     .sort((a, b) => b.score - a.score);
 
   if (accentCandidates.length > 0) {
