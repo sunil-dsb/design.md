@@ -169,10 +169,39 @@ export function DigitRain({
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerleave", onLeave);
     canvas.addEventListener("pointerdown", onClick);
-    draw();
+
+    // Pause the animation when the canvas scrolls off-screen so we're not
+    // burning 60fps RAF on an invisible footer. Also pauses when the tab is
+    // hidden (visibilitychange).
+    let visible = true;
+    const startLoop = () => {
+      if (raf === 0) raf = requestAnimationFrame(draw);
+    };
+    const stopLoop = () => {
+      if (raf !== 0) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+    const onVisibility = () => {
+      if (document.hidden) stopLoop();
+      else if (visible) startLoop();
+    };
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry.isIntersecting;
+        if (visible && !document.hidden) startLoop();
+        else stopLoop();
+      },
+      { threshold: 0 },
+    );
+    io.observe(canvas);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      cancelAnimationFrame(raf);
+      stopLoop();
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", resize);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerleave", onLeave);

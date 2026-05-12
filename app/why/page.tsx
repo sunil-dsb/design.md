@@ -4,7 +4,7 @@ import { BubbleButton } from "@/components/bubble-button";
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
 import { SkipLink } from "@/components/skip-link";
-import { ArrowIcon } from "@/icons/arrow";
+import { ArrowLineIcon } from "@/icons/arrow-line";
 import { EyesIcon } from "@/icons/eyes";
 
 export const metadata: Metadata = {
@@ -335,7 +335,7 @@ export default function WhyPage() {
               <BubbleButton
                 href="/"
                 size="lg"
-                icon={<ArrowIcon className="size-4" focusable="false" />}
+                icon={<ArrowLineIcon className="size-5" />}
               >
                 TRY IT NOW
               </BubbleButton>

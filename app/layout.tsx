@@ -66,8 +66,20 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${pixelFont.variable} h-full antialiased`}
       style={{ colorScheme: "dark" }}
+      // Some browser extensions (locator devtools, dark-mode helpers, etc.)
+      // inject attributes onto <html> before React hydrates — e.g.
+      // `data-locator-client-url="chrome-extension://…"`. Suppress the
+      // mismatch warning on the root element only; descendant mismatches
+      // (which would be real bugs) still surface normally.
+      suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col bg-black text-white">
+      <body
+        className="flex min-h-full flex-col bg-black text-white"
+        // Same shape as the <html> case — password managers (Dashlane /
+        // LastPass / Bitwarden / etc.) inject `__processed_<uuid>__="true"`
+        // onto <body>. Suppress at the body level too.
+        suppressHydrationWarning
+      >
         {children}
       </body>
     </html>

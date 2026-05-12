@@ -23,9 +23,18 @@ export function Features() {
       aria-labelledby="features-heading"
       className="mx-auto w-full max-w-5xl px-6 pb-24 sm:px-10"
     >
-      <h2 id="features-heading" className="sr-only">
-        Features
-      </h2>
+      <header className="mb-8">
+        <h2
+          id="features-heading"
+          className="font-pixel text-2xl tracking-tight"
+        >
+          how it works
+        </h2>
+        <p className="mt-2 text-sm text-white/60">
+          From paste to production-ready spec, in one pass.
+        </p>
+      </header>
+
       <ul
         role="list"
         className="grid grid-cols-1 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-3"

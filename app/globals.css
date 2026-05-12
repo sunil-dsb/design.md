@@ -113,6 +113,7 @@ select {
   padding: 0 1rem;
   background-color: #0039ff;
   color: #ffffff;
+  text-transform: uppercase;
 }
 
 .bubble-btn__icon {

@@ -302,12 +302,22 @@ function Stats({
       role="list"
       className="grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4"
     >
-      {items.map((s) => (
-        <li key={s.label} className="bg-black px-5 py-5">
-          <p className="font-pixel text-2xl tracking-tight text-primary sm:text-3xl">
+      {items.map((s, i) => (
+        <li
+          key={s.label}
+          className="group relative bg-black p-6 transition-colors hover:bg-white/2"
+        >
+          <span
+            aria-hidden="true"
+            className="absolute top-0 left-0 h-px w-10 bg-primary transition-all group-hover:w-full"
+          />
+          <p className="mb-2 font-pixel text-[10px] uppercase tracking-widest text-white/40">
+            {String(i + 1).padStart(2, "0")}
+          </p>
+          <p className="font-pixel text-4xl leading-none tracking-tight text-white sm:text-5xl">
             {s.value}
           </p>
-          <p className="mt-1 font-pixel text-[10px] uppercase tracking-widest text-white/50">
+          <p className="mt-3 font-pixel text-[10px] uppercase tracking-widest text-white/55">
             {s.label}
           </p>
         </li>
@@ -356,22 +366,45 @@ function ColorCell({
   layer?: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 bg-black p-4">
+    <div className="group relative flex flex-col bg-black transition-colors hover:bg-white/2">
       <div
-        aria-hidden="true"
-        className="aspect-[5/3] w-full border border-white/10"
+        className="relative aspect-4/3 w-full overflow-hidden"
         style={{ background: hex }}
-      />
-      <div>
-        <p className="truncate font-pixel text-xs uppercase tracking-widest text-white">
-          {label}
-        </p>
-        <p className="mt-1 truncate font-mono text-[11px] text-white/55">
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06),inset_0_-1px_24px_rgba(0,0,0,0.18)]"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute top-2 right-2 bg-black/55 px-1.5 py-0.5 font-mono text-[10px] tracking-tight text-white/90 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
+        >
           {hex}
-        </p>
-        <p className="mt-1 font-mono text-[10px] text-white/35">
-          {frequency}× {layer ? `· ${layer}` : ""}
-        </p>
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-2 border-t border-white/10 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate font-pixel text-sm tracking-wide text-white">
+            {label}
+          </p>
+          <span
+            aria-hidden="true"
+            className="shrink-0 font-pixel text-[10px] uppercase tracking-widest text-primary"
+          >
+            {frequency}×
+          </span>
+        </div>
+        <div className="flex items-baseline justify-between gap-2">
+          <code className="truncate font-mono text-[11px] text-white/55">
+            {hex}
+          </code>
+          {layer && (
+            <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-white/30">
+              {layer}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

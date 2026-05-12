@@ -28,7 +28,7 @@ export function Navbar() {
             </li>
             <li className="flex">
               <a
-                href="https://github.com"
+                href="https://github.com/sunil-dsb/design.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Star us on GitHub"
@@ -43,7 +43,11 @@ export function Navbar() {
               </a>
             </li>
             <li className="flex items-center px-2 sm:px-3">
-              <BubbleButton href="/signin">sign in</BubbleButton>
+              {/* Placeholder button until auth is wired up — renders as a
+                  real <button> so it doesn't 404 like a dead /signin link. */}
+              <BubbleButton aria-label="Sign in (coming soon)">
+                sign in
+              </BubbleButton>
             </li>
           </ul>
         </nav>

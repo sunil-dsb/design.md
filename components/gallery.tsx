@@ -1,14 +1,16 @@
+import Image from "next/image";
 import type { ComponentType, SVGProps } from "react";
 import {
   SiCursor,
   SiGithub,
   SiLinear,
   SiRaycast,
-  SiResend,
   SiStripe,
   SiSupabase,
   SiVercel,
 } from "@icons-pack/react-simple-icons";
+import { BubbleButton } from "@/components/bubble-button";
+import { ArrowLineIcon } from "@/icons/arrow-line";
 
 // First four ship with committed gold DESIGN.md files in examples/.
 // The rest are placeholders until they pass extractor vetting (anti-bot,
@@ -26,7 +28,8 @@ type GalleryEntry = {
   name: string;
   tagline: string;
   swatch: string;
-  Logo: LogoComponent;
+  Logo?: LogoComponent;
+  logoSrc?: string;
   live: boolean;
   views?: number;
   installs?: number;
@@ -102,11 +105,11 @@ const GALLERY: GalleryEntry[] = [
     live: false,
   },
   {
-    slug: "resend",
-    name: "Resend",
-    tagline: "Email API",
+    slug: "makemyaisite",
+    name: "MakeMyAISite",
+    tagline: "AI website builder",
     swatch: "linear-gradient(135deg,#000000,#1a1a1a)",
-    Logo: SiResend,
+    logoSrc: "/mmai.png",
     live: false,
   },
 ];
@@ -145,6 +148,15 @@ export function Gallery() {
             <StatsPanel entry={b} />
           </li>
         ))}
+        <li className="flex items-center justify-end">
+          <BubbleButton
+            href="/gallery"
+            aria-label="View all gallery entries"
+            icon={<ArrowLineIcon className="size-4" />}
+          >
+            view all gallery
+          </BubbleButton>
+        </li>
       </ul>
     </section>
   );
@@ -172,11 +184,22 @@ function GalleryCard({ entry }: { entry: GalleryEntry }) {
         aria-hidden="true"
         className="absolute inset-0 flex flex-col items-center justify-center gap-2"
       >
-        <entry.Logo
-          aria-hidden="true"
-          focusable="false"
-          className="size-8 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)] sm:size-10"
-        />
+        {entry.Logo ? (
+          <entry.Logo
+            aria-hidden="true"
+            focusable="false"
+            className="size-8 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)] sm:size-10"
+          />
+        ) : entry.logoSrc ? (
+          <Image
+            src={entry.logoSrc}
+            alt=""
+            width={32}
+            height={32}
+            sizes="(min-width: 640px) 2rem, 1.5rem"
+            className="size-6 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)] sm:size-8"
+          />
+        ) : null}
         <span className="font-pixel text-sm tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] lowercase">
           {entry.name}
         </span>
@@ -213,18 +236,30 @@ function GalleryCard({ entry }: { entry: GalleryEntry }) {
     );
   }
 
+  // Coming-soon cards used to be `opacity-60` to read as muted, but stacking
+  // that opacity on already-translucent text dropped labels below WCAG
+  // contrast (effective ~0.24 on black for the label). We now drop the
+  // global opacity and instead dim just the swatch via a black overlay —
+  // keeps the brand recognisable as "less active" while letting the meta
+  // text stay fully readable.
   return (
     <article
-      aria-label={`${entry.name} — coming soon`}
-      className="flex flex-1 flex-col overflow-hidden border border-white/5 bg-black opacity-60"
+      aria-label={`${entry.name} — need sign`}
+      className="relative flex flex-1 flex-col overflow-hidden border border-white/10 bg-black"
     >
-      {swatch}
-      <div className="flex flex-1 flex-col border-t border-white/5 px-4 py-3">
-        <div className="font-pixel text-xs tracking-wide text-white/70">
+      <div className="relative">
+        {swatch}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-black/40"
+        />
+      </div>
+      <div className="flex flex-1 flex-col border-t border-white/10 px-4 py-3">
+        <div className="font-pixel text-xs tracking-wide text-white">
           {entry.name}
         </div>
-        <p className="mt-1 font-mono text-[10px] tracking-widest text-white/40 uppercase">
-          coming soon
+        <p className="mt-1 font-mono text-[10px] tracking-widest text-white/70 uppercase">
+          need sign
         </p>
       </div>
     </article>
@@ -260,7 +295,9 @@ function StatsPanel({ entry }: { entry: GalleryEntry }) {
       aria-label={ariaLabel}
       className={
         "flex w-14 flex-col text-white sm:w-16 " +
-        (hasData ? "bg-primary" : "bg-white/5 text-white/40")
+        // bg-white/10 + text-white at full opacity meets WCAG AA on near-black;
+        // the previous bg-white/5 + text-white/40 fell below contrast threshold.
+        (hasData ? "bg-primary" : "bg-white/10")
       }
     >
       {entry.badge && hasData ? (
@@ -301,7 +338,10 @@ function StatCell({
       <span
         className={
           "font-mono text-[8px] tracking-wide uppercase " +
-          (dim ? "text-white/30" : "text-white/70")
+          // text-white at 70% on bg-white/10 over black, and full white on
+          // bg-primary, both clear WCAG AA for small text. The previous
+          // `/30` on the dim panel was the main contrast offender.
+          (dim ? "text-white/70" : "text-white")
         }
       >
         {label}

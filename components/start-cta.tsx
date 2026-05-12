@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { BubbleButton } from "@/components/bubble-button";
+import { ArrowLineIcon } from "@/icons/arrow-line";
 
 // Decorative floating robot mascots. Parent wrapper is aria-hidden so the
 // individual Image alts can stay empty — no need to label decoration twice.
@@ -34,13 +35,16 @@ export function StartCTA() {
         className="pointer-events-none absolute inset-0 hidden sm:block"
       >
         {ROBOTS.map((r) => (
+          // Animated WebPs — Next.js's optimizer refuses animated sources
+          // (it only emits single frames). `unoptimized` serves the file
+          // as-is so the loop stays intact.
           <Image
             key={r.src}
             src={r.src}
             alt=""
             width={165}
             height={123}
-            sizes="(min-width: 640px) 11rem, 8rem"
+            unoptimized
             className={`h-auto ${r.className}`}
           />
         ))}
@@ -58,7 +62,14 @@ export function StartCTA() {
           Your AI agent stops averaging and starts referencing.
         </p>
         <div className="mt-10 flex justify-center">
-          <BubbleButton href="/why" size="lg">
+          <BubbleButton
+            href="/why"
+            size="lg"
+            // Descriptive name for screen readers & Lighthouse — the visible
+            // "learn more" alone is flagged as non-descriptive link text.
+            aria-label="Read why design.md exists"
+            icon={<ArrowLineIcon className="size-5" />}
+          >
             learn more
           </BubbleButton>
         </div>
