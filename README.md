@@ -1,3 +1,11 @@
+---
+title: design.md
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
+
 <div align="center">
 
 <img src="./public/hero.webp" alt="design.md  extract design systems from any website" width="100%" />

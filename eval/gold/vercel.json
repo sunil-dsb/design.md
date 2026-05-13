@@ -1,0 +1,50 @@
+{
+  "$schema": "../types.ts (GoldTokens)",
+  "brand": "vercel",
+  "url": "https://vercel.com/",
+  "verifiedAt": "2026-05-12",
+  "verifiedBy": "manual review against committed examples/vercel/DESIGN.md + vercel.com source inspection",
+  "sources": [
+    "vercel.com (CSS variables)",
+    "vercel.com/design (public design system page)",
+    "examples/vercel/DESIGN.md (agent-written gold file, upstream commit)"
+  ],
+
+  "colors": {
+    "primary": { "hex": "#171717", "name": "Vercel Black" },
+    "neutrals": [
+      { "name": "Canvas",      "hex": "#ffffff" },
+      { "name": "Canvas Dark", "hex": "#000000" },
+      { "name": "Ink",         "hex": "#171717" },
+      { "name": "Muted Text",  "hex": "#666666" },
+      { "name": "Hairline",    "hex": "#eaeaea" }
+    ],
+    "paletteHexes": [
+      "#171717",
+      "#ffffff",
+      "#000000",
+      "#666666",
+      "#eaeaea",
+      "#fafafa"
+    ]
+  },
+
+  "typography": {
+    "display": { "family": "Geist", "fallbacks": ["sans-serif"] },
+    "body":    { "family": "Geist", "fallbacks": ["sans-serif"] },
+    "mono":    { "family": "Geist Mono", "fallbacks": ["ui-monospace", "monospace"] }
+  },
+
+  "spacing": {
+    "baseUnit": 4,
+    "scale": [4, 8, 12, 16, 20, 24, 32, 48, 64, 80, 96]
+  },
+
+  "radius": {
+    "scale": [4, 6, 8, 12]
+  },
+
+  "darkMode": {
+    "supported": true
+  }
+}

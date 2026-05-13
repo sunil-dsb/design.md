@@ -1,0 +1,52 @@
+{
+  "$schema": "../types.ts (GoldTokens)",
+  "brand": "supabase",
+  "url": "https://supabase.com/",
+  "verifiedAt": "2026-05-12",
+  "verifiedBy": "manual review against committed examples/supabase/DESIGN.md + supabase.com source inspection",
+  "sources": [
+    "supabase.com (CSS variables, brand assets)",
+    "examples/supabase/DESIGN.md (agent-written gold file, upstream commit)"
+  ],
+
+  "colors": {
+    "primary": { "hex": "#3ecf8e", "name": "Supabase Green" },
+    "accent":  { "hex": "#242424", "name": "Primary Button Dark" },
+    "neutrals": [
+      { "name": "Canvas",      "hex": "#171717" },
+      { "name": "Surface",     "hex": "#1f1f1f" },
+      { "name": "Surface Alt", "hex": "#242424" },
+      { "name": "Primary Text","hex": "#fafafa" },
+      { "name": "Muted Text",  "hex": "#898989" },
+      { "name": "Hairline",    "hex": "#2e2e2e" }
+    ],
+    "paletteHexes": [
+      "#3ecf8e",
+      "#242424",
+      "#171717",
+      "#1f1f1f",
+      "#fafafa",
+      "#898989",
+      "#2e2e2e"
+    ]
+  },
+
+  "typography": {
+    "display": { "family": "Custom Display", "fallbacks": ["Inter", "sans-serif"] },
+    "body":    { "family": "Inter", "fallbacks": ["sans-serif"] },
+    "mono":    { "family": "JetBrains Mono", "fallbacks": ["ui-monospace", "monospace"] }
+  },
+
+  "spacing": {
+    "baseUnit": 4,
+    "scale": [4, 8, 12, 16, 20, 24, 32, 48, 64]
+  },
+
+  "radius": {
+    "scale": [4, 6, 8, 12, 9999]
+  },
+
+  "darkMode": {
+    "supported": true
+  }
+}

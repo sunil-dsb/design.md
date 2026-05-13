@@ -1,0 +1,53 @@
+{
+  "$schema": "../types.ts (GoldTokens)",
+  "brand": "linear",
+  "url": "https://linear.app/",
+  "verifiedAt": "2026-05-12",
+  "verifiedBy": "manual review against committed examples/linear/DESIGN.md + linear.app source inspection",
+  "sources": [
+    "linear.app (CSS variables on :root)",
+    "examples/linear/DESIGN.md (agent-written gold file, upstream commit)"
+  ],
+
+  "colors": {
+    "primary": { "hex": "#5e6ad2", "name": "Brand Indigo" },
+    "neutrals": [
+      { "name": "Canvas",       "hex": "#08090a" },
+      { "name": "Surface",      "hex": "#1c1c1f" },
+      { "name": "Surface Alt",  "hex": "#26262b" },
+      { "name": "Primary Text", "hex": "#f7f8f8" },
+      { "name": "Muted Text",   "hex": "#8a8f98" },
+      { "name": "Hairline",     "hex": "#26262b" }
+    ],
+    "paletteHexes": [
+      "#5e6ad2",
+      "#08090a",
+      "#1c1c1f",
+      "#26262b",
+      "#f7f8f8",
+      "#8a8f98",
+      "#9b6cff",
+      "#4cb782",
+      "#e2b232"
+    ]
+  },
+
+  "typography": {
+    "display": { "family": "Inter", "fallbacks": ["sans-serif"] },
+    "body":    { "family": "Inter", "fallbacks": ["sans-serif"] },
+    "mono":    { "family": "Berkeley Mono", "fallbacks": ["ui-monospace", "monospace"] }
+  },
+
+  "spacing": {
+    "baseUnit": 4,
+    "scale": [4, 8, 12, 16, 20, 24, 32, 40, 48, 64]
+  },
+
+  "radius": {
+    "scale": [4, 6, 8, 12, 16]
+  },
+
+  "darkMode": {
+    "supported": true
+  }
+}

@@ -13,7 +13,8 @@
     "engine:proof": "tsx bin/proof.ts",
     "engine:preview": "tsx bin/preview-gen.ts",
     "engine:report": "tsx bin/report-gen.ts",
-    "engine:validate": "tsx bin/validate.ts"
+    "engine:validate": "tsx bin/validate.ts",
+    "engine:score": "tsx bin/score.ts"
   },
   "dependencies": {
     "@icons-pack/react-simple-icons": "^13.13.0",

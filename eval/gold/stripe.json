@@ -1,0 +1,61 @@
+{
+  "$schema": "../types.ts (GoldTokens)",
+  "brand": "stripe",
+  "url": "https://stripe.com/",
+  "verifiedAt": "2026-05-12",
+  "verifiedBy": "manual review against committed examples/stripe/DESIGN.md + stripe.com source inspection",
+  "sources": [
+    "stripe.com (CSS --linkColor, --textColor, --inputBackground)",
+    "stripe.com/about (brand identity)",
+    "examples/stripe/DESIGN.md (agent-written gold file, upstream commit)"
+  ],
+
+  "colors": {
+    "primary": { "hex": "#533afd", "name": "Stripe Purple" },
+    "accent": { "hex": "#ff6118", "name": "Accent Orange" },
+    "semantic": {
+      "success": "#3ecf8e",
+      "error": "#df1b41"
+    },
+    "neutrals": [
+      { "name": "Canvas",      "hex": "#ffffff" },
+      { "name": "Canvas Alt",  "hex": "#e5edf5" },
+      { "name": "Ink",         "hex": "#0a2540" },
+      { "name": "Deep Navy",   "hex": "#061b31" },
+      { "name": "Slate Text",  "hex": "#425466" },
+      { "name": "Hairline",    "hex": "#d6d9fc" }
+    ],
+    "paletteHexes": [
+      "#533afd",
+      "#ff6118",
+      "#3ecf8e",
+      "#df1b41",
+      "#ffffff",
+      "#e5edf5",
+      "#0a2540",
+      "#061b31",
+      "#425466",
+      "#d6d9fc",
+      "#635bff",
+      "#273951"
+    ]
+  },
+
+  "typography": {
+    "display": { "family": "sohne-var", "fallbacks": ["sans-serif"] },
+    "body":    { "family": "sohne-var", "fallbacks": ["sans-serif"] }
+  },
+
+  "spacing": {
+    "baseUnit": 4,
+    "scale": [4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96]
+  },
+
+  "radius": {
+    "scale": [2, 4, 8, 16]
+  },
+
+  "darkMode": {
+    "supported": true
+  }
+}
