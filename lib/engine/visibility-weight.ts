@@ -20,12 +20,12 @@
 //   foldBoost        = 2.0 if rect.y < viewport.height (above fold), else 1.0
 //
 // Pipeline: extract.ts produces tokens.json + returns pageExtractions; the
-// API route writes pageExtractions.elements to elements.json (sidecar);
-// applyVisibilityWeighting reads both, aggregates weights per token cluster
-// via the same OKLCH ΔE distance cluster.ts uses, adds a `visibilityScore`
-// field to each ColorToken, and re-sorts colorTokens by score descending.
-// Tokens with zero weighted observations fall to the bottom (likely
-// hidden / phantom / footer-only).
+// API route hands the per-page element arrays directly to
+// applyVisibilityWeighting (in-memory — no disk sidecar), which aggregates
+// weights per token cluster via the same OKLCH ΔE distance cluster.ts uses,
+// adds a `visibilityScore` field to each ColorToken, and re-sorts
+// colorTokens by score descending. Tokens with zero weighted observations
+// fall to the bottom (likely hidden / phantom / footer-only).
 //
 // Engine modules untouched. See MIRROR.md Part 2.13 for the small
 // extract.ts signature change that makes this possible.
@@ -215,30 +215,41 @@ export interface ApplyVisibilityResult {
 }
 
 /**
- * Read tokens.json + elements.json from disk, compute per-token visibility
- * scores, mutate the tokens to add `visibilityScore` fields, re-sort
- * `colorTokens` by score descending (tie-break on frequency), and write
- * the updated tokens.json back to disk.
+ * The per-page element arrays handed to `applyVisibilityWeighting`. Matches
+ * the shape extract.ts hands back on `pageExtractions[i].dom.elements`, but
+ * slimmed: only `url` + `elements` are needed for weight attribution.
+ */
+export interface PageElements {
+  url: string;
+  elements: ElementStyle[];
+}
+
+/**
+ * Compute per-token visibility scores from in-memory page element arrays,
+ * mutate the on-disk tokens.json to add a `visibilityScore` field to each
+ * ColorToken, re-sort `colorTokens` by score descending (tie-break on
+ * frequency), and write the updated tokens.json back to disk.
  *
  * Returns a result summary the API route surfaces in the SSE stage event.
  *
- * Safe to call when elements.json is missing — returns a no-op result and
- * leaves tokens.json untouched.
+ * Safe to call with an empty `pages` array or a missing tokens.json —
+ * returns a no-op result and leaves disk state untouched.
+ *
+ * **No sidecar file on disk.** Earlier versions persisted `elements.json`
+ * alongside tokens.json so this function could read it back; that was a
+ * 5–20 MB disk round-trip for data we already had in memory. The caller
+ * (route.ts) now passes the array directly.
  */
 export function applyVisibilityWeighting(
   tokensPath: string,
-  elementsPath: string,
+  pages: PageElements[],
   viewport: Viewport = DEFAULT_VIEWPORT,
 ): ApplyVisibilityResult {
-  if (!fs.existsSync(tokensPath) || !fs.existsSync(elementsPath)) {
+  if (!fs.existsSync(tokensPath) || !Array.isArray(pages) || pages.length === 0) {
     return { weightedCount: 0, primaryChanged: false, previousTopHex: null, newTopHex: null, totalTokens: 0 };
   }
 
   const tokens = JSON.parse(fs.readFileSync(tokensPath, 'utf-8'));
-  const pages = JSON.parse(fs.readFileSync(elementsPath, 'utf-8')) as Array<{
-    url: string;
-    elements: ElementStyle[];
-  }>;
 
   const colorTokens: ColorToken[] = Array.isArray(tokens.colorTokens) ? tokens.colorTokens : [];
   if (colorTokens.length === 0) {

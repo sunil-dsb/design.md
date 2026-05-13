@@ -394,6 +394,7 @@ export function ExtractClient() {
         onSubmit={handleSubmit}
         role="search"
         aria-label="Extract DESIGN.md from a URL"
+        aria-busy={loading}
         className="mt-10 flex w-full items-center gap-2 border border-white/20 px-2 py-2"
       >
         <label htmlFor="extract-url" className="sr-only">
@@ -408,18 +409,22 @@ export function ExtractClient() {
           disabled={loading}
           autoComplete="url"
           inputMode="url"
-          className="min-w-0 flex-1 appearance-none bg-transparent px-3 py-2 text-sm text-white caret-white placeholder-white/30 outline-none disabled:opacity-50"
+          className="min-w-0 flex-1 appearance-none bg-transparent px-3 py-2 text-sm text-white caret-white placeholder-white/50 outline-none disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={loading || !url.trim()}
-          aria-label="Extract"
+          aria-label={
+            loading
+              ? "Extracting DESIGN.md"
+              : "Extract DESIGN.md from this URL"
+          }
           className="clip-btn shrink-0 disabled:opacity-40"
         >
           <span aria-hidden="true" className="clip-btn__shadow">
             {loading ? "EXTRACTING" : "EXTRACT"}
           </span>
-          <span className="clip-btn__face">
+          <span aria-hidden="true" className="clip-btn__face">
             {loading ? "EXTRACTING" : "EXTRACT"}
           </span>
         </button>
@@ -473,11 +478,17 @@ function LoadingState({
   const headerLabel = runningKey ? stages[runningKey].label : "starting up";
 
   return (
-    <Panel label="status" tone="info" className="mt-10">
+    <Panel
+      label="status"
+      tone="info"
+      className="mt-10"
+      role="status"
+      ariaLive="polite"
+    >
       <p className="font-pixel text-sm uppercase tracking-widest text-white">
         {headerLabel}
       </p>
-      <p className="mt-3 text-sm text-white/60">
+      <p className="mt-3 text-sm text-white/70">
         Crawling up to 8 pages, capturing styles, clustering tokens, applying
         visibility-and-importance weighting, running the pixel-fidelity proof,
         and assembling the report. Usually 90–240 seconds.
@@ -547,16 +558,18 @@ function StageRow({
       ? "text-white"
       : state.status === "error"
       ? "text-red-300"
-      : "text-white/40";
+      : "text-white/60";
 
   return (
     <li
-      role="status"
-      aria-label={`${state.label}: ${state.status}`}
+      aria-label={`Stage ${index} ${state.label}: ${state.status}`}
       className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-3"
     >
       <div className="flex items-center gap-3">
-        <span className="font-pixel text-[10px] uppercase tracking-widest text-white/35">
+        <span
+          aria-hidden="true"
+          className="font-pixel text-[10px] uppercase tracking-widest text-white/55"
+        >
           {String(index).padStart(2, "0")}
         </span>
         {indicator}
@@ -567,13 +580,16 @@ function StageRow({
           {state.label}
         </p>
         {state.status === "error" && state.message && (
-          <p className="mt-1 truncate font-mono text-[11px] text-red-300/80">
+          <p className="mt-1 truncate font-mono text-[11px] text-red-300">
             {state.message}
           </p>
         )}
       </div>
 
-      <span className="font-mono text-[11px] text-white/40">
+      <span
+        aria-hidden="true"
+        className="font-mono text-[11px] text-white/60"
+      >
         {state.durationMs !== undefined
           ? `${(state.durationMs / 1000).toFixed(1)}s`
           : state.status === "running"
@@ -586,11 +602,17 @@ function StageRow({
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <Panel label="error" tone="error" className="mt-10">
+    <Panel
+      label="error"
+      tone="error"
+      className="mt-10"
+      role="alert"
+      ariaLive="assertive"
+    >
       <p className="font-pixel text-sm uppercase tracking-widest text-white">
         extraction failed
       </p>
-      <p className="mt-3 text-sm wrap-break-word text-white/70">{message}</p>
+      <p className="mt-3 text-sm wrap-break-word text-white/80">{message}</p>
     </Panel>
   );
 }
@@ -655,10 +677,12 @@ function ResultState({ result }: { result: ExtractResponse }) {
       )}
 
       {longTailColors.length > 0 && (
-        <SectionHeader
+        <CollapsibleSection
           index={2}
           label="long-tail colors"
           count={longTailColors.length}
+          subtitle="Unlabelled colors below the role-naming threshold. Review for clustering accuracy."
+          defaultOpen={false}
         >
           <ul
             role="list"
@@ -680,7 +704,7 @@ function ResultState({ result }: { result: ExtractResponse }) {
               </li>
             ))}
           </ul>
-        </SectionHeader>
+        </CollapsibleSection>
       )}
 
       {typography.length > 0 && (
@@ -694,26 +718,7 @@ function ResultState({ result }: { result: ExtractResponse }) {
             className="divide-y divide-white/10 border border-white/15"
           >
             {typography.slice(0, 16).map((t, i) => (
-              <li
-                key={`${t.fontFamily}-${i}`}
-                className="grid grid-cols-[1fr_auto] items-center gap-4 px-5 py-4"
-              >
-                <div className="min-w-0">
-                  <p className="font-pixel text-xs uppercase tracking-widest text-white">
-                    {t.roleLabel ?? "—"}
-                  </p>
-                  <p className="mt-1 truncate font-mono text-xs text-white/55">
-                    {t.fontFamily}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 font-mono text-xs text-white/60">
-                  <span className="text-white/80">{t.fontSize}</span>
-                  <span className="text-white/30">·</span>
-                  <span>{t.fontWeight}</span>
-                  <span className="text-white/30">·</span>
-                  <span className="text-primary">{t.frequency}×</span>
-                </div>
-              </li>
+              <TypographyRow key={`${t.fontFamily}-${i}`} index={i + 1} t={t} />
             ))}
           </ul>
         </SectionHeader>
@@ -773,11 +778,50 @@ function ResultState({ result }: { result: ExtractResponse }) {
         </pre>
       </details>
 
-      <p className="text-xs text-white/40">
+      <p className="text-xs text-white/60">
         files written to{" "}
-        <code className="font-mono text-white/70">{outputDir}/</code>
+        <code className="font-mono text-white/80">{outputDir}/</code>
       </p>
     </div>
+  );
+}
+
+// ─── Small copy-to-clipboard chip used inline next to tokens ──────────────
+// Single-button UX: shows "copy" by default, flips to "copied ✓" for 1.5s
+// after a successful write. Fails silently — the visible value is always
+// readable so the user can copy by hand if clipboard API isn't available.
+function CopyValue({
+  value,
+  label,
+}: {
+  value: string;
+  label?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // No-op — assistive UX fallback is the visible value itself.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label={`Copy ${label ?? value} to clipboard`}
+      className={`shrink-0 px-2 py-1 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
+        copied
+          ? "text-primary"
+          : "text-white/55 hover:text-white"
+      }`}
+    >
+      {copied ? "copied ✓" : "copy"}
+    </button>
   );
 }
 
@@ -796,26 +840,38 @@ function PanelHeader({
   subtitle?: string;
   rightSlot?: ReactNode;
 }) {
+  const headingId = `panel-${label.replace(/\s+/g, "-").replace(/[^a-z0-9-]/gi, "")}`;
   return (
     <header className="mb-4">
       <div className="flex items-center gap-3">
         <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
-        <span className="font-pixel text-xs uppercase tracking-widest text-white/55">
+        <h2
+          id={headingId}
+          className="font-pixel text-xs uppercase tracking-widest text-white"
+        >
           {label}
-        </span>
+          {count !== undefined && (
+            <span className="sr-only"> ({count} items)</span>
+          )}
+        </h2>
         {count !== undefined && (
-          <span className="font-pixel text-xs text-white/40">{count}</span>
+          <span
+            aria-hidden="true"
+            className="font-pixel text-xs text-white/60"
+          >
+            {count}
+          </span>
         )}
         {rightSlot}
       </div>
       {subtitle && (
-        <p className="mt-2 text-xs text-white/45">{subtitle}</p>
+        <p className="mt-2 text-xs text-white/60">{subtitle}</p>
       )}
     </header>
   );
 }
 
-// ─── Spacing scale — visual blocks proportional to each step ──────────────
+// ─── Spacing scale — actual gaps between two blocks, t-shirt-named ────────
 function SpacingSection({
   spacingSystem,
 }: {
@@ -824,38 +880,69 @@ function SpacingSection({
   if (!spacingSystem || !spacingSystem.scale || spacingSystem.scale.length === 0) {
     return null;
   }
-  const maxStep = Math.max(...spacingSystem.scale);
+  const base = spacingSystem.baseUnit;
+
+  // Map a px step to a t-shirt size relative to the base unit. Familiar
+  // vocabulary (xs/sm/md/lg/xl) communicates intent better than "2×".
+  function tShirt(step: number): string {
+    const ratio = step / base;
+    if (ratio <= 0.25) return "2xs";
+    if (ratio <= 0.5) return "xs";
+    if (ratio < 1) return "sm";
+    if (ratio === 1) return "base";
+    if (ratio <= 1.5) return "md";
+    if (ratio <= 2) return "lg";
+    if (ratio <= 4) return "xl";
+    return "2xl";
+  }
+
   return (
     <section>
       <PanelHeader
         label="spacing"
         count={spacingSystem.scale.length}
-        subtitle={`Base unit: ${spacingSystem.baseUnit}px${spacingSystem.maxContentWidth ? ` · Max content width: ${spacingSystem.maxContentWidth}` : ""}`}
+        subtitle={`Each row shows the actual gap you'd get between two elements. Base unit ${base}px.`}
       />
-      <ul role="list" className="divide-y divide-white/10 border border-white/15">
+      <ul
+        role="list"
+        className="grid grid-cols-1 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-2"
+      >
         {spacingSystem.scale.map((step) => (
           <li
             key={step}
-            className="grid grid-cols-[6rem_1fr] items-center gap-4 px-5 py-3"
+            className="flex items-center gap-5 bg-black px-5 py-5"
           >
-            <span className="font-mono text-xs text-white/80">{step}px</span>
-            <div className="flex items-center gap-3">
-              <div
-                aria-hidden="true"
-                className="h-2 bg-primary"
-                style={{ width: `${Math.max(8, (step / maxStep) * 100)}%` }}
+            <div
+              aria-hidden="true"
+              className="flex h-10 shrink-0 items-center"
+            >
+              <span className="size-6 bg-white/20" />
+              <span
+                className="h-px bg-primary"
+                style={{
+                  width: `${Math.min(step, 120)}px`,
+                }}
               />
-              <span className="font-pixel text-[10px] uppercase tracking-widest text-white/40">
-                {step === spacingSystem.baseUnit ? "base" : `${step / spacingSystem.baseUnit}×`}
-              </span>
+              <span className="size-6 bg-white/20" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-pixel text-lg tracking-tight text-white">
+                {step}
+                <span className="ml-1 font-pixel text-[10px] uppercase tracking-widest text-white/55">
+                  px
+                </span>
+              </p>
+              <p className="mt-1 font-pixel text-[10px] uppercase tracking-widest text-primary">
+                {tShirt(step)}
+              </p>
             </div>
           </li>
         ))}
       </ul>
       {spacingSystem.sectionSpacing && spacingSystem.sectionSpacing.length > 0 && (
-        <p className="mt-3 text-xs text-white/45">
-          Section-rhythm spacing:{" "}
-          <code className="font-mono text-white/70">
+        <p className="mt-4 text-xs text-white/60">
+          Section gaps:{" "}
+          <code className="font-mono text-white/80">
             {spacingSystem.sectionSpacing.map((n) => `${n}px`).join(" · ")}
           </code>
         </p>
@@ -871,12 +958,26 @@ function RadiusSection({
   radiusTokens?: ExtractResponse["tokens"]["radiusTokens"];
 }) {
   if (!radiusTokens || radiusTokens.length === 0) return null;
+
+  // Map a numeric radius (px) to a t-shirt label. Pills/full-rounds map to
+  // "pill" explicitly. Otherwise we bucket by px to match a familiar scale.
+  function radiusLabel(value: string): string {
+    const num = parseFloat(value);
+    if (value.includes("9999") || value.includes("50%") || num >= 500) return "pill";
+    if (num === 0) return "none";
+    if (num <= 4) return "sm";
+    if (num <= 8) return "md";
+    if (num <= 16) return "lg";
+    if (num <= 24) return "xl";
+    return "2xl";
+  }
+
   return (
     <section>
       <PanelHeader
         label="border radius"
         count={radiusTokens.length}
-        subtitle="Each swatch shows the actual rounding extracted from the site."
+        subtitle="Each swatch is the actual corner rounding used on the site."
       />
       <ul
         role="list"
@@ -885,23 +986,23 @@ function RadiusSection({
         {radiusTokens.slice(0, 12).map((r) => (
           <li
             key={r.value}
-            className="flex items-center gap-4 bg-black px-5 py-4"
+            className="flex flex-col items-center gap-4 bg-black px-5 py-6"
           >
             <div
               aria-hidden="true"
-              className="size-12 shrink-0 border border-white/20 bg-white/10"
+              className="size-16 shrink-0 border border-white/25 bg-white/8"
               style={{ borderRadius: r.value }}
             />
-            <div className="min-w-0">
-              <p className="font-mono text-xs text-white/85">{r.value}</p>
-              <p className="mt-1 font-pixel text-[10px] uppercase tracking-widest text-white/40">
+            <div className="text-center">
+              <p className="font-pixel text-base tracking-tight text-white">
+                {r.value}
+              </p>
+              <p className="mt-1 font-pixel text-[10px] uppercase tracking-widest text-primary">
+                {radiusLabel(r.value)}
+              </p>
+              <p className="mt-2 font-pixel text-[10px] uppercase tracking-widest text-white/55">
                 {r.frequency}× used
               </p>
-              {r.typicalElements && r.typicalElements.length > 0 && (
-                <p className="mt-1 truncate font-mono text-[10px] text-white/40">
-                  {r.typicalElements.slice(0, 3).join(", ")}
-                </p>
-              )}
             </div>
           </li>
         ))}
@@ -926,26 +1027,34 @@ function ShadowsSection({
       />
       <ul
         role="list"
-        className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-3"
       >
         {shadowTokens.slice(0, 9).map((s) => (
-          <li key={s.value} className="px-2 py-6">
-            <div
-              aria-hidden="true"
-              className="grid h-24 place-items-center rounded-sm bg-white"
-              style={{ boxShadow: s.value }}
-            >
-              <span className="font-pixel text-[10px] uppercase tracking-widest text-black/55">
-                {s.type ?? "shadow"}
-              </span>
+          <li key={s.value} className="flex flex-col gap-4 bg-black p-5">
+            <div className="grid place-items-center rounded-sm bg-white px-4 py-7">
+              <span
+                aria-hidden="true"
+                className="block h-14 w-full max-w-32 rounded-sm bg-white"
+                style={{ boxShadow: s.value }}
+              />
             </div>
-            <div className="mt-3 space-y-1">
-              <p className="font-pixel text-[10px] uppercase tracking-widest text-white/55">
-                {s.type ?? "shadow"} · {s.frequency}×
-              </p>
-              <p className="break-all font-mono text-[11px] text-white/70">
-                {s.value}
-              </p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 font-pixel text-[10px] uppercase tracking-widest text-white">
+                  <span>{s.type ?? "shadow"}</span>
+                  <span aria-hidden="true" className="text-white/35">
+                    ·
+                  </span>
+                  <span className="text-primary">{s.frequency}× used</span>
+                </p>
+                <code className="mt-2 block break-all font-mono text-[11px] text-white/70">
+                  {s.value}
+                </code>
+              </div>
+              <CopyValue
+                value={s.value}
+                label={`${s.type ?? "shadow"} CSS`}
+              />
             </div>
           </li>
         ))}
@@ -975,7 +1084,7 @@ function MotionSection({
       />
       <div className="grid grid-cols-1 gap-px overflow-hidden border border-white/10 bg-white/10 lg:grid-cols-2">
         <div className="bg-black p-5">
-          <p className="mb-3 font-pixel text-[10px] uppercase tracking-widest text-white/40">
+          <p className="mb-3 font-pixel text-[10px] uppercase tracking-widest text-white/70">
             duration scale
           </p>
           {durations.length === 0 ? (
@@ -991,7 +1100,7 @@ function MotionSection({
                     {d.label}
                   </span>
                   <span className="font-mono text-white/85">{d.value}</span>
-                  <span className="font-mono text-[10px] text-white/40">
+                  <span className="font-mono text-[10px] text-white/60">
                     {d.frequency}×
                   </span>
                 </li>
@@ -1000,7 +1109,7 @@ function MotionSection({
           )}
         </div>
         <div className="bg-black p-5">
-          <p className="mb-3 font-pixel text-[10px] uppercase tracking-widest text-white/40">
+          <p className="mb-3 font-pixel text-[10px] uppercase tracking-widest text-white/70">
             easing
           </p>
           {motionSystem.primaryTimingFunction && (
@@ -1049,19 +1158,45 @@ function LiveComponentsSection({
       <PanelHeader
         label="components (live)"
         count={components.reduce((n, g) => n + g.variants.length, 0)}
-        subtitle="Real rendered components using the extracted styles. Hover to see captured hover-state changes."
+        subtitle="Real components rendered with the captured CSS. Hover to see hover-state changes. Layout-heavy components (cards, footer, hero, nav) may render incomplete — the engine only captures visual props, not internal structure."
       />
-      <div className="space-y-8">
+      <div className="space-y-6">
         {components.map((g) => (
-          <div key={g.type}>
-            <h3 className="mb-3 font-pixel text-xs uppercase tracking-widest text-white/70">
-              {g.type}
-            </h3>
-            <div className="flex flex-wrap items-center gap-4 border border-white/10 bg-white/3 p-6">
+          <div
+            key={g.type}
+            className="overflow-hidden border border-white/10"
+          >
+            <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/3 px-4 py-2.5">
+              <h3 className="font-pixel text-xs uppercase tracking-widest text-white">
+                {g.type}
+              </h3>
+              <span
+                aria-hidden="true"
+                className="font-pixel text-[10px] uppercase tracking-widest text-white/60"
+              >
+                {g.variants.length}{" "}
+                {g.variants.length === 1 ? "variant" : "variants"}
+              </span>
+            </header>
+            <ul
+              role="list"
+              className="flex flex-wrap items-center gap-x-6 gap-y-4 bg-white/2 p-6"
+            >
               {g.variants.slice(0, 6).map((v) => (
-                <LiveVariant key={v.name} type={g.type} variant={v} />
+                <li
+                  key={v.name}
+                  className="flex flex-col items-start gap-1.5"
+                >
+                  <LiveVariant type={g.type} variant={v} />
+                  <span className="font-pixel text-[9px] uppercase tracking-widest text-white/55">
+                    {v.name}
+                    {v.count > 1 && (
+                      <span className="ml-1.5 text-primary">{v.count}×</span>
+                    )}
+                  </span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         ))}
       </div>
@@ -1179,112 +1314,209 @@ function AccessibilitySection({
 }) {
   if (!a11yTokens) return null;
   const pairs = a11yTokens.contrastPairs ?? [];
+  // Group failing pairs first so they're impossible to miss.
+  const failing = pairs.filter((p) => !p.meetsAA);
+  const passing = pairs.filter((p) => p.meetsAA);
+  const orderedPairs = [...failing, ...passing].slice(0, 9);
+
   return (
     <section>
       <PanelHeader
         label="accessibility"
         count={pairs.length}
-        subtitle="WCAG 2.2 AA targets: 4.5:1 normal text, 3:1 large text. Failing pairs are flagged."
+        subtitle="WCAG 2.2 AA: text must hit 4.5:1 contrast against its background (3:1 for large text). Anything failing is flagged below in red."
       />
+
+      {failing.length > 0 && (
+        <p
+          role="alert"
+          className="mb-4 border border-red-500/25 bg-red-500/5 px-4 py-3 text-sm text-red-300/90"
+        >
+          <span className="font-pixel text-[10px] uppercase tracking-widest text-red-300">
+            {failing.length} {failing.length === 1 ? "pair" : "pairs"} fail AA ·
+          </span>{" "}
+          Low contrast makes text hard to read for users with low vision or in
+          bright sunlight. Pick darker text or a lighter background.
+        </p>
+      )}
+
       {pairs.length === 0 ? (
-        <p className="text-xs text-white/50">No contrast pairs extracted.</p>
+        <p className="text-xs text-white/60">No contrast pairs extracted.</p>
       ) : (
         <ul
           role="list"
           className="grid grid-cols-1 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {pairs.slice(0, 9).map((p, i) => (
-            <li key={`${p.foreground}-${p.background}-${i}`} className="bg-black p-4">
+          {orderedPairs.map((p, i) => (
+            <li
+              key={`${p.foreground}-${p.background}-${i}`}
+              className="flex flex-col gap-3 bg-black p-4"
+            >
               <div
                 aria-hidden="true"
-                className="grid h-16 place-items-center border border-white/10 text-sm font-medium"
+                className="grid h-20 place-items-center border border-white/10 px-3 text-sm font-medium"
                 style={{ background: p.background, color: p.foreground }}
               >
-                Sample text
+                The quick brown fox
               </div>
-              <div className="mt-3 flex items-center justify-between text-xs">
-                <span className="font-mono text-white/70">
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className={`font-pixel text-xs uppercase tracking-widest ${
+                    p.meetsAA ? "text-emerald-300" : "text-red-300"
+                  }`}
+                >
+                  {p.meetsAA ? "pass" : "fail"}
+                </span>
+                <span className="font-mono text-sm text-white">
                   {p.ratio.toFixed(2)}:1
                 </span>
-                <div className="flex gap-1.5">
-                  <span
-                    className={`border px-1.5 py-0.5 font-pixel text-[9px] uppercase tracking-widest ${
-                      p.meetsAA
-                        ? "border-emerald-500/30 text-emerald-300/80"
-                        : "border-red-500/30 text-red-300/80"
-                    }`}
-                  >
-                    AA {p.meetsAA ? "✓" : "✗"}
-                  </span>
-                  <span
-                    className={`border px-1.5 py-0.5 font-pixel text-[9px] uppercase tracking-widest ${
-                      p.meetsAAA
-                        ? "border-emerald-500/30 text-emerald-300/80"
-                        : "border-white/15 text-white/40"
-                    }`}
-                  >
-                    AAA {p.meetsAAA ? "✓" : "—"}
-                  </span>
-                </div>
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 font-mono text-[10px] text-white/50">
-                <span>fg {p.foreground}</span>
-                <span>bg {p.background}</span>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`border px-1.5 py-0.5 font-pixel text-[9px] uppercase tracking-widest ${
+                    p.meetsAA
+                      ? "border-emerald-500/40 text-emerald-300"
+                      : "border-red-500/40 text-red-300"
+                  }`}
+                >
+                  AA {p.meetsAA ? "✓" : "✗"}
+                </span>
+                <span
+                  className={`border px-1.5 py-0.5 font-pixel text-[9px] uppercase tracking-widest ${
+                    p.meetsAAA
+                      ? "border-emerald-500/40 text-emerald-300"
+                      : "border-white/15 text-white/55"
+                  }`}
+                >
+                  AAA {p.meetsAAA ? "✓" : "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2 font-mono text-[10px] text-white/60">
+                <span className="truncate">text {p.foreground}</span>
+                <span className="truncate">bg {p.background}</span>
               </div>
             </li>
           ))}
         </ul>
       )}
-      <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
-        <A11yFact
-          label="touch target"
-          value={
-            a11yTokens.minTouchTarget
-              ? `${a11yTokens.minTouchTarget.width}×${a11yTokens.minTouchTarget.height}px`
-              : "—"
-          }
-        />
-        <A11yFact
-          label="alt-text"
-          value={
-            a11yTokens.altTextCoverage
-              ? `${a11yTokens.altTextCoverage.percentage.toFixed(0)}%`
-              : "—"
-          }
-        />
-        <A11yFact
-          label="reduced motion"
-          value={
-            a11yTokens.reducedMotionSupport === undefined
-              ? "—"
-              : a11yTokens.reducedMotionSupport
-              ? "supported"
-              : "no"
-          }
-        />
-        <A11yFact
-          label="skip link"
-          value={
-            a11yTokens.skipLinkDetected === undefined
-              ? "—"
-              : a11yTokens.skipLinkDetected
-              ? "yes"
-              : "no"
-          }
-        />
+
+      <div className="mt-6">
+        <p className="mb-3 font-pixel text-[10px] uppercase tracking-widest text-white">
+          site-wide checks
+        </p>
+        <ul
+          role="list"
+          className="grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4"
+        >
+          <A11yFact
+            label="touch target"
+            hint="Tap-area for buttons (WCAG 2.5.5 wants ≥ 24×24px)."
+            value={
+              a11yTokens.minTouchTarget
+                ? `${a11yTokens.minTouchTarget.width}×${a11yTokens.minTouchTarget.height}px`
+                : "—"
+            }
+            tone={
+              a11yTokens.minTouchTarget &&
+              a11yTokens.minTouchTarget.width >= 24 &&
+              a11yTokens.minTouchTarget.height >= 24
+                ? "good"
+                : a11yTokens.minTouchTarget
+                ? "bad"
+                : "neutral"
+            }
+          />
+          <A11yFact
+            label="alt-text"
+            hint="% of images that have a usable alt attribute."
+            value={
+              a11yTokens.altTextCoverage
+                ? `${a11yTokens.altTextCoverage.percentage.toFixed(0)}%`
+                : "—"
+            }
+            tone={
+              a11yTokens.altTextCoverage
+                ? a11yTokens.altTextCoverage.percentage >= 90
+                  ? "good"
+                  : a11yTokens.altTextCoverage.percentage >= 60
+                  ? "warn"
+                  : "bad"
+                : "neutral"
+            }
+          />
+          <A11yFact
+            label="reduced motion"
+            hint="Does the site respect prefers-reduced-motion?"
+            value={
+              a11yTokens.reducedMotionSupport === undefined
+                ? "—"
+                : a11yTokens.reducedMotionSupport
+                ? "yes"
+                : "no"
+            }
+            tone={
+              a11yTokens.reducedMotionSupport === undefined
+                ? "neutral"
+                : a11yTokens.reducedMotionSupport
+                ? "good"
+                : "warn"
+            }
+          />
+          <A11yFact
+            label="skip link"
+            hint="Hidden 'skip to content' link for keyboard users."
+            value={
+              a11yTokens.skipLinkDetected === undefined
+                ? "—"
+                : a11yTokens.skipLinkDetected
+                ? "yes"
+                : "no"
+            }
+            tone={
+              a11yTokens.skipLinkDetected === undefined
+                ? "neutral"
+                : a11yTokens.skipLinkDetected
+                ? "good"
+                : "warn"
+            }
+          />
+        </ul>
       </div>
     </section>
   );
 }
 
-function A11yFact({ label, value }: { label: string; value: string }) {
+function A11yFact({
+  label,
+  value,
+  hint,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "good" | "bad" | "warn" | "neutral";
+}) {
+  const valueClass =
+    tone === "good"
+      ? "text-emerald-300"
+      : tone === "bad"
+      ? "text-red-300"
+      : tone === "warn"
+      ? "text-amber-300"
+      : "text-white";
   return (
-    <div className="bg-black px-4 py-3">
-      <p className="font-pixel text-[10px] uppercase tracking-widest text-white/40">
+    <li className="bg-black px-4 py-4">
+      <p className="font-pixel text-[10px] uppercase tracking-widest text-white">
         {label}
       </p>
-      <p className="mt-1 font-mono text-xs text-white/80">{value}</p>
-    </div>
+      <p className={`mt-2 font-mono text-sm ${valueClass}`}>{value}</p>
+      {hint && (
+        <p className="mt-1.5 text-[10px] leading-relaxed text-white/55">
+          {hint}
+        </p>
+      )}
+    </li>
   );
 }
 
@@ -1296,29 +1528,29 @@ function ResponsiveSection({
 }) {
   if (!breakpoints || breakpoints.length === 0) return null;
   return (
-    <section>
-      <PanelHeader
-        label="responsive"
-        count={breakpoints.length}
-        subtitle="Each row is a media-query breakpoint with the number of CSS rules that scope under it."
-      />
+    <CollapsibleSection
+      label="responsive"
+      count={breakpoints.length}
+      subtitle="Each row is a media-query breakpoint with the number of CSS rules that scope under it."
+      defaultOpen={false}
+    >
       <ul role="list" className="divide-y divide-white/10 border border-white/15">
         {breakpoints.slice(0, 12).map((bp, i) => (
           <li
             key={`${bp.type}-${bp.value}-${i}`}
             className="grid grid-cols-[6rem_1fr_auto] items-center gap-4 px-5 py-3"
           >
-            <span className="font-pixel text-[10px] uppercase tracking-widest text-white/60">
+            <span className="font-pixel text-[10px] uppercase tracking-widest text-white/70">
               {bp.type}
             </span>
             <span className="font-mono text-xs text-white/85">{bp.value}</span>
-            <span className="font-mono text-[10px] text-white/40">
+            <span className="font-mono text-[10px] text-white/60">
               {bp.ruleCount} rules
             </span>
           </li>
         ))}
       </ul>
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -1330,11 +1562,11 @@ function IconographySection({
 }) {
   if (!iconSystem) return null;
   return (
-    <section>
-      <PanelHeader
-        label="iconography"
-        subtitle={`${iconSystem.library ?? "custom / unknown"} · ${iconSystem.totalCount ?? 0} icons observed`}
-      />
+    <CollapsibleSection
+      label="iconography"
+      subtitle={`${iconSystem.library ?? "custom / unknown"} · ${iconSystem.totalCount ?? 0} icons observed`}
+      defaultOpen={false}
+    >
       <div className="grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
         <A11yFact label="library" value={iconSystem.library ?? "custom"} />
         <A11yFact
@@ -1356,14 +1588,14 @@ function IconographySection({
         />
       </div>
       {iconSystem.sizeScale && iconSystem.sizeScale.length > 0 && (
-        <p className="mt-3 text-xs text-white/45">
+        <p className="mt-3 text-xs text-white/60">
           Sizes:{" "}
-          <code className="font-mono text-white/70">
+          <code className="font-mono text-white/80">
             {iconSystem.sizeScale.map((n) => `${n}px`).join(" · ")}
           </code>
         </p>
       )}
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -1379,7 +1611,7 @@ function ProofPreviewSection({ proofHtmlUrl }: { proofHtmlUrl: string }) {
             href={proofHtmlUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-pixel text-[10px] uppercase tracking-widest text-white/40 underline-offset-2 hover:text-primary hover:underline"
+            className="font-pixel text-[10px] uppercase tracking-widest text-white/70 underline-offset-2 hover:text-primary hover:underline"
           >
             open in new tab ↗
           </a>
@@ -1433,22 +1665,27 @@ function PromptPackSection({ promptPackUrl }: { promptPackUrl: string }) {
       : "COPY PROMPT";
 
   return (
-    <section>
+    <section aria-labelledby="panel-build-ui">
       <div className="mb-4 flex items-center gap-3">
         <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
-        <span className="font-pixel text-xs uppercase tracking-widest text-white/55">
-          generate design.md
-        </span>
+        <h2
+          id="panel-build-ui"
+          className="font-pixel text-xs uppercase tracking-widest text-white"
+        >
+          build ui with this design
+        </h2>
       </div>
       <div className="border border-white/15 p-6">
         <p className="font-pixel text-sm tracking-tight text-white">
-          Paste this prompt into any AI agent.
+          Paste this into any AI agent, then ask it to build.
         </p>
         <p className="mt-2 text-sm text-white/60">
-          A self-contained universal prompt embedding your tokens.json plus the
-          17-section v2 spec. Works with Claude Code, Claude.ai, ChatGPT,
-          Cursor, Windsurf, Codex CLI, Lovable, and Replit Agent the agent
-          writes a complete DESIGN.md grounded in the extracted tokens.
+          A short prompt with the extracted colors, typography, spacing,
+          radius, and shadows. Drop it into Claude Code, Cursor, v0, Lovable,
+          Replit Agent, Windsurf, ChatGPT, Codex, or Copilot and append a
+          one-liner like &ldquo;build a pricing page with this design&rdquo;
+          your agent ships UI grounded in the extracted brand, not generic
+          AI defaults.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
           <button
@@ -1511,13 +1748,22 @@ function Downloads({
   }
 
   return (
-    <section>
+    <section aria-labelledby="panel-downloads">
       <div className="mb-4 flex items-center gap-3">
         <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
-        <span className="font-pixel text-xs uppercase tracking-widest text-white/55">
+        <h2
+          id="panel-downloads"
+          className="font-pixel text-xs uppercase tracking-widest text-white"
+        >
           downloads
+          <span className="sr-only"> ({items.length} files)</span>
+        </h2>
+        <span
+          aria-hidden="true"
+          className="font-pixel text-xs text-white/60"
+        >
+          {items.length}
         </span>
-        <span className="font-pixel text-xs text-white/40">{items.length}</span>
       </div>
       {/* Render each artifact as the project's canonical BubbleButton CTA —
           same style as the navbar / hero / gallery buttons — so the
@@ -1539,9 +1785,9 @@ function Downloads({
           </li>
         ))}
       </ul>
-      <p className="mt-4 text-xs text-white/40">
+      <p className="mt-4 text-xs text-white/60">
         on disk at{" "}
-        <code className="font-mono text-white/70">{outputDir}/</code>
+        <code className="font-mono text-white/80">{outputDir}/</code>
       </p>
     </section>
   );
@@ -1561,12 +1807,21 @@ function DiagnosticsPanel({ diagnostics }: { diagnostics: Diagnostic[] }) {
 
   // Quiet panel chrome — the row contents do the differentiation.
   return (
-    <section className="overflow-hidden border border-white/15">
+    <section
+      aria-labelledby="panel-diagnostics"
+      className="overflow-hidden border border-white/15"
+    >
       <header className="flex items-center justify-between border-b border-white/10 bg-white/3 px-4 py-2.5">
-        <span className="font-pixel text-xs uppercase tracking-widest text-white/70">
+        <h2
+          id="panel-diagnostics"
+          className="font-pixel text-xs uppercase tracking-widest text-white"
+        >
           things to verify
-        </span>
-        <span className="font-pixel text-[10px] uppercase tracking-widest text-white/40">
+        </h2>
+        <span
+          aria-hidden="true"
+          className="font-pixel text-[10px] uppercase tracking-widest text-white/60"
+        >
           {errors.length > 0 && <>{errors.length} {errors.length === 1 ? "error" : "errors"} · </>}
           {warnings.length > 0 && <>{warnings.length} {warnings.length === 1 ? "warning" : "warnings"} · </>}
           {infos.length > 0 && <>{infos.length} info</>}
@@ -1628,7 +1883,7 @@ function DiagnosticRow({ diagnostic }: { diagnostic: Diagnostic }) {
             </p>
           )}
           {diagnostic.details && diagnostic.details.length > 0 && (
-            <ul role="list" className="space-y-0.5 font-mono text-[11px] text-white/40">
+            <ul role="list" className="space-y-0.5 font-mono text-[11px] text-white/60">
               {diagnostic.details.map((d, i) => (
                 <li key={i}>· {d}</li>
               ))}
@@ -1659,7 +1914,10 @@ function Stats({
             aria-hidden="true"
             className="absolute top-0 left-0 h-px w-10 bg-primary transition-all group-hover:w-full"
           />
-          <p className="mb-2 font-pixel text-[10px] uppercase tracking-widest text-white/40">
+          <p
+            aria-hidden="true"
+            className="mb-2 font-pixel text-[10px] uppercase tracking-widest text-white/60"
+          >
             {String(i + 1).padStart(2, "0")}
           </p>
           <p className="font-pixel text-4xl leading-none tracking-tight text-white sm:text-5xl">
@@ -1674,6 +1932,144 @@ function Stats({
   );
 }
 
+// Collapsible variant of SectionHeader / PanelHeader. Same visual chrome —
+// numbered prefix, hairline rule, white H2 label, count — but wraps the
+// section in a native <details> so it folds down to just the header bar.
+// Used for non-headline sections (long-tail colors, responsive breakpoints,
+// iconography) that are review-aid material, not the primary result.
+function CollapsibleSection({
+  index,
+  label,
+  count,
+  subtitle,
+  defaultOpen = false,
+  children,
+}: {
+  index?: number;
+  label: string;
+  count?: number;
+  subtitle?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const headingId = `collapsible-${label.replace(/\s+/g, "-").replace(/[^a-z0-9-]/gi, "")}`;
+  return (
+    <section aria-labelledby={headingId}>
+      <details open={defaultOpen} className="group">
+        <summary className="-mx-2 cursor-pointer list-none px-2 py-1 transition-colors hover:bg-white/2">
+          <div className="flex items-center gap-3">
+            {index !== undefined && (
+              <span
+                aria-hidden="true"
+                className="font-pixel text-xs uppercase tracking-widest text-primary"
+              >
+                {String(index).padStart(2, "0")}
+              </span>
+            )}
+            <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
+            <h2
+              id={headingId}
+              className="font-pixel text-xs uppercase tracking-widest text-white"
+            >
+              {label}
+              {count !== undefined && (
+                <span className="sr-only"> ({count} items)</span>
+              )}
+            </h2>
+            {count !== undefined && (
+              <span
+                aria-hidden="true"
+                className="font-pixel text-xs text-white/60"
+              >
+                {count}
+              </span>
+            )}
+            <ArrowIcon
+              aria-hidden="true"
+              focusable="false"
+              className="size-3 shrink-0 rotate-90 text-white/55 transition-transform group-open:-rotate-90"
+            />
+          </div>
+          {subtitle && (
+            <p className="mt-2 text-xs text-white/60">{subtitle}</p>
+          )}
+        </summary>
+        <div className="mt-4">{children}</div>
+      </details>
+    </section>
+  );
+}
+
+// Renders one typography row with a live preview of the role name in the
+// extracted style — same font-family, size, weight as captured. Browsers
+// fall back gracefully when the font isn't installed locally; the metadata
+// row below still announces the exact tokens.
+function TypographyRow({
+  index,
+  t,
+}: {
+  index: number;
+  t: NonNullable<ExtractResponse["tokens"]["typographyLevels"]>[number];
+}) {
+  const previewLabel = t.roleLabel
+    ? t.roleLabel.charAt(0).toUpperCase() + t.roleLabel.slice(1)
+    : "Aa Bb Cc";
+  // Cap visual size so a 96px display headline doesn't make one row
+  // dominate the section. Token-truth stays in the metadata line.
+  const previewStyle = {
+    fontFamily: t.fontFamily,
+    fontSize: `min(${t.fontSize}, 3rem)`,
+    fontWeight: t.fontWeight,
+    lineHeight: 1.1,
+  } as const;
+  return (
+    <li className="flex items-center gap-5 px-5 py-5">
+      <span
+        aria-hidden="true"
+        className="w-6 shrink-0 font-pixel text-[10px] uppercase tracking-widest text-primary"
+      >
+        {String(index).padStart(2, "0")}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p
+          aria-hidden="true"
+          style={previewStyle}
+          className="truncate text-white"
+        >
+          {previewLabel}
+        </p>
+        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="font-pixel text-[10px] uppercase tracking-widest text-white">
+            {t.roleLabel ?? "—"}
+          </span>
+          <span aria-hidden="true" className="font-mono text-xs text-white/35">
+            ·
+          </span>
+          <span className="font-mono text-xs text-white/80">{t.fontSize}</span>
+          <span aria-hidden="true" className="font-mono text-xs text-white/35">
+            ·
+          </span>
+          <span className="font-mono text-xs text-white/80">
+            w{t.fontWeight}
+          </span>
+          <span aria-hidden="true" className="font-mono text-xs text-white/35">
+            ·
+          </span>
+          <span className="truncate font-mono text-xs text-white/60">
+            {t.fontFamily}
+          </span>
+        </p>
+      </div>
+      <span
+        aria-hidden="true"
+        className="shrink-0 font-pixel text-[10px] uppercase tracking-widest text-primary"
+      >
+        {t.frequency}×
+      </span>
+    </li>
+  );
+}
+
 function SectionHeader({
   index,
   label,
@@ -1685,17 +2081,30 @@ function SectionHeader({
   count: number;
   children: ReactNode;
 }) {
+  const headingId = `section-${label.replace(/\s+/g, "-")}`;
   return (
-    <section>
+    <section aria-labelledby={headingId}>
       <div className="mb-4 flex items-center gap-3">
-        <span className="font-pixel text-xs uppercase tracking-widest text-primary">
+        <span
+          aria-hidden="true"
+          className="font-pixel text-xs uppercase tracking-widest text-primary"
+        >
           {String(index).padStart(2, "0")}
         </span>
         <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
-        <span className="font-pixel text-xs uppercase tracking-widest text-white/55">
+        <h2
+          id={headingId}
+          className="font-pixel text-xs uppercase tracking-widest text-white"
+        >
           {label}
+          <span className="sr-only"> ({count} items)</span>
+        </h2>
+        <span
+          aria-hidden="true"
+          className="font-pixel text-xs text-white/60"
+        >
+          {count}
         </span>
-        <span className="font-pixel text-xs text-white/40">{count}</span>
       </div>
       {children}
     </section>
@@ -1723,12 +2132,6 @@ function ColorCell({
           aria-hidden="true"
           className="absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06),inset_0_-1px_24px_rgba(0,0,0,0.18)]"
         />
-        <span
-          aria-hidden="true"
-          className="absolute top-2 right-2 bg-black/55 px-1.5 py-0.5 font-mono text-[10px] tracking-tight text-white/90 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
-        >
-          {hex}
-        </span>
       </div>
 
       <div className="flex flex-col gap-2 border-t border-white/10 p-4">
@@ -1736,23 +2139,25 @@ function ColorCell({
           <p className="truncate font-pixel text-sm tracking-wide text-white">
             {label}
           </p>
-          <span
-            aria-hidden="true"
-            className="shrink-0 font-pixel text-[10px] uppercase tracking-widest text-primary"
-          >
-            {frequency}×
+          <span className="shrink-0 font-pixel text-[10px] uppercase tracking-widest text-primary">
+            <span aria-hidden="true">{frequency}×</span>
+            <span className="sr-only">used {frequency} times</span>
           </span>
         </div>
-        <div className="flex items-baseline justify-between gap-2">
-          <code className="truncate font-mono text-[11px] text-white/55">
+        <div className="flex items-center justify-between gap-2">
+          <code className="truncate font-mono text-[11px] text-white/70">
             {hex}
           </code>
           {layer && (
-            <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-white/30">
+            <span
+              aria-hidden="true"
+              className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-white/55"
+            >
               {layer}
             </span>
           )}
         </div>
+        <CopyValue value={hex} label={`color ${label} hex`} />
       </div>
     </div>
   );
@@ -1762,16 +2167,22 @@ function Panel({
   label,
   tone,
   className = "",
+  role,
+  ariaLive,
   children,
 }: {
   label: string;
   tone: "info" | "error";
   className?: string;
+  role?: "status" | "alert";
+  ariaLive?: "polite" | "assertive";
   children: ReactNode;
 }) {
   const accent = tone === "error" ? "text-red-400" : "text-primary";
   return (
     <section
+      role={role}
+      aria-live={ariaLive}
       className={`overflow-hidden border ${
         tone === "error" ? "border-red-500/30" : "border-white/15"
       } ${className}`}
@@ -1790,9 +2201,10 @@ function Panel({
             aria-hidden="true"
             className="size-3 rounded-full bg-[#28c840]"
           />
-          <span className="ml-3 font-mono text-xs text-white/70">extract.log</span>
+          <span className="ml-3 font-mono text-xs text-white/80">extract.log</span>
         </div>
         <span
+          aria-hidden="true"
           className={`font-pixel text-xs uppercase tracking-widest ${accent}`}
         >
           {label}

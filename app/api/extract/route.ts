@@ -9,6 +9,7 @@ import { generateAndWriteDesignMd } from "@/lib/engine/design-md-emit";
 import { assignColorRoles, assignTypeRoles } from "@/lib/engine/role-namer";
 import { computeDiagnostics, type ProofSummary } from "@/lib/engine/diagnostics";
 import { applyVisibilityWeighting, DEFAULT_VIEWPORT } from "@/lib/engine/visibility-weight";
+import { checkAndRecordRateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ColorToken, TypographyLevel } from "@/lib/engine/types";
 
 // Note on the Turbopack NFT trace warning at build time: these engine
@@ -114,6 +115,27 @@ export async function POST(req: Request) {
     return Response.json(
       { error: "Provide a valid `url` (e.g. `stripe.com` or `https://stripe.com`)." },
       { status: 400 },
+    );
+  }
+
+  // ── Rate limiting (after URL validation so malformed requests don't
+  // burn a slot). Per-IP daily cap, configurable via
+  // RATE_LIMIT_PER_IP_PER_DAY env var (default 5). Auto-bypassed when
+  // NODE_ENV !== 'production' so local dev doesn't trip itself, and when
+  // ?key=<value> matches RATE_LIMIT_BYPASS_KEY for demos. See
+  // lib/rate-limit.ts for the full contract.
+  const bypassKey = new URL(req.url).searchParams.get("key");
+  const clientIp = getClientIp(req);
+  const rl = checkAndRecordRateLimit(clientIp, bypassKey);
+  if (!rl.allowed) {
+    return Response.json(
+      {
+        error: `Daily limit reached — ${rl.used} of ${rl.limit} extractions used in the last 24 hours. Try again ${rl.resetIn}.`,
+      },
+      {
+        status: 429,
+        headers: { "retry-after": String(rl.retryAfterSeconds) },
+      },
     );
   }
 
@@ -240,27 +262,28 @@ export async function POST(req: Request) {
 
         // ── Phase 1.5: visibility-and-importance weighting ──────────
         //
-        // Persist the per-page element data to elements.json (sidecar),
-        // then apply visibility weighting to mutate tokens.json with
+        // Apply visibility weighting in-memory to mutate tokens.json with
         // visibilityScore + re-sort. dna.md §11.1's wedge — the single
         // largest accuracy multiplier. See lib/engine/visibility-weight.ts.
         //
-        // The sidecar is large (5-20 MB) and gitignored. Phase 3 readers
-        // (preview-gen / proof / report-gen / prompt-pack) and the
-        // diagnostics module all benefit from the re-sorted colorTokens
-        // because they iterate the array and the "most important" tokens
-        // are now genuinely at the front.
-        const elementsPath = path.join(outputDir, "elements.json");
+        // Phase 3 readers (preview-gen / proof / report-gen / prompt-pack /
+        // design-md-emit) and the diagnostics module all benefit from the
+        // re-sorted colorTokens because they iterate the array and the
+        // "most important" tokens are now genuinely at the front.
+        //
+        // No disk sidecar — earlier versions wrote pageExtractions to an
+        // `elements.json` file just so this function could read it back
+        // (5-20 MB round-trip for data already in memory). The function
+        // now takes the array directly.
         await runStage("weighting:start", "applying visibility weighting", () => {
-          // Trim to fields the weighting module actually consults — keeps
-          // the sidecar file small without losing the rect / tag / region /
-          // color attributes the weight formula needs.
+          // Trim to the fields the weighting module actually consults —
+          // each ElementStyle keeps rect / tag / region / color attributes
+          // the weight formula needs.
           const slim = pageExtractions.map((pe) => ({
             url: pe.url,
             elements: pe.dom.elements,
           }));
-          fs.writeFileSync(elementsPath, JSON.stringify(slim));
-          return applyVisibilityWeighting(tokensPath, elementsPath, DEFAULT_VIEWPORT);
+          return applyVisibilityWeighting(tokensPath, slim, DEFAULT_VIEWPORT);
         });
 
         // ── Strip redundant dark-mode screenshot buffers from tokens.json ─

@@ -345,7 +345,6 @@ describe('applyVisibilityWeighting', () => {
   it('re-sorts colorTokens by visibility score and adds visibilityScore field', () => {
     withTempDir((dir) => {
       const tokensPath = path.join(dir, 'tokens.json');
-      const elementsPath = path.join(dir, 'elements.json');
 
       // Two colors: greyText (high frequency, no boosts) vs heroPurple (low
       // raw freq but boosted by hero CTA visibility). Before weighting the
@@ -374,14 +373,11 @@ describe('applyVisibilityWeighting', () => {
         structuralRegion: 'footer',
         backgroundColor: '#666666',
       });
-      fs.writeFileSync(
-        elementsPath,
-        JSON.stringify([
-          { url: 'https://example.com/', elements: [heroCTA, ...Array(50).fill(tinyGreyHairline)] },
-        ]),
-      );
+      const pages = [
+        { url: 'https://example.com/', elements: [heroCTA, ...Array(50).fill(tinyGreyHairline)] },
+      ];
 
-      const result = applyVisibilityWeighting(tokensPath, elementsPath, VIEWPORT);
+      const result = applyVisibilityWeighting(tokensPath, pages, VIEWPORT);
 
       expect(result.weightedCount).toBeGreaterThan(0);
       expect(result.previousTopHex).toBe('#666666');
@@ -394,11 +390,20 @@ describe('applyVisibilityWeighting', () => {
     });
   });
 
-  it('returns a no-op result when elements.json is missing', () => {
+  it('returns a no-op result when the pages array is empty', () => {
     withTempDir((dir) => {
       const tokensPath = path.join(dir, 'tokens.json');
       fs.writeFileSync(tokensPath, JSON.stringify({ colorTokens: [makeColorToken()] }));
-      const result = applyVisibilityWeighting(tokensPath, path.join(dir, 'missing.json'), VIEWPORT);
+      const result = applyVisibilityWeighting(tokensPath, [], VIEWPORT);
+      expect(result.weightedCount).toBe(0);
+      expect(result.primaryChanged).toBe(false);
+    });
+  });
+
+  it('returns a no-op result when tokens.json is missing', () => {
+    withTempDir((dir) => {
+      const tokensPath = path.join(dir, 'nonexistent.json');
+      const result = applyVisibilityWeighting(tokensPath, [{ url: 'x', elements: [] }], VIEWPORT);
       expect(result.weightedCount).toBe(0);
       expect(result.primaryChanged).toBe(false);
     });
