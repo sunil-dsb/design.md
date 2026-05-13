@@ -9,6 +9,9 @@ import { generateAndWriteDesignMd } from "@/lib/engine/design-md-emit";
 import { assignColorRoles, assignTypeRoles } from "@/lib/engine/role-namer";
 import { computeDiagnostics, type ProofSummary } from "@/lib/engine/diagnostics";
 import { applyVisibilityWeighting, DEFAULT_VIEWPORT } from "@/lib/engine/visibility-weight";
+import { generateAndWriteRamps } from "@/lib/engine/ramp-regen";
+import { generateAndWriteTailwindCss } from "@/lib/engine/tailwind-emit";
+import { generateAndWriteShadcnCss } from "@/lib/engine/shadcn-emit";
 import { checkAndRecordRateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ColorToken, TypographyLevel } from "@/lib/engine/types";
 
@@ -63,6 +66,9 @@ export const maxDuration = 300;
 type StageKind =
   | "extract:start"   | "extract:done"
   | "weighting:start" | "weighting:done" | "weighting:error"
+  | "ramps:start"     | "ramps:done"     | "ramps:error"
+  | "tailwind:start"  | "tailwind:done"  | "tailwind:error"
+  | "shadcn:start"    | "shadcn:done"    | "shadcn:error"
   | "preview:start"   | "preview:done"   | "preview:error"
   | "proof:start"     | "proof:done"     | "proof:error"
   | "report:start"    | "report:done"    | "report:error"
@@ -233,7 +239,20 @@ export async function POST(req: Request) {
       };
 
       const warnings: string[] = [];
-      const phase3 = { preview: false, proof: false, report: false, prompts: false, designmd: false };
+      // shadcn has two output states — emitted CSS, or an explanatory
+      // omit-reason markdown when the gates fail. We track both so the
+      // SPA can surface the right artifact URL.
+      const phase3 = {
+        ramps: false,
+        tailwind: false,
+        shadcnCss: false,    // shadcn-theme.css written
+        shadcnOmit: false,   // shadcn-omit-reason.md written
+        preview: false,
+        proof: false,
+        report: false,
+        prompts: false,
+        designmd: false,
+      };
       const overallStart = Date.now();
 
       try {
@@ -320,87 +339,191 @@ export async function POST(req: Request) {
           );
         }
 
-        // ── Phase 3: preview / proof / report (best-effort) ───────────
+        // ── Ramp regeneration (the wedge differentiator) ──────────────
+        //
+        // Regenerate a clean 12-stop OKLCH brand ramp anchored on the
+        // role-named primary, plus a tinted-or-grey neutral ramp. This is
+        // the wedge from plan-v1.md §2: competitors emit raw observed
+        // colors; we emit a coherent designer-grade scale.
+        //
+        // Sits between visibility weighting (which fixes "which color is
+        // primary?") and Phase 3 (preview/proof/report/prompts/designmd).
+        // Future emitters (Tailwind v4 @theme, conditional shadcn theme,
+        // per-agent prompt packs) will consume `output/<slug>/regenerated-
+        // ramp.json` as their colour source. See lib/engine/ramp-regen.ts.
+        //
+        // Runs unconditionally (not gated on `withPhase3`) — the file is
+        // ~4 KB and the work is ~50 ms, so always emitting it keeps the
+        // downstream emitters callable even when callers ask to skip the
+        // visual artefacts.
+        const rampsPath = path.join(outputDir, "regenerated-ramp.json");
+        const rmp = await runStage(
+          "ramps:start",
+          "regenerating brand + neutral ramps",
+          () => {
+            generateAndWriteRamps(tokensPath, outputDir);
+            return fs.existsSync(rampsPath);
+          },
+        );
+        phase3.ramps = rmp.ok && rmp.value === true;
+        if (!rmp.ok) warnings.push(`ramp regen failed: ${rmp.error}`);
+
+        // ── Phase 3: preview / proof / report / prompts / designmd ───────
+        //
+        // Dependency graph (verified by reading each engine module):
+        //   chain:        preview → proof → report
+        //                  (proof.ts reads preview.html when present;
+        //                   report-gen.ts reads proof-data.json when present)
+        //   independent:  prompts, designmd
+        //                  (only consume tokens.json — no Phase-3 file deps)
+        //
+        // We run the chain and the two independent tasks concurrently with
+        // Promise.all. Wall-clock savings depend on the per-stage times:
+        // when proof is slow (30–60 s) the chain dominates and savings are
+        // small (~1–3 s); when proof is fast, prompts+designmd no longer
+        // serialize behind it. Either way it's strictly faster, and the
+        // dependency-preserving topology means zero correctness risk.
+        //
+        // SSE events still emit per stage via runStage; the UI sees three
+        // stages start at once and finish independently, which is honest.
         const previewPath = path.join(outputDir, "preview.html");
         const proofHtmlPath = path.join(outputDir, "proof.html");
         const reportHtmlPath = path.join(outputDir, "report.html");
+        const promptPackPath = path.join(outputDir, "prompts", "universal.md");
+        const designMdPath = path.join(outputDir, "DESIGN.md");
+        const tailwindCssPath = path.join(outputDir, "tailwind.css");
+        const shadcnCssPath = path.join(outputDir, "shadcn-theme.css");
+        const shadcnOmitPath = path.join(outputDir, "shadcn-omit-reason.md");
 
         if (withPhase3) {
-          const prev = await runStage(
-            "preview:start",
-            "generating preview",
-            () => {
-              generatePreview(tokensPath, outputDir);
-              return fs.existsSync(previewPath);
-            },
-          );
-          phase3.preview = prev.ok && prev.value === true;
-          if (!prev.ok) warnings.push(`preview-gen failed: ${prev.error}`);
+          // Chain: preview → proof → report. Each soft-depends on the prior
+          // stage's output file, so they cannot run in parallel with each
+          // other without changing observable behavior.
+          const chainTask = (async () => {
+            const prev = await runStage(
+              "preview:start",
+              "generating preview",
+              () => {
+                generatePreview(tokensPath, outputDir);
+                return fs.existsSync(previewPath);
+              },
+            );
+            phase3.preview = prev.ok && prev.value === true;
+            if (!prev.ok) warnings.push(`preview-gen failed: ${prev.error}`);
 
-          const prf = await runStage(
-            "proof:start",
-            "running pixel-fidelity proof",
-            async () => {
-              await runProof(
-                url,
-                tokensPath,
-                outputDir,
-                phase3.preview ? previewPath : undefined,
-              );
-              return fs.existsSync(proofHtmlPath);
-            },
-          );
-          phase3.proof = prf.ok && prf.value === true;
-          if (!prf.ok) {
-            // Common failure: target site blocks Playwright's second visit
-            // after the initial crawl. Tokens are still valid; surface as a
-            // warning, don't fail the request.
-            warnings.push(`proof failed (tokens still valid): ${prf.error}`);
-          }
+            const prf = await runStage(
+              "proof:start",
+              "running pixel-fidelity proof",
+              async () => {
+                await runProof(
+                  url,
+                  tokensPath,
+                  outputDir,
+                  phase3.preview ? previewPath : undefined,
+                );
+                return fs.existsSync(proofHtmlPath);
+              },
+            );
+            phase3.proof = prf.ok && prf.value === true;
+            if (!prf.ok) {
+              // Common failure: target site blocks Playwright's second visit
+              // after the initial crawl. Tokens are still valid; surface as a
+              // warning, don't fail the request.
+              warnings.push(`proof failed (tokens still valid): ${prf.error}`);
+            }
 
-          const rpt = await runStage(
-            "report:start",
-            "generating report",
-            () => {
-              generateReport(tokensPath, outputDir, undefined);
-              return fs.existsSync(reportHtmlPath);
-            },
-          );
-          phase3.report = rpt.ok && rpt.value === true;
-          if (!rpt.ok) warnings.push(`report-gen failed: ${rpt.error}`);
+            const rpt = await runStage(
+              "report:start",
+              "generating report",
+              () => {
+                generateReport(tokensPath, outputDir, undefined);
+                return fs.existsSync(reportHtmlPath);
+              },
+            );
+            phase3.report = rpt.ok && rpt.value === true;
+            if (!rpt.ok) warnings.push(`report-gen failed: ${rpt.error}`);
+          })();
 
-          // Prompt pack the SPA's Phase 2 bridge. Writes a self-contained
+          // Independent: prompts (Phase 2 bridge). Writes a self-contained
           // universal prompt to output/<slug>/prompts/universal.md that the
           // user pastes into any AI agent (Claude Code, Claude.ai, ChatGPT,
           // Cursor, Codex, Windsurf) to produce DESIGN.md from tokens.json.
           // See lib/engine/prompt-pack.ts and plan-v1.md §7 Weekend 6b.
-          const promptPackPath = path.join(outputDir, "prompts", "universal.md");
-          const pmp = await runStage(
-            "prompts:start",
-            "preparing prompt pack",
-            () => {
-              generatePromptPack(tokensPath, outputDir, url);
-              return fs.existsSync(promptPackPath);
-            },
-          );
-          phase3.prompts = pmp.ok && pmp.value === true;
-          if (!pmp.ok) warnings.push(`prompt-pack failed: ${pmp.error}`);
+          const promptsTask = (async () => {
+            const pmp = await runStage(
+              "prompts:start",
+              "preparing prompt pack",
+              () => {
+                generatePromptPack(tokensPath, outputDir, url);
+                return fs.existsSync(promptPackPath);
+              },
+            );
+            phase3.prompts = pmp.ok && pmp.value === true;
+            if (!pmp.ok) warnings.push(`prompt-pack failed: ${pmp.error}`);
+          })();
 
-          // Deterministic DESIGN.md emitter — Path A (templates ~11 of 17
-          // sections; the subjective 4 stub out with hand-offs to the
-          // universal prompt). Pure function over tokens.json — no LLM,
+          // Independent: deterministic DESIGN.md emitter — Path A (templates
+          // ~11 of 17 sections; the subjective 4 stub out with hand-offs to
+          // the universal prompt). Pure function over tokens.json — no LLM,
           // scoreboard-safe. See lib/engine/design-md-emit.ts.
-          const designMdPath = path.join(outputDir, "DESIGN.md");
-          const dmd = await runStage(
-            "designmd:start",
-            "writing deterministic DESIGN.md",
-            () => {
-              generateAndWriteDesignMd(outputDir, url);
-              return fs.existsSync(designMdPath);
-            },
-          );
-          phase3.designmd = dmd.ok && dmd.value === true;
-          if (!dmd.ok) warnings.push(`design-md-emit failed: ${dmd.error}`);
+          const designMdTask = (async () => {
+            const dmd = await runStage(
+              "designmd:start",
+              "writing deterministic DESIGN.md",
+              () => {
+                generateAndWriteDesignMd(outputDir, url);
+                return fs.existsSync(designMdPath);
+              },
+            );
+            phase3.designmd = dmd.ok && dmd.value === true;
+            if (!dmd.ok) warnings.push(`design-md-emit failed: ${dmd.error}`);
+          })();
+
+          // Independent: Tailwind v4 @theme emitter (Phase 4 Piece 2).
+          // Reads tokens.json + regenerated-ramp.json (already on disk from
+          // the ramps stage) and emits `tailwind.css` — a paste-ready
+          // @theme block users drop into their Tailwind v4 project.
+          // See lib/engine/tailwind-emit.ts.
+          const tailwindTask = (async () => {
+            const tw = await runStage(
+              "tailwind:start",
+              "emitting tailwind v4 @theme",
+              () => {
+                generateAndWriteTailwindCss(tokensPath, outputDir, url);
+                return fs.existsSync(tailwindCssPath);
+              },
+            );
+            phase3.tailwind = tw.ok && tw.value === true;
+            if (!tw.ok) warnings.push(`tailwind emit failed: ${tw.error}`);
+          })();
+
+          // Independent: conditional shadcn theme emitter (Phase 4 Piece 3).
+          // Writes EITHER `shadcn-theme.css` (gates pass) OR
+          // `shadcn-omit-reason.md` (gates fail — no chromatic primary, no
+          // neutral ramp, or source uses neither Tailwind nor shadcn). The
+          // return value tells us which file was written so the artifact
+          // URL points at the right one. See lib/engine/shadcn-emit.ts.
+          const shadcnTask = (async () => {
+            const sc = await runStage(
+              "shadcn:start",
+              "emitting shadcn 17-slot theme",
+              () => {
+                const out = generateAndWriteShadcnCss(tokensPath, outputDir, url);
+                // Surface which artifact landed on disk via the runStage
+                // return value — the boolean signals "stage completed", the
+                // path lookups below differentiate css vs reason.
+                return out.wrote;
+              },
+            );
+            if (sc.ok) {
+              phase3.shadcnCss = sc.value === 'css' && fs.existsSync(shadcnCssPath);
+              phase3.shadcnOmit = sc.value === 'reason' && fs.existsSync(shadcnOmitPath);
+            } else {
+              warnings.push(`shadcn emit failed: ${sc.error}`);
+            }
+          })();
+
+          await Promise.all([chainTask, promptsTask, designMdTask, tailwindTask, shadcnTask]);
         }
 
         // ── Read tokens back + apply heuristic role naming ────────────
@@ -498,6 +621,10 @@ export async function POST(req: Request) {
           report,
           artifacts: {
             tokensJsonUrl: `${outputBase}/tokens.json`,
+            regeneratedRampUrl: phase3.ramps ? `${outputBase}/regenerated-ramp.json` : null,
+            tailwindCssUrl: phase3.tailwind ? `${outputBase}/tailwind.css` : null,
+            shadcnThemeUrl: phase3.shadcnCss ? `${outputBase}/shadcn-theme.css` : null,
+            shadcnOmitReasonUrl: phase3.shadcnOmit ? `${outputBase}/shadcn-omit-reason.md` : null,
             previewHtmlUrl: phase3.preview ? `${outputBase}/preview.html` : null,
             proofHtmlUrl: phase3.proof ? `${outputBase}/proof.html` : null,
             reportHtmlUrl: phase3.report ? `${outputBase}/report.html` : null,

@@ -1,7 +1,13 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { ArrowIcon } from "@/icons/arrow";
 import { BubbleButton } from "@/components/bubble-button";
 import type { Diagnostic } from "@/lib/engine/diagnostics";
@@ -21,13 +27,37 @@ interface StageState {
   message?: string;
 }
 
-type StageKey = "extract" | "weighting" | "preview" | "proof" | "report" | "prompts" | "designmd";
+type StageKey =
+  | "extract"
+  | "weighting"
+  | "ramps"
+  | "tailwind"
+  | "shadcn"
+  | "preview"
+  | "proof"
+  | "report"
+  | "prompts"
+  | "designmd";
 
-const STAGE_ORDER: StageKey[] = ["extract", "weighting", "preview", "proof", "report", "prompts", "designmd"];
+const STAGE_ORDER: StageKey[] = [
+  "extract",
+  "weighting",
+  "ramps",
+  "tailwind",
+  "shadcn",
+  "preview",
+  "proof",
+  "report",
+  "prompts",
+  "designmd",
+];
 
 const INITIAL_STAGES: Record<StageKey, StageState> = {
   extract:   { status: "pending", label: "extracting tokens" },
   weighting: { status: "pending", label: "applying visibility weighting" },
+  ramps:     { status: "pending", label: "regenerating brand + neutral ramps" },
+  tailwind:  { status: "pending", label: "emitting tailwind v4 @theme" },
+  shadcn:    { status: "pending", label: "emitting shadcn 17-slot theme" },
   preview:   { status: "pending", label: "generating preview" },
   proof:     { status: "pending", label: "running pixel-fidelity proof" },
   report:    { status: "pending", label: "generating report" },
@@ -209,6 +239,10 @@ interface ExtractResponse {
   // Null when generation was skipped (withPhase3: false) or failed gracefully.
   artifacts?: {
     tokensJsonUrl: string;
+    regeneratedRampUrl: string | null;
+    tailwindCssUrl: string | null;
+    shadcnThemeUrl: string | null;       // shadcn-theme.css when gates passed
+    shadcnOmitReasonUrl: string | null;  // shadcn-omit-reason.md when gates failed
     previewHtmlUrl: string | null;
     proofHtmlUrl: string | null;
     reportHtmlUrl: string | null;
@@ -217,7 +251,7 @@ interface ExtractResponse {
   };
   // proof.ts ΔE<12 pixel coverage, 0..1. Null when proof step skipped/failed.
   proofCoverage?: number | null;
-  phase3?: { preview: boolean; proof: boolean; report: boolean; prompts: boolean; designmd: boolean };
+  phase3?: { ramps: boolean; tailwind: boolean; shadcnCss: boolean; shadcnOmit: boolean; preview: boolean; proof: boolean; report: boolean; prompts: boolean; designmd: boolean };
   warnings?: string[];
   /**
    * Engine diagnostics from lib/engine/diagnostics.ts. Surfaces things the
@@ -467,43 +501,121 @@ function Header({ url, hasResult }: { url: string; hasResult: boolean }) {
   );
 }
 
+// Per-stage descriptions used as the active body copy in LoadingState. Each
+// reads as plain English so users understand what's happening without
+// engineering jargon. Falls back to a generic starting message before
+// the first stage report arrives.
+const STAGE_DESCRIPTIONS: Record<StageKey, string> = {
+  extract:
+    "Spinning up a headless browser, loading your site, and reading every painted style from the live DOM — colors, fonts, spacing, the lot.",
+  weighting:
+    "Promoting the tokens that appear on visible, above-the-fold elements above background noise so the brand-defining colors actually rank first.",
+  ramps:
+    "Anchoring on the brand-primary, holding the hue, walking a 12-stop OKLCH lightness curve — and tapering chroma at the extremes so each step is in-gamut.",
+  tailwind:
+    "Packing the regenerated ramps + your type, spacing, radius, and shadow scales into a paste-ready Tailwind v4 @theme block.",
+  shadcn:
+    "Mapping the brand + neutral ramps onto shadcn's 17 slots, WCAG-AA verifying every foreground pairing. Skipped with a written reason when the source uses neither Tailwind nor shadcn.",
+  preview:
+    "Rendering a real HTML preview from the extracted tokens so you can see your design system come back to life on the right side of the screen.",
+  proof:
+    "Pixel-level side-by-side: the live site versus our extracted palette. Anywhere we miss a color by more than ΔE 12, it gets flagged.",
+  report:
+    "Building the human-readable report.html that explains every token decision — the value picked, the alternatives, and why.",
+  prompts:
+    "Packing the universal prompt — your tokens.json embedded with the full v2 spec — so any AI agent can take it from here.",
+  designmd:
+    "Final pass: writing the deterministic DESIGN.md with all canonical sections. This is the file you drop in your repo.",
+};
+
 function LoadingState({
   stages,
 }: {
   stages: Record<StageKey, StageState>;
 }) {
-  // Pick a coarse current-stage label for the panel header. The first
-  // running stage wins; if none are running yet we say "starting".
+  // Current stage drives the headline + body copy. Falls back to a generic
+  // "starting" state before any stage report arrives.
   const runningKey = STAGE_ORDER.find((k) => stages[k].status === "running");
-  const headerLabel = runningKey ? stages[runningKey].label : "starting up";
+  const headerLabel = runningKey
+    ? stages[runningKey].label
+    : "starting up";
+  const description = runningKey
+    ? STAGE_DESCRIPTIONS[runningKey]
+    : "Warming up the engine. The browser is about to load your site and start reading.";
+
+  const doneCount = STAGE_ORDER.filter(
+    (k) => stages[k].status === "done",
+  ).length;
 
   return (
-    <Panel
-      label="status"
-      tone="info"
-      className="mt-10"
+    <section
       role="status"
-      ariaLive="polite"
+      aria-live="polite"
+      className="mt-10 overflow-hidden border border-white/15"
     >
-      <p className="font-pixel text-sm uppercase tracking-widest text-white">
-        {headerLabel}
-      </p>
-      <p className="mt-3 text-sm text-white/70">
-        Crawling up to 8 pages, capturing styles, clustering tokens, applying
-        visibility-and-importance weighting, running the pixel-fidelity proof,
-        and assembling the report. Usually 90–240 seconds.
-      </p>
+      <header className="grid grid-cols-[1fr_auto] items-start gap-6 border-b border-white/15 bg-white/3 px-6 py-5">
+        <div className="min-w-0">
+          <p className="font-pixel text-[10px] uppercase tracking-widest text-white/70">
+            extracting · step {Math.max(1, doneCount + 1)} of{" "}
+            {STAGE_ORDER.length}
+          </p>
+          <h2 className="mt-2 font-pixel text-base uppercase tracking-tight text-white sm:text-lg">
+            {headerLabel}
+          </h2>
+        </div>
+        <Countdown startSeconds={300} />
+      </header>
 
-      <ul role="list" className="mt-6 divide-y divide-white/10 border border-white/10">
-        {STAGE_ORDER.map((key, i) => (
-          <StageRow
-            key={key}
-            index={i + 1}
-            state={stages[key]}
-          />
-        ))}
-      </ul>
-    </Panel>
+      <div className="px-6 py-5">
+        <p className="text-sm leading-relaxed text-white/75">{description}</p>
+
+        <ul
+          role="list"
+          className="mt-6 divide-y divide-white/10 border border-white/10"
+        >
+          {STAGE_ORDER.map((key, i) => (
+            <StageRow key={key} index={i + 1} state={stages[key]} />
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+// 5-minute soft countdown shown in the loading header. After the timer hits
+// zero we display "any moment" instead of going negative — most extractions
+// finish in 90–240 s, so 5 min is a generous ceiling. State is local and
+// resets on unmount, so re-submitting an extraction restarts the clock.
+function Countdown({ startSeconds }: { startSeconds: number }) {
+  const [remaining, setRemaining] = useState(startSeconds);
+
+  useEffect(() => {
+    if (remaining <= 0) return;
+    const id = setInterval(() => {
+      setRemaining((s) => Math.max(0, s - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [remaining]);
+
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+  const formatted = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  const live = remaining > 0;
+
+  return (
+    <div className="text-right">
+      <p className="font-pixel text-[10px] uppercase tracking-widest text-white/60">
+        est. remaining
+      </p>
+      <p
+        className={`mt-1 font-pixel text-3xl tracking-tight tabular-nums ${
+          live ? "text-white" : "text-primary"
+        }`}
+        aria-live="off"
+      >
+        {live ? formatted : "any moment"}
+      </p>
+    </div>
   );
 }
 
@@ -517,17 +629,23 @@ function StageRow({
   const indicator = (() => {
     switch (state.status) {
       case "done":
+        // Bright emerald green tick — completion deserves a different colour
+        // from "in progress" (primary blue) so users instantly read the
+        // status without reading the label.
         return (
           <span
             aria-hidden="true"
-            className="grid size-5 place-items-center bg-primary text-[10px] font-pixel text-black"
+            className="grid size-5 place-items-center bg-emerald-400 text-[11px] font-pixel text-white"
           >
             ✓
           </span>
         );
       case "running":
         return (
-          <span aria-hidden="true" className="relative grid size-5 place-items-center">
+          <span
+            aria-hidden="true"
+            className="relative grid size-5 place-items-center"
+          >
             <span className="absolute inset-0 animate-ping rounded-full border border-primary/60" />
             <span className="size-2 rounded-full bg-primary" />
           </span>
@@ -545,7 +663,7 @@ function StageRow({
         return (
           <span
             aria-hidden="true"
-            className="grid size-5 place-items-center border border-white/15 text-[10px] font-pixel text-white/30"
+            className="grid size-5 place-items-center border border-white/20 text-[10px] font-pixel text-white/40"
           />
         );
     }
@@ -553,7 +671,7 @@ function StageRow({
 
   const accent =
     state.status === "done"
-      ? "text-white"
+      ? "text-emerald-300"
       : state.status === "running"
       ? "text-white"
       : state.status === "error"
@@ -617,6 +735,179 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
+// ─── Result-section nav ───────────────────────────────────────────────────
+// Grouped table-of-contents for the long extract result. Order inside each
+// group matches render order so the nav reads top-to-bottom. Headline tokens
+// (Colors → Typography → Components) sit at the top of the first group so
+// they're the first thing the user sees.
+type NavItem = { id: string; label: string };
+type NavGroup = { label: string; items: NavItem[] };
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "tokens",
+    items: [
+      { id: "section-named-colors", label: "Colors" },
+      { id: "section-typography", label: "Typography" },
+      { id: "panel-components-live", label: "Components" },
+      { id: "panel-spacing", label: "Spacing" },
+      { id: "panel-border-radius", label: "Radius" },
+      { id: "panel-shadows-elevation", label: "Shadows" },
+      { id: "panel-motion", label: "Motion" },
+    ],
+  },
+  {
+    label: "audit",
+    items: [
+      { id: "panel-accessibility", label: "Accessibility" },
+      { id: "panel-fidelity-proof", label: "Fidelity proof" },
+    ],
+  },
+  {
+    label: "ship",
+    items: [
+      { id: "panel-generate-design-md", label: "Generate prompt" },
+      { id: "panel-downloads", label: "Downloads" },
+    ],
+  },
+  {
+    label: "review",
+    items: [
+      { id: "collapsible-long-tail-colors", label: "Long-tail colors" },
+      { id: "collapsible-responsive", label: "Responsive" },
+      { id: "collapsible-iconography", label: "Iconography" },
+      { id: "panel-diagnostics", label: "Things to verify" },
+    ],
+  },
+];
+
+// IntersectionObserver-driven active-section tracker. Triggers when a target
+// crosses the band 20–80% down the viewport — the "user is reading here" zone.
+// Picks the lowest-on-page id that is currently intersecting so the active
+// item moves DOWN the nav as you scroll, never jumps.
+function useActiveSection(ids: string[]): string | null {
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const visible = new Set<string>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) visible.add(e.target.id);
+          else visible.delete(e.target.id);
+        }
+        // Pick the first id (by document order) that's currently visible.
+        const next = ids.find((id) => visible.has(id));
+        if (next) setActiveId(next);
+      },
+      { rootMargin: "-20% 0px -70% 0px" },
+    );
+    const observed: Element[] = [];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) {
+        observer.observe(el);
+        observed.push(el);
+      }
+    }
+    return () => {
+      for (const el of observed) observer.unobserve(el);
+      observer.disconnect();
+    };
+  }, [ids]);
+
+  return activeId;
+}
+
+function ResultNav() {
+  const allIds = [
+    "extract-overview",
+    ...NAV_GROUPS.flatMap((g) => g.items.map((i) => i.id)),
+  ];
+  const activeId = useActiveSection(allIds);
+
+  return (
+    <nav
+      aria-label="Result sections"
+      className="flex flex-col gap-6 text-left"
+    >
+      {/* Eyebrow + total count gives users a sense of scope */}
+      <div className="flex items-baseline justify-between">
+        <p className="font-pixel text-[10px] uppercase tracking-widest text-white">
+          report
+        </p>
+        <p className="font-pixel text-[9px] uppercase tracking-widest text-white/45">
+          {allIds.length} sections
+        </p>
+      </div>
+
+      {/* Top-level: Overview link sits alone above the groups so it's
+          always the first thing the eye lands on. */}
+      <NavLink
+        href="#extract-overview"
+        label="Overview"
+        isActive={activeId === "extract-overview"}
+      />
+
+      {NAV_GROUPS.map((group) => (
+        <div key={group.label}>
+          <p className="mb-2 font-pixel text-[9px] uppercase tracking-widest text-white/40">
+            {group.label}
+          </p>
+          <ul role="list" className="flex flex-col">
+            {group.items.map((item) => (
+              <li key={item.id}>
+                <NavLink
+                  href={`#${item.id}`}
+                  label={item.label}
+                  isActive={activeId === item.id}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+// Individual nav link with a status-dot prefix. Dot fills primary blue when
+// the section is in view; soft white otherwise. Active item also gets a
+// faint primary-tinted background pill so the active state is unmistakable
+// at a glance.
+function NavLink({
+  href,
+  label,
+  isActive,
+}: {
+  href: string;
+  label: string;
+  isActive: boolean;
+}) {
+  return (
+    <a
+      href={href}
+      aria-current={isActive ? "true" : undefined}
+      className={`group flex items-center gap-2.5 px-2 py-1.5 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
+        isActive
+          ? "bg-primary/10 text-white"
+          : "text-white/60 hover:bg-white/3 hover:text-white"
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`size-1.5 shrink-0 transition-all ${
+          isActive
+            ? "bg-primary"
+            : "bg-white/25 group-hover:bg-white/55"
+        }`}
+      />
+      <span className="truncate">{label}</span>
+    </a>
+  );
+}
+
 function ResultState({ result }: { result: ExtractResponse }) {
   const { tokens, durationMs, outputDir, artifacts, proofCoverage, diagnostics } =
     result;
@@ -652,14 +943,27 @@ function ResultState({ result }: { result: ExtractResponse }) {
 
   return (
     <div className="mt-12 space-y-16">
-      <Stats
-        items={[
-          { label: "duration", value: `${(durationMs / 1000).toFixed(1)}s` },
-          { label: "colors", value: String(colors.length) },
-          { label: "type levels", value: String(typography.length) },
-          fidelityStat,
-        ]}
-      />
+      <aside
+        aria-label="Report navigation"
+        className="hidden xl:fixed xl:top-32 xl:bottom-8 xl:left-6 xl:block xl:w-48 xl:overflow-y-auto xl:pr-2"
+      >
+        <ResultNav />
+      </aside>
+
+      <section
+        id="extract-overview"
+        aria-label="Extraction overview"
+        className="scroll-mt-24"
+      >
+        <Stats
+          items={[
+            { label: "duration", value: `${(durationMs / 1000).toFixed(1)}s` },
+            { label: "colors", value: String(colors.length) },
+            { label: "type levels", value: String(typography.length) },
+            fidelityStat,
+          ]}
+        />
+      </section>
 
       {/* Engine diagnostics moved BELOW (just before the full-tokens.json
           details) — they're "things to verify" notes, not the headline.
@@ -916,14 +1220,14 @@ function SpacingSection({
               aria-hidden="true"
               className="flex h-10 shrink-0 items-center"
             >
-              <span className="size-6 bg-white/20" />
+              <span className="size-6 bg-white/80" />
               <span
                 className="h-px bg-primary"
                 style={{
                   width: `${Math.min(step, 120)}px`,
                 }}
               />
-              <span className="size-6 bg-white/20" />
+              <span className="size-6 bg-white/80" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-pixel text-lg tracking-tight text-white">
@@ -1072,7 +1376,11 @@ function MotionSection({
   if (!motionSystem) return null;
   const durations = motionSystem.durationScale ?? [];
   const easings = motionSystem.timingFunctions ?? [];
-  if (durations.length === 0 && easings.length === 0 && !motionSystem.primaryTimingFunction) {
+  if (
+    durations.length === 0 &&
+    easings.length === 0 &&
+    !motionSystem.primaryTimingFunction
+  ) {
     return null;
   }
   return (
@@ -1080,57 +1388,86 @@ function MotionSection({
       <PanelHeader
         label="motion"
         count={durations.length + easings.length}
-        subtitle={`Reduced-motion: ${motionSystem.prefersReducedMotion ? "supported" : "not detected"}`}
+        subtitle={`Reduced-motion: ${
+          motionSystem.prefersReducedMotion ? "supported" : "not detected"
+        }. Hover any duration row to play the animation at the captured timing.`}
       />
-      <div className="grid grid-cols-1 gap-px overflow-hidden border border-white/10 bg-white/10 lg:grid-cols-2">
-        <div className="bg-black p-5">
-          <p className="mb-3 font-pixel text-[10px] uppercase tracking-widest text-white/70">
-            duration scale
-          </p>
-          {durations.length === 0 ? (
-            <p className="text-xs text-white/50">No duration tokens extracted.</p>
-          ) : (
-            <ul role="list" className="space-y-2">
-              {durations.slice(0, 8).map((d) => (
-                <li
-                  key={d.label + d.value}
-                  className="grid grid-cols-[5rem_1fr_auto] items-center gap-3 text-xs"
-                >
-                  <span className="font-pixel uppercase tracking-widest text-white/70">
-                    {d.label}
-                  </span>
-                  <span className="font-mono text-white/85">{d.value}</span>
-                  <span className="font-mono text-[10px] text-white/60">
-                    {d.frequency}×
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+
+      {durations.length > 0 && (
+        <div className="mb-6 overflow-hidden border border-white/15">
+          <header className="flex items-center justify-between border-b border-white/10 bg-white/3 px-4 py-2.5">
+            <h3 className="font-pixel text-xs uppercase tracking-widest text-white">
+              duration scale
+            </h3>
+            <span
+              aria-hidden="true"
+              className="font-pixel text-[10px] uppercase tracking-widest text-white/60"
+            >
+              {durations.length} {durations.length === 1 ? "step" : "steps"}
+            </span>
+          </header>
+          <ul role="list" className="divide-y divide-white/10">
+            {durations.slice(0, 8).map((d) => (
+              <DurationRow
+                key={d.label + d.value}
+                d={d}
+                easing={motionSystem.primaryTimingFunction ?? "ease"}
+              />
+            ))}
+          </ul>
         </div>
-        <div className="bg-black p-5">
-          <p className="mb-3 font-pixel text-[10px] uppercase tracking-widest text-white/70">
-            easing
-          </p>
+      )}
+
+      {(motionSystem.primaryTimingFunction || easings.length > 0) && (
+        <div className="overflow-hidden border border-white/15">
+          <header className="flex items-center justify-between border-b border-white/10 bg-white/3 px-4 py-2.5">
+            <h3 className="font-pixel text-xs uppercase tracking-widest text-white">
+              easing curves
+            </h3>
+            {easings.length > 0 && (
+              <span
+                aria-hidden="true"
+                className="font-pixel text-[10px] uppercase tracking-widest text-white/60"
+              >
+                {easings.length}{" "}
+                {easings.length === 1 ? "curve" : "curves"}
+              </span>
+            )}
+          </header>
+
           {motionSystem.primaryTimingFunction && (
-            <p className="mb-3 break-all font-mono text-xs text-white/85">
-              <span className="font-pixel text-[10px] uppercase tracking-widest text-primary">
-                primary:
-              </span>{" "}
-              {motionSystem.primaryTimingFunction}
-            </p>
+            <div className="flex items-start gap-4 border-b border-white/10 px-4 py-4">
+              <BezierCurve
+                value={motionSystem.primaryTimingFunction}
+                size={56}
+                accent="primary"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-pixel text-[10px] uppercase tracking-widest text-primary">
+                  primary
+                </p>
+                <code className="mt-1 block break-all font-mono text-xs text-white">
+                  {motionSystem.primaryTimingFunction}
+                </code>
+              </div>
+            </div>
           )}
+
           {easings.length > 1 && (
-            <ul role="list" className="space-y-2">
+            <ul role="list" className="divide-y divide-white/10">
               {easings.slice(0, 6).map((t, i) => (
                 <li
                   key={t.value + i}
-                  className="grid grid-cols-[1fr_auto] items-center gap-3 text-xs"
+                  className="flex items-center gap-4 px-4 py-3"
                 >
-                  <span className="truncate font-mono text-white/70">
+                  <BezierCurve value={t.value} size={40} />
+                  <code className="min-w-0 flex-1 truncate font-mono text-xs text-white/85">
                     {t.value}
-                  </span>
-                  <span className="font-mono text-[10px] text-white/40">
+                  </code>
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 font-mono text-[10px] text-white/60"
+                  >
                     {t.frequency}×
                   </span>
                 </li>
@@ -1138,9 +1475,129 @@ function MotionSection({
             </ul>
           )}
         </div>
-      </div>
+      )}
     </section>
   );
+}
+
+// One row in the duration table. Hovering the row plays a small bar
+// animation across the track at the row's captured duration + easing — gives
+// users an actual feel for what "200ms ease-in-out" looks like, not just a
+// number on a screen.
+function DurationRow({
+  d,
+  easing,
+}: {
+  d: { label: string; value: string; frequency: number };
+  easing: string;
+}) {
+  const [playing, setPlaying] = useState(false);
+  return (
+    <li
+      onMouseEnter={() => setPlaying(true)}
+      onMouseLeave={() => setPlaying(false)}
+      onFocus={() => setPlaying(true)}
+      onBlur={() => setPlaying(false)}
+      tabIndex={0}
+      className="grid cursor-default grid-cols-[5rem_1fr_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-white/2 focus-visible:outline-2 focus-visible:outline-primary"
+    >
+      <span className="font-pixel text-[10px] uppercase tracking-widest text-white">
+        {d.label}
+      </span>
+      <div
+        aria-hidden="true"
+        className="relative h-1.5 overflow-hidden bg-white/10"
+      >
+        <span
+          className="absolute top-0 left-0 h-full w-3 bg-primary"
+          style={{
+            transition: playing
+              ? `transform ${d.value} ${easing}`
+              : "transform 0.2s linear",
+            transform: playing ? "translateX(2400%)" : "translateX(0)",
+          }}
+        />
+      </div>
+      <div className="flex items-center gap-3">
+        <code className="font-mono text-xs text-white">{d.value}</code>
+        <span
+          aria-hidden="true"
+          className="font-mono text-[10px] text-white/60"
+        >
+          {d.frequency}×
+        </span>
+      </div>
+    </li>
+  );
+}
+
+// Visualises a cubic-bezier(x1,y1,x2,y2) or named easing as an SVG curve.
+// Falls back to a straight (linear) line when the value isn't parseable.
+function BezierCurve({
+  value,
+  size = 48,
+  accent = "white",
+}: {
+  value: string;
+  size?: number;
+  accent?: "white" | "primary";
+}) {
+  const [x1, y1, x2, y2] = parseEasing(value);
+  const stroke = accent === "primary" ? "#0039ff" : "#ffffff";
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      aria-hidden="true"
+      className="shrink-0 border border-white/15 bg-white/3"
+    >
+      {/* Diagonal reference (linear easing) */}
+      <line
+        x1="0"
+        y1="100"
+        x2="100"
+        y2="0"
+        stroke="rgba(255,255,255,0.12)"
+        strokeWidth="1"
+      />
+      {/* Captured easing curve. Y is inverted because SVG origin is top-left
+          but easing graphs are conventionally bottom-up. */}
+      <path
+        d={`M 0 100 C ${x1 * 100} ${(1 - y1) * 100}, ${x2 * 100} ${
+          (1 - y2) * 100
+        }, 100 0`}
+        fill="none"
+        stroke={stroke}
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function parseEasing(value: string): [number, number, number, number] {
+  // Named CSS easings → their canonical cubic-bezier equivalents.
+  const NAMED: Record<string, [number, number, number, number]> = {
+    linear: [0, 0, 1, 1],
+    ease: [0.25, 0.1, 0.25, 1],
+    "ease-in": [0.42, 0, 1, 1],
+    "ease-out": [0, 0, 0.58, 1],
+    "ease-in-out": [0.42, 0, 0.58, 1],
+  };
+  const trimmed = value.trim().toLowerCase();
+  if (NAMED[trimmed]) return NAMED[trimmed];
+  const match = trimmed.match(
+    /cubic-bezier\s*\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/,
+  );
+  if (match) {
+    return [
+      parseFloat(match[1]),
+      parseFloat(match[2]),
+      parseFloat(match[3]),
+      parseFloat(match[4]),
+    ];
+  }
+  return [0, 0, 1, 1]; // linear fallback
 }
 
 // ─── Live component preview — actual rendered buttons / cards ──────────────
@@ -1180,15 +1637,25 @@ function LiveComponentsSection({
             </header>
             <ul
               role="list"
-              className="flex flex-wrap items-center gap-x-6 gap-y-4 bg-white/2 p-6"
+              className="flex flex-wrap items-center gap-4 p-6"
+              style={{
+                // Checkerboard backdrop so components in any colour
+                // (including pure black or pure white) stay visible against
+                // the preview surface.
+                backgroundImage:
+                  "linear-gradient(45deg, rgba(255,255,255,0.06) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.06) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.06) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.06) 75%)",
+                backgroundSize: "16px 16px",
+                backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px",
+                backgroundColor: "#1a1a1a",
+              }}
             >
               {g.variants.slice(0, 6).map((v) => (
                 <li
                   key={v.name}
-                  className="flex flex-col items-start gap-1.5"
+                  className="flex flex-col items-start gap-2 border border-white/15 bg-black/40 p-4 backdrop-blur-sm"
                 >
                   <LiveVariant type={g.type} variant={v} />
-                  <span className="font-pixel text-[9px] uppercase tracking-widest text-white/55">
+                  <span className="font-pixel text-[9px] uppercase tracking-widest text-white/70">
                     {v.name}
                     {v.count > 1 && (
                       <span className="ml-1.5 text-primary">{v.count}×</span>
@@ -1731,6 +2198,17 @@ function Downloads({
   const items: Array<{ label: string; url: string }> = [
     { label: "tokens.json", url: artifacts.tokensJsonUrl },
   ];
+  if (artifacts.regeneratedRampUrl) {
+    items.push({ label: "regenerated-ramp.json", url: artifacts.regeneratedRampUrl });
+  }
+  if (artifacts.tailwindCssUrl) {
+    items.push({ label: "tailwind.css", url: artifacts.tailwindCssUrl });
+  }
+  if (artifacts.shadcnThemeUrl) {
+    items.push({ label: "shadcn-theme.css", url: artifacts.shadcnThemeUrl });
+  } else if (artifacts.shadcnOmitReasonUrl) {
+    items.push({ label: "shadcn-omit-reason.md", url: artifacts.shadcnOmitReasonUrl });
+  }
   if (artifacts.previewHtmlUrl) {
     items.push({ label: "preview.html", url: artifacts.previewHtmlUrl });
   }
@@ -1984,6 +2462,16 @@ function CollapsibleSection({
                 {count}
               </span>
             )}
+            {/* Affordance text swaps between collapsed/expanded states so users
+                know the section is interactive. Visually paired with the chevron
+                which rotates -90deg when open. */}
+            <span
+              aria-hidden="true"
+              className="font-pixel text-[10px] uppercase tracking-widest text-white/60 transition-colors group-hover:text-white"
+            >
+              <span className="group-open:hidden">click to expand</span>
+              <span className="hidden group-open:inline">hide</span>
+            </span>
             <ArrowIcon
               aria-hidden="true"
               focusable="false"

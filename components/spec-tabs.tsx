@@ -14,34 +14,52 @@ type Props = {
 // Static placeholder content for the formats we plan to emit but haven't
 // wired yet (plan-v1.md W6a/W6b). Shown verbatim under the corresponding
 // tab so users can see the shape of the output we'll generate per brand.
+// Static sample showing the SHAPE of the real Tailwind v4 emitter output
+// (lib/engine/tailwind-emit.ts). The actual hex values come from regenerated
+// OKLCH ramps; this placeholder uses 6-digit hex from a single seed so the
+// homepage tab reads as concrete code without requiring a live extraction.
 const TAILWIND_SAMPLE = `@theme {
-  --color-brand-50:  oklch(0.985 0.005 260);
-  --color-brand-100: oklch(0.95  0.04  260);
-  --color-brand-500: oklch(0.63  0.18  260);
-  --color-brand-600: oklch(0.55  0.18  260);
-  --color-brand-950: oklch(0.13  0.04  260);
+  --color-brand-25:  #f3f4ff;
+  --color-brand-50:  #eaecff;
+  --color-brand-100: #d8dcff;
+  --color-brand-500: #6e70ff;
+  --color-brand-900: #160061;
+  --color-brand-950: #06002f;
 
-  --font-display: "Geist Sans";
-  --font-body:    "Geist Sans";
+  --font-sans:    Geist;
   --font-mono:    "Geist Mono";
 
-  --spacing-base: 4px;
-  --radius-md:    0.5rem;
-  --radius-lg:    0.75rem;
+  --spacing: 4px;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
 }`;
 
+// Static sample mirroring the SHAPE of the real shadcn emitter output
+// (lib/engine/shadcn-emit.ts). The actual values come from regenerated
+// ramps + role-namer; this placeholder uses generic purple hex stops so
+// the homepage tab reads as concrete code without a live extraction. All
+// 20 slots are present so users see the full mapping at a glance.
 const SHADCN_SAMPLE = `:root {
-  --background:           oklch(1     0     0);
-  --foreground:           oklch(0.15  0     0);
-  --primary:              oklch(0.63  0.18  260);
-  --primary-foreground:   oklch(0.98  0     0);
-  --secondary:            oklch(0.97  0     0);
-  --secondary-foreground: oklch(0.15  0     0);
-  --muted:                oklch(0.97  0     0);
-  --muted-foreground:     oklch(0.55  0     0);
-  --border:               oklch(0.9   0     0);
-  --ring:                 oklch(0.63  0.18  260 / 0.5);
-  --radius:               0.5rem;
+  --background:             #ffffff;
+  --foreground:             #171717;
+  --card:                   #ffffff;
+  --card-foreground:        #171717;
+  --popover:                #ffffff;
+  --popover-foreground:     #171717;
+  --primary:                #6e70ff;
+  --primary-foreground:     #ffffff;
+  --secondary:              #eaebee;
+  --secondary-foreground:   #1a1a1d;
+  --muted:                  #eaebee;
+  --muted-foreground:       #88898c;
+  --accent:                 #eaebee;
+  --accent-foreground:      #1a1a1d;
+  --destructive:            #dc2626;
+  --destructive-foreground: #ffffff;
+  --border:                 #dddee1;
+  --input:                  #dddee1;
+  --ring:                   #6e70ff;
+  --radius:                 0.5rem;
 }`;
 
 type Tab = {

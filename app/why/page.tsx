@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AnnouncementBar } from "@/components/announcement-bar";
 import { BubbleButton } from "@/components/bubble-button";
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
@@ -85,6 +86,7 @@ export default function WhyPage() {
   return (
     <>
       <SkipLink />
+      <AnnouncementBar />
       <Navbar />
 
       <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">

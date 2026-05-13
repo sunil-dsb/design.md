@@ -13,6 +13,14 @@
   color-scheme: dark;
 }
 
+/* Smooth-scroll on in-page anchor jumps (used by the /extract result nav).
+   `scroll-padding-top` ensures the target section lands BELOW the sticky
+   navbar instead of being hidden under it. */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
 html,
 body {
   background: #000000;
@@ -502,6 +510,87 @@ select {
 
 @media (prefers-reduced-motion: reduce) {
   .scene-blob {
+    animation: none;
+  }
+}
+
+/* ── Announcement bar — thinner mesh-gradient sibling of the footer ──
+   Same blue-blob recipe, scaled down + clipped to a ~36px-tall bar. The
+   blobs intentionally extend beyond the bar bounds so overflow-clipping
+   exposes only their middle band — gives the gradient a flowing-tape feel
+   rather than a discrete-blob feel. */
+.announce-scene {
+  isolation: isolate;
+}
+
+.announce-blob {
+  position: absolute;
+  display: block;
+  border-radius: 9999px;
+  background: #0039ff;
+  filter: blur(38px);
+  will-change: transform;
+}
+
+.announce-blob--1 {
+  top: -80px;
+  left: -40px;
+  width: 220px;
+  height: 220px;
+  opacity: 0.6;
+  animation: announce-float-1 12s ease-in-out infinite;
+}
+
+.announce-blob--2 {
+  top: -90px;
+  left: 38%;
+  width: 260px;
+  height: 260px;
+  opacity: 0.5;
+  animation: announce-float-2 16s ease-in-out infinite;
+}
+
+.announce-blob--3 {
+  top: -70px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  opacity: 0.55;
+  animation: announce-float-3 14s ease-in-out infinite;
+}
+
+@keyframes announce-float-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(160px, 20px) scale(1.08);
+  }
+}
+
+@keyframes announce-float-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-120px, 25px) scale(1.12);
+  }
+}
+
+@keyframes announce-float-3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-140px, 15px) scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announce-blob {
     animation: none;
   }
 }

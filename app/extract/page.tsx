@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { AnnouncementBar } from "@/components/announcement-bar";
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
 import { SkipLink } from "@/components/skip-link";
@@ -14,6 +15,7 @@ export default function ExtractPage() {
   return (
     <>
       <SkipLink />
+      <AnnouncementBar />
       <Navbar />
 
       <main
