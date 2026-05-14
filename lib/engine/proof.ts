@@ -311,13 +311,17 @@ async function runProof(
         rects.push({ x: Math.max(0, r.left), y: Math.max(0, r.top), w: Math.min(r.width, vw - r.left), h: Math.min(r.height, vh - r.top) });
       }
     }
-    // Also exclude elements with background-image
+    // Also exclude elements with a raster background-image (`url(...)`).
+    // CSS gradients are intentionally NOT excluded  they're CSS-rendered
+    // colors, so they're exactly what the palette-coverage score is meant
+    // to measure. Adding `gradient` here would mask any page that uses a
+    // gradient on <body>/<html>/<main>, which is most modern landing pages.
     const allEls = document.querySelectorAll('*');
     for (const el of allEls) {
       const bg = getComputedStyle(el).backgroundImage;
-      if (bg && bg !== 'none' && (bg.includes('url(') || bg.includes('gradient'))) {
+      if (bg && bg !== 'none' && bg.includes('url(')) {
         const r = el.getBoundingClientRect();
-        if (r.width > 30 && r.height > 30 && r.bottom > 0 && r.top < vh) {
+        if (r.width > 30 && r.height > 30 && r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw) {
           rects.push({ x: Math.max(0, r.left), y: Math.max(0, r.top), w: Math.min(r.width, vw - r.left), h: Math.min(r.height, vh - r.top) });
         }
       }

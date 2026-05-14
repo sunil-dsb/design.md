@@ -30,6 +30,7 @@ interface StageState {
 type StageKey =
   | "extract"
   | "weighting"
+  | "buttons"
   | "ramps"
   | "tailwind"
   | "shadcn"
@@ -42,6 +43,7 @@ type StageKey =
 const STAGE_ORDER: StageKey[] = [
   "extract",
   "weighting",
+  "buttons",
   "ramps",
   "tailwind",
   "shadcn",
@@ -55,6 +57,7 @@ const STAGE_ORDER: StageKey[] = [
 const INITIAL_STAGES: Record<StageKey, StageState> = {
   extract: { status: "pending", label: "extracting tokens" },
   weighting: { status: "pending", label: "applying visibility weighting" },
+  buttons: { status: "pending", label: "clustering button variants" },
   ramps: { status: "pending", label: "regenerating brand + neutral ramps" },
   tailwind: { status: "pending", label: "emitting tailwind v4 @theme" },
   shadcn: { status: "pending", label: "emitting shadcn 17-slot theme" },
@@ -332,7 +335,16 @@ export function ExtractClient() {
     setStages(structuredClone(INITIAL_STAGES));
 
     try {
-      const res = await fetch("/api/extract", {
+      // Forward the page's `?key=` query param to the API route so the
+      // owner can bypass their own rate limit by visiting the SPA with
+      // ?key=<RATE_LIMIT_BYPASS_KEY>. Anyone without the secret still
+      // hits the 5/IP/24h cap server-side.
+      const ownerKey = new URLSearchParams(window.location.search).get("key");
+      const apiUrl = ownerKey
+        ? `/api/extract?key=${encodeURIComponent(ownerKey)}`
+        : "/api/extract";
+
+      const res = await fetch(apiUrl, {
         // maxPages intentionally omitted  the API route's default is 8,
         // matching the CLI default. Hard-coding 5 here would silently
         // override that.
@@ -548,6 +560,8 @@ const STAGE_DESCRIPTIONS: Record<StageKey, string> = {
     "Spinning up a headless browser, loading your site, and reading every painted style from the live DOM  colors, fonts, spacing, the lot.",
   weighting:
     "Promoting the tokens that appear on visible, above-the-fold elements above background noise so the brand-defining colors actually rank first.",
+  buttons:
+    "Re-clustering every button by visual signature (background, text, border, radius) in OKLCH color space, then naming each variant by matching it to the brand color roles — Primary, Accent, Outline, Ghost, Destructive — and picking the most visible example as the canonical one.",
   ramps:
     "Anchoring on the brand-primary, holding the hue, walking a 12-stop OKLCH lightness curve  and tapering chroma at the extremes so each step is in-gamut.",
   tailwind:

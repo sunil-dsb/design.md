@@ -11,6 +11,8 @@ import { computeDiagnostics, type ProofSummary } from "@/lib/engine/diagnostics"
 import { applyVisibilityWeighting, DEFAULT_VIEWPORT } from "@/lib/engine/visibility-weight";
 import { generateAndWriteRamps } from "@/lib/engine/ramp-regen";
 import { generateAndWriteTailwindCss } from "@/lib/engine/tailwind-emit";
+import { stripDarkScreenshotsOnDisk } from "@/lib/engine/strip-dark-screenshots";
+import { applyButtonClustering } from "@/lib/engine/button-cluster";
 import { generateAndWriteShadcnCss } from "@/lib/engine/shadcn-emit";
 import { checkAndRecordRateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ColorToken, TypographyLevel } from "@/lib/engine/types";
@@ -66,6 +68,7 @@ export const maxDuration = 300;
 type StageKind =
   | "extract:start"   | "extract:done"
   | "weighting:start" | "weighting:done" | "weighting:error"
+  | "buttons:start"   | "buttons:done"   | "buttons:error"
   | "ramps:start"     | "ramps:done"     | "ramps:error"
   | "tailwind:start"  | "tailwind:done"  | "tailwind:error"
   | "shadcn:start"    | "shadcn:done"    | "shadcn:error"
@@ -243,6 +246,7 @@ export async function POST(req: Request) {
       // omit-reason markdown when the gates fail. We track both so the
       // SPA can surface the right artifact URL.
       const phase3 = {
+        buttons: false,
         ramps: false,
         tailwind: false,
         shadcnCss: false,    // shadcn-theme.css written
@@ -305,41 +309,50 @@ export async function POST(req: Request) {
           return applyVisibilityWeighting(tokensPath, slim, DEFAULT_VIEWPORT);
         });
 
-        //  Strip redundant dark-mode screenshot buffers from tokens.json 
-        //
-        // The engine attaches dark-mode PNG screenshots as raw Node Buffers
-        // on `darkMode.darkScreenshots` (a Record<viewport, Buffer>). When
-        // JSON.stringify serializes those Buffers it emits a {type:'Buffer',
-        // data:[n,n,n,...]} object per byte  pretty-printed, a single 1080p
-        // PNG balloons to ~30MB and the full 5-viewport set pushes tokens.json
-        // past 180MB on dark-mode-capable sites (Stripe, Vercel, etc.).
-        //
-        // The PNGs are also saved as actual files under screenshots/dark/, so
-        // the buffers in tokens.json are pure redundancy. We strip them once
-        // here, before Phase 3 readers parse the file. None of preview-gen /
-        // proof / report-gen / prompt-pack use this field.
-        //
-        // Upstream behaves the same way; their committed examples just don't
-        // happen to have dark mode detected. See MIRROR.md Part 2.11.
+        // Strip redundant dark-mode screenshot Buffers from tokens.json
+        // before Phase 3 readers parse the file. See
+        // lib/engine/strip-dark-screenshots.ts for the why; MIRROR.md
+        // Part 2.11 for the mirror-discipline reasoning.
         try {
-          const tokensRaw = fs.readFileSync(tokensPath, "utf-8");
-          const tokensOnDisk = JSON.parse(tokensRaw);
-          if (
-            tokensOnDisk?.darkMode &&
-            typeof tokensOnDisk.darkMode === "object" &&
-            tokensOnDisk.darkMode.darkScreenshots
-          ) {
-            delete tokensOnDisk.darkMode.darkScreenshots;
-            fs.writeFileSync(tokensPath, JSON.stringify(tokensOnDisk, null, 2));
-          }
+          stripDarkScreenshotsOnDisk(tokensPath);
         } catch (err) {
-          // Strip failure is non-fatal  tokens.json may just be larger.
+          // Strip failure is non-fatal — tokens.json may just be larger.
           warnings.push(
             `darkScreenshots strip skipped: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
 
-        //  Ramp regeneration (the wedge differentiator) 
+        // ── Button clustering (improved component variant extraction) ─
+        //
+        // Replaces the bucketed "Primary / Secondary / Ghost / Destructive"
+        // classification in cluster.ts with OKLCH ΔE clustering on the
+        // (bg, text, border) tuple, role-tied variant names (the cluster
+        // whose bg matches the role-named primary color is the "Primary
+        // button"), visibility-picked representatives, and size-tier
+        // subdivision when 2+ size groups exist. Mirror-safe — cluster.ts
+        // is untouched; this REPLACES the components[type==='Button']
+        // entry on disk. See lib/engine/button-cluster.ts.
+        //
+        // Runs AFTER weighting (needs visibilityScore for representative
+        // pick) and AFTER strip (depends on tokens.json being parseable
+        // without 173 MB of buffer data slowing the round-trip).
+        const buttonsRes = await runStage(
+          "buttons:start",
+          "clustering button variants",
+          () => {
+            const slim = pageExtractions.map((pe) => ({
+              url: pe.url,
+              elements: pe.dom.elements,
+              interactions: pe.interactions,
+            }));
+            const result = applyButtonClustering(tokensPath, slim);
+            return result.mutated;
+          },
+        );
+        phase3.buttons = buttonsRes.ok && buttonsRes.value === true;
+        if (!buttonsRes.ok) warnings.push(`button cluster failed: ${buttonsRes.error}`);
+
+        //  Ramp regeneration (the wedge differentiator)
         //
         // Regenerate a clean 12-stop OKLCH brand ramp anchored on the
         // role-named primary, plus a tinted-or-grey neutral ramp. This is

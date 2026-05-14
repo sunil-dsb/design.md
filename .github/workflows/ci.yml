@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel older runs of the same branch when new commits land — saves CI
+# minutes and keeps the latest result authoritative.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Type-check + Lint + Test + Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      # Skip the ~170 MB Chromium download during `pnpm install`. The CI job
+      # type-checks, tests, and builds — none of which launch a browser.
+      # Runtime extraction uses the Playwright image's pre-installed Chromium.
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # LFS pull is required because `pnpm build` reads
+          # public/pixelfont.woff2 via `next/font/local` at build time, and
+          # that file is LFS-tracked (see .gitattributes). Without it, the
+          # build sees a tiny LFS pointer instead of a real woff2 binary.
+          lfs: true
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # Pinned to match `packageManager` in package.json + the Dockerfile
+          # builder stage. Floating to `9` risks CI installing a different
+          # pnpm minor than production and producing a divergent lockfile.
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm exec tsc --noEmit -p tsconfig.json
+
+      - name: Lint
+        run: pnpm lint
+        # Lint failures don't block the build — surfaced as a warning instead.
+        # Flip to `continue-on-error: false` once the codebase is lint-clean.
+        continue-on-error: true
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        # Catches Next.js build regressions (failed type narrowing in server
+        # components, broken imports, Turbopack config errors) that tsc alone
+        # misses. Mirrors what the Dockerfile builder stage runs, so a green
+        # CI here implies the production image will build.
+        run: pnpm build

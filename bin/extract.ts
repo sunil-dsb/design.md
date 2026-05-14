@@ -5,7 +5,10 @@
 // reflects OUR CLI shape (`pnpm engine:extract`) rather than upstream's
 // `npx ts-node scripts/extract.ts ...`  the engine's printUsage stays
 // byte-identical to upstream for mirror cleanliness (see MIRROR.md).
+import * as path from 'path';
 import { extract, parseArgs } from '../lib/engine/extract';
+import { stripDarkScreenshotsOnDisk } from '../lib/engine/strip-dark-screenshots';
+import { applyButtonClustering } from '../lib/engine/button-cluster';
 
 const HELP_TEXT = `
 Usage: pnpm engine:extract <url1> [url2] [url3] ...
@@ -41,7 +44,36 @@ Examples:
   }
 
   const opts = parseArgs(process.argv);
-  await extract(opts);
+  const pageExtractions = await extract(opts);
+  const tokensPath = path.join(opts.output, 'tokens.json');
+
+  // Strip the dark-mode screenshot Buffers that the engine attaches to
+  // tokens.json (see lib/engine/strip-dark-screenshots.ts). The SPA route
+  // does the same — keeping both consumers consistent prevents a 173 MB
+  // tokens.json on dark-mode-capable sites like Stripe and Vercel.
+  try {
+    stripDarkScreenshotsOnDisk(tokensPath);
+  } catch {
+    // Non-fatal — extraction succeeded, the only cost is a larger file.
+  }
+
+  // Re-cluster button variants in-place. cluster.ts produces a 4-bucket
+  // luminance-classified components[Button] entry; we replace it with the
+  // OKLCH-ΔE-clustered, role-tied, visibility-picked version that matches
+  // the SPA's API route output. See lib/engine/button-cluster.ts.
+  try {
+    applyButtonClustering(
+      tokensPath,
+      pageExtractions.map((pe) => ({
+        url: pe.url,
+        elements: pe.dom.elements,
+        interactions: pe.interactions,
+      })),
+    );
+  } catch {
+    // Non-fatal — cluster.ts's original output stays in tokens.json on
+    // failure; we just don't get the improved variants.
+  }
 })().catch((err) => {
   console.error(err);
   process.exit(1);
