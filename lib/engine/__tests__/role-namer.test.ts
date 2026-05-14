@@ -8,7 +8,7 @@ import {
 } from '../role-namer';
 import type { ColorToken, TypographyLevel } from '../types';
 
-// ─── Fixtures ──────────────────────────────────────────────────────────────
+//  Fixtures 
 //
 // Tests use deliberately unambiguous fixtures (clearly-primary purples,
 // clearly-canvas whites, clearly-ink near-blacks) so behavioural assertions
@@ -53,7 +53,7 @@ function roleFor(named: ReturnType<typeof assignColorRoles>, hex: string): Color
   return match ? match.role : null;
 }
 
-// ─── ROLE_PRIORITY / rolePriority ──────────────────────────────────────────
+//  ROLE_PRIORITY / rolePriority 
 
 describe('ROLE_PRIORITY', () => {
   it('places primary first (0)', () => {
@@ -113,7 +113,7 @@ describe('rolePriority()', () => {
   });
 });
 
-// ─── assignColorRoles ──────────────────────────────────────────────────────
+//  assignColorRoles 
 
 describe('assignColorRoles()', () => {
   describe('primary', () => {
@@ -126,7 +126,7 @@ describe('assignColorRoles()', () => {
     });
 
     it('gives a strong boost when CSS variable name contains "primary"', () => {
-      // Two equally chromatic candidates — one carries --primary, the other doesn't.
+      // Two equally chromatic candidates  one carries --primary, the other doesn't.
       const teal = makeColorToken({
         hex: '#00c2b8',
         cssVariableNames: ['--primary'],
@@ -143,7 +143,7 @@ describe('assignColorRoles()', () => {
     it('uses visibilityScore over raw bgColor count when present', () => {
       // Low-bg-count, high-visibility token should outscore high-bg-count,
       // low-visibility token. This is the bug that role-namer's log10 fix
-      // exists to prevent — without it, a footer hairline would beat the
+      // exists to prevent  without it, a footer hairline would beat the
       // brand color.
       const realBrand = makeColorToken({
         hex: '#635bff',
@@ -161,7 +161,7 @@ describe('assignColorRoles()', () => {
 
     it('falls back to bgColor count when visibilityScore is absent', () => {
       // Two same-chroma purples, one with much higher bgColor usage. No
-      // visibilityScore on either — legacy code path.
+      // visibilityScore on either  legacy code path.
       const heavyUse = makeColorToken({
         hex: '#7c3aed',
         usedAs: { textColor: 0, bgColor: 40, borderColor: 0, shadowColor: 0, gradientColor: 0, iconColor: 0 },
@@ -297,7 +297,7 @@ describe('assignColorRoles()', () => {
 
   describe('null assignment', () => {
     it('returns role: null for tokens that fit no rule', () => {
-      // Mid-grey with no bg/border/text usage — no role fits.
+      // Mid-grey with no bg/border/text usage  no role fits.
       const orphan = makeColorToken({
         hex: '#888888',
         usedAs: { textColor: 0, bgColor: 0, borderColor: 0, shadowColor: 0, gradientColor: 0, iconColor: 0 },
@@ -339,7 +339,7 @@ describe('assignColorRoles()', () => {
   });
 });
 
-// ─── assignTypeRoles ───────────────────────────────────────────────────────
+//  assignTypeRoles 
 
 describe('assignTypeRoles()', () => {
   it('classifies 60px as display-xxl', () => {

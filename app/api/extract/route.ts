@@ -35,7 +35,7 @@ export const dynamic = "force-dynamic";
 // need a hosted worker (see plan-v1.md §5).
 export const maxDuration = 300;
 
-// ─── Server-Sent Events plumbing ────────────────────────────────────────────
+//  Server-Sent Events plumbing 
 //
 // We stream stage updates to the client over a single POST connection so the
 // SPA result panel can show "crawling → extracting → proving → reporting"
@@ -124,7 +124,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // ── Rate limiting (after URL validation so malformed requests don't
+  //  Rate limiting (after URL validation so malformed requests don't
   // burn a slot). Per-IP daily cap, configurable via
   // RATE_LIMIT_PER_IP_PER_DAY env var (default 5). Auto-bypassed when
   // NODE_ENV !== 'production' so local dev doesn't trip itself, and when
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
   if (!rl.allowed) {
     return Response.json(
       {
-        error: `Daily limit reached — ${rl.used} of ${rl.limit} extractions used in the last 24 hours. Try again ${rl.resetIn}.`,
+        error: `Daily limit reached  ${rl.used} of ${rl.limit} extractions used in the last 24 hours. Try again ${rl.resetIn}.`,
       },
       {
         status: 429,
@@ -149,7 +149,7 @@ export async function POST(req: Request) {
   const outputDir = path.join(process.cwd(), "output", slug);
 
   // Seed extraUrls with high-value funnel pages that often carry component
-  // variants the homepage doesn't show. `/pricing` is the most universal —
+  // variants the homepage doesn't show. `/pricing` is the most universal 
   // it's where outlined "Contact sales" buttons, comparison tables, and
   // tier-card components typically appear. Sites without /pricing 404
   // gracefully (the crawler adds them to failedUrls and continues).
@@ -185,7 +185,7 @@ export async function POST(req: Request) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      // ── Tiny SSE writer ───────────────────────────────────────────────
+      //  Tiny SSE writer 
       const sendEvent = (event: string, data: unknown) => {
         const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
         controller.enqueue(encoder.encode(payload));
@@ -201,7 +201,7 @@ export async function POST(req: Request) {
         try {
           sendComment("heartbeat");
         } catch {
-          // Controller closed — let the cleanup in finally handle it.
+          // Controller closed  let the cleanup in finally handle it.
         }
       }, 15000);
 
@@ -239,7 +239,7 @@ export async function POST(req: Request) {
       };
 
       const warnings: string[] = [];
-      // shadcn has two output states — emitted CSS, or an explanatory
+      // shadcn has two output states  emitted CSS, or an explanatory
       // omit-reason markdown when the gates fail. We track both so the
       // SPA can surface the right artifact URL.
       const phase3 = {
@@ -256,7 +256,7 @@ export async function POST(req: Request) {
       const overallStart = Date.now();
 
       try {
-        // ── Phase 1: extract (the only fatal stage) ───────────────────
+        //  Phase 1: extract (the only fatal stage) 
         // extract() returns the per-page extraction data so we can apply
         // visibility weighting (Phase 1.5) without re-running Playwright.
         // See MIRROR.md Part 2.13 for the engine signature change.
@@ -279,10 +279,10 @@ export async function POST(req: Request) {
           return;
         }
 
-        // ── Phase 1.5: visibility-and-importance weighting ──────────
+        //  Phase 1.5: visibility-and-importance weighting 
         //
         // Apply visibility weighting in-memory to mutate tokens.json with
-        // visibilityScore + re-sort. dna.md §11.1's wedge — the single
+        // visibilityScore + re-sort. dna.md §11.1's wedge  the single
         // largest accuracy multiplier. See lib/engine/visibility-weight.ts.
         //
         // Phase 3 readers (preview-gen / proof / report-gen / prompt-pack /
@@ -290,12 +290,12 @@ export async function POST(req: Request) {
         // re-sorted colorTokens because they iterate the array and the
         // "most important" tokens are now genuinely at the front.
         //
-        // No disk sidecar — earlier versions wrote pageExtractions to an
+        // No disk sidecar  earlier versions wrote pageExtractions to an
         // `elements.json` file just so this function could read it back
         // (5-20 MB round-trip for data already in memory). The function
         // now takes the array directly.
         await runStage("weighting:start", "applying visibility weighting", () => {
-          // Trim to the fields the weighting module actually consults —
+          // Trim to the fields the weighting module actually consults 
           // each ElementStyle keeps rect / tag / region / color attributes
           // the weight formula needs.
           const slim = pageExtractions.map((pe) => ({
@@ -305,12 +305,12 @@ export async function POST(req: Request) {
           return applyVisibilityWeighting(tokensPath, slim, DEFAULT_VIEWPORT);
         });
 
-        // ── Strip redundant dark-mode screenshot buffers from tokens.json ─
+        //  Strip redundant dark-mode screenshot buffers from tokens.json 
         //
         // The engine attaches dark-mode PNG screenshots as raw Node Buffers
         // on `darkMode.darkScreenshots` (a Record<viewport, Buffer>). When
         // JSON.stringify serializes those Buffers it emits a {type:'Buffer',
-        // data:[n,n,n,...]} object per byte — pretty-printed, a single 1080p
+        // data:[n,n,n,...]} object per byte  pretty-printed, a single 1080p
         // PNG balloons to ~30MB and the full 5-viewport set pushes tokens.json
         // past 180MB on dark-mode-capable sites (Stripe, Vercel, etc.).
         //
@@ -333,13 +333,13 @@ export async function POST(req: Request) {
             fs.writeFileSync(tokensPath, JSON.stringify(tokensOnDisk, null, 2));
           }
         } catch (err) {
-          // Strip failure is non-fatal — tokens.json may just be larger.
+          // Strip failure is non-fatal  tokens.json may just be larger.
           warnings.push(
             `darkScreenshots strip skipped: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
 
-        // ── Ramp regeneration (the wedge differentiator) ──────────────
+        //  Ramp regeneration (the wedge differentiator) 
         //
         // Regenerate a clean 12-stop OKLCH brand ramp anchored on the
         // role-named primary, plus a tinted-or-grey neutral ramp. This is
@@ -352,7 +352,7 @@ export async function POST(req: Request) {
         // per-agent prompt packs) will consume `output/<slug>/regenerated-
         // ramp.json` as their colour source. See lib/engine/ramp-regen.ts.
         //
-        // Runs unconditionally (not gated on `withPhase3`) — the file is
+        // Runs unconditionally (not gated on `withPhase3`)  the file is
         // ~4 KB and the work is ~50 ms, so always emitting it keeps the
         // downstream emitters callable even when callers ask to skip the
         // visual artefacts.
@@ -368,14 +368,14 @@ export async function POST(req: Request) {
         phase3.ramps = rmp.ok && rmp.value === true;
         if (!rmp.ok) warnings.push(`ramp regen failed: ${rmp.error}`);
 
-        // ── Phase 3: preview / proof / report / prompts / designmd ───────
+        //  Phase 3: preview / proof / report / prompts / designmd 
         //
         // Dependency graph (verified by reading each engine module):
         //   chain:        preview → proof → report
         //                  (proof.ts reads preview.html when present;
         //                   report-gen.ts reads proof-data.json when present)
         //   independent:  prompts, designmd
-        //                  (only consume tokens.json — no Phase-3 file deps)
+        //                  (only consume tokens.json  no Phase-3 file deps)
         //
         // We run the chain and the two independent tasks concurrently with
         // Promise.all. Wall-clock savings depend on the per-stage times:
@@ -462,9 +462,9 @@ export async function POST(req: Request) {
             if (!pmp.ok) warnings.push(`prompt-pack failed: ${pmp.error}`);
           })();
 
-          // Independent: deterministic DESIGN.md emitter — Path A (templates
+          // Independent: deterministic DESIGN.md emitter  Path A (templates
           // ~11 of 17 sections; the subjective 4 stub out with hand-offs to
-          // the universal prompt). Pure function over tokens.json — no LLM,
+          // the universal prompt). Pure function over tokens.json  no LLM,
           // scoreboard-safe. See lib/engine/design-md-emit.ts.
           const designMdTask = (async () => {
             const dmd = await runStage(
@@ -481,7 +481,7 @@ export async function POST(req: Request) {
 
           // Independent: Tailwind v4 @theme emitter (Phase 4 Piece 2).
           // Reads tokens.json + regenerated-ramp.json (already on disk from
-          // the ramps stage) and emits `tailwind.css` — a paste-ready
+          // the ramps stage) and emits `tailwind.css`  a paste-ready
           // @theme block users drop into their Tailwind v4 project.
           // See lib/engine/tailwind-emit.ts.
           const tailwindTask = (async () => {
@@ -499,7 +499,7 @@ export async function POST(req: Request) {
 
           // Independent: conditional shadcn theme emitter (Phase 4 Piece 3).
           // Writes EITHER `shadcn-theme.css` (gates pass) OR
-          // `shadcn-omit-reason.md` (gates fail — no chromatic primary, no
+          // `shadcn-omit-reason.md` (gates fail  no chromatic primary, no
           // neutral ramp, or source uses neither Tailwind nor shadcn). The
           // return value tells us which file was written so the artifact
           // URL points at the right one. See lib/engine/shadcn-emit.ts.
@@ -510,7 +510,7 @@ export async function POST(req: Request) {
               () => {
                 const out = generateAndWriteShadcnCss(tokensPath, outputDir, url);
                 // Surface which artifact landed on disk via the runStage
-                // return value — the boolean signals "stage completed", the
+                // return value  the boolean signals "stage completed", the
                 // path lookups below differentiate css vs reason.
                 return out.wrote;
               },
@@ -526,7 +526,7 @@ export async function POST(req: Request) {
           await Promise.all([chainTask, promptsTask, designMdTask, tailwindTask, shadcnTask]);
         }
 
-        // ── Read tokens back + apply heuristic role naming ────────────
+        //  Read tokens back + apply heuristic role naming 
         type TokensShape = {
           colorTokens?: ColorToken[];
           typographyLevels?: TypographyLevel[];
@@ -546,7 +546,7 @@ export async function POST(req: Request) {
         }
 
         // Heuristic role naming (Primary / Ink / Canvas / Hairline / Muted /
-        // ...) runs in the response layer only — never mutates tokens.json
+        // ...) runs in the response layer only  never mutates tokens.json
         // on disk. See MIRROR.md Part 2.7.
         if (Array.isArray(tokens.colorTokens)) {
           tokens.colorTokens = assignColorRoles(tokens.colorTokens);
@@ -560,7 +560,7 @@ export async function POST(req: Request) {
           ? JSON.parse(fs.readFileSync(reportJsonPath, "utf-8"))
           : null;
 
-        // ── Read proof-data.json once and extract everything we need ──
+        //  Read proof-data.json once and extract everything we need 
         // We pull coverage (already used as a stat), totalSampled (feeds the
         // low-sample-size diagnostic), and the top-5 unmatched-color bins
         // (feeds the low-coverage diagnostic's details). proof.ts writes
@@ -601,7 +601,7 @@ export async function POST(req: Request) {
           }
         }
 
-        // ── Engine diagnostics ────────────────────────────────────────
+        //  Engine diagnostics 
         // Pure function over (tokens, report, proof, warnings). Produces a
         // flat list the SPA renders in the result panel. See
         // lib/engine/diagnostics.ts for the rule set.

@@ -17,16 +17,12 @@ import type {
   InteractionData,
   DarkModeData,
   FrameworkDetection,
-  IconSystemInfo,
-  MotionSystem,
-  A11yTokens,
   DesignTokens,
-  DesignBoundary,
   ExtractionReport,
   CSSVariable,
 } from './types';
 
-// ─── CLI Argument Parsing ─────────────────────────────────────────────────────
+//  CLI Argument Parsing 
 
 interface ExtractOptions {
   urls: string[];
@@ -166,7 +162,7 @@ function log(verbose: boolean, ...args: unknown[]): void {
   }
 }
 
-// ─── Main Extraction Pipeline ─────────────────────────────────────────────────
+//  Main Extraction Pipeline 
 
 interface PageExtraction {
   url: string;
@@ -178,7 +174,7 @@ interface PageExtraction {
 // NOTE: return type widened from upstream's `Promise<void>` to
 // `Promise<PageExtraction[]>` so our visibility-weighting layer
 // (lib/engine/visibility-weight.ts) can recover per-element data after
-// extract finishes. Strictly additive — callers that previously ignored the
+// extract finishes. Strictly additive  callers that previously ignored the
 // void return (CLI bin, upstream tests) keep working unchanged because
 // `await fn(): X` discards X. See MIRROR.md Part 2.13.
 async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
@@ -194,7 +190,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
   fs.mkdirSync(path.join(options.output, 'screenshots'), { recursive: true });
   fs.mkdirSync(path.join(options.output, 'screenshots', 'dark'), { recursive: true });
 
-  // ── Step 1-3: Crawl pages ────────────────────────────────────────────────
+  //  Step 1-3: Crawl pages 
 
   log(options.verbose, 'Starting page crawl...');
   const crawlResult = await crawlPages(options.urls, {
@@ -228,7 +224,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
   }
   log(options.verbose, 'Screenshots saved.');
 
-  // ── Step 4-5: DOM collection + CSS analysis (per page) ───────────────────
+  //  Step 4-5: DOM collection + CSS analysis (per page) 
 
   log(options.verbose, 'Starting DOM collection and CSS analysis...');
 
@@ -282,7 +278,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
 
   console.log(`  Extracted ${totalElements} elements from ${pageExtractions.length} pages`);
 
-  // ── Step 7: Dark mode detection (multi-page fallback) ─────────────────────
+  //  Step 7: Dark mode detection (multi-page fallback) 
 
   let darkModeData: DarkModeData = {
     supported: false,
@@ -340,7 +336,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
     }
   }
 
-  // ── Step 8: Framework detection (first page only) ────────────────────────
+  //  Step 8: Framework detection (first page only) 
 
   let frameworkData: FrameworkDetection = { tailwind: null, uiFramework: null, designSystemUrl: null };
 
@@ -366,7 +362,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
 
   await browser.close();
 
-  // ── Step 9-11: Aggregate analysis ────────────────────────────────────────
+  //  Step 9-11: Aggregate analysis 
 
   log(options.verbose, 'Aggregating analysis...');
 
@@ -389,7 +385,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
   // Accessibility
   const a11yTokens = extractA11y(domCollections, interactionSets);
 
-  // ── Step 12: Cluster tokens ──────────────────────────────────────────────
+  //  Step 12: Cluster tokens 
 
   log(options.verbose, 'Clustering tokens...');
 
@@ -434,7 +430,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
   console.log(`  Shadows: ${tokens.shadowTokens.length} tokens`);
   console.log(`  Radii: ${tokens.radiusTokens.length} tokens`);
 
-  // ── Step 13: Design boundary detection ───────────────────────────────────
+  //  Step 13: Design boundary detection 
 
   log(options.verbose, 'Detecting design boundaries...');
 
@@ -464,7 +460,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
   const boundary = detectBoundaries(pageGroups);
   console.log(`  Design boundary: ${boundary.relationship} (similarity: ${boundary.overallSimilarity.toFixed(0)}%)`);
 
-  // ── Step 14: Write output files ──────────────────────────────────────────
+  //  Step 14: Write output files 
 
   log(options.verbose, 'Writing output files...');
 
@@ -527,7 +523,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
     JSON.stringify(report, null, 2),
   );
 
-  // ── Summary ──────────────────────────────────────────────────────────────
+  //  Summary 
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log(`\n  Extraction complete in ${elapsed}s`);
@@ -541,7 +537,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
   return pageExtractions;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+//  Helpers 
 
 function urlToSlug(url: string): string {
   const parsed = new URL(url);
@@ -549,7 +545,7 @@ function urlToSlug(url: string): string {
   return p || 'homepage';
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+//  Main 
 // CLI guard block removed this module is imported as a library from a Next.js
 // API route. The original CLI entry point lived at the upstream fork's
 // scripts/cli.ts; we don't need it.

@@ -1,4 +1,4 @@
-// Diagnostics — surfaces what the engine flagged as suspicious or low-confidence.
+// Diagnostics  surfaces what the engine flagged as suspicious or low-confidence.
 //
 // This is post-processing OUTSIDE the engine. It reads tokens.json + the
 // extraction-report + proof-data + pipeline warnings and emits a flat list
@@ -23,7 +23,7 @@ import type { ColorToken, DesignTokens, ExtractionReport } from './types';
 export type DiagnosticSeverity = 'info' | 'warning' | 'error';
 
 export interface Diagnostic {
-  /** Stable id — kebab-case rule name; multi-fires get a suffix (e.g. `failed-page-2`). */
+  /** Stable id  kebab-case rule name; multi-fires get a suffix (e.g. `failed-page-2`). */
   id: string;
   severity: DiagnosticSeverity;
   /** One-line headline shown in the panel row. */
@@ -60,7 +60,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
   const diags: Diagnostic[] = [];
   const { tokens, report, proof, warnings } = input;
 
-  // ── 1. Pipeline warnings (Phase 3 partial failures) ────────────────────
+  //  1. Pipeline warnings (Phase 3 partial failures) 
   // These are surfaced by the API route when a stage like proof.ts failed
   // but the rest of the pipeline kept going.
   for (let i = 0; i < (warnings ?? []).length; i++) {
@@ -72,7 +72,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  // ── 2. Engine-emitted warnings (from extract.ts) ───────────────────────
+  //  2. Engine-emitted warnings (from extract.ts) 
   const engineWarnings = report?.warnings ?? [];
   for (let i = 0; i < engineWarnings.length; i++) {
     diags.push({
@@ -83,7 +83,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  // ── 3. Low pixel-fidelity coverage ─────────────────────────────────────
+  //  3. Low pixel-fidelity coverage 
   if (
     proof?.coverage !== null &&
     proof?.coverage !== undefined &&
@@ -97,14 +97,14 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
       severity: 'warning',
       title: `Pixel-fidelity coverage is ${(proof.coverage * 100).toFixed(1)}%`,
       message:
-        'A significant fraction of sampled pixels on the live page did not match any color in the extracted palette. The engine likely missed colors — common causes: lazy-loaded styles, CSS-in-JS hydrated after networkidle, or interaction states not yet captured.',
+        'A significant fraction of sampled pixels on the live page did not match any color in the extracted palette. The engine likely missed colors  common causes: lazy-loaded styles, CSS-in-JS hydrated after networkidle, or interaction states not yet captured.',
       action:
         'Open proof.html for a side-by-side. Consider re-running with --with-interaction or --max-pages 10.',
       details: proof.unmatchedTop?.slice(0, 5).map((u) => `${u.hex} (${u.count} pixels unmatched)`),
     });
   }
 
-  // ── 4. Low proof sample size ───────────────────────────────────────────
+  //  4. Low proof sample size 
   // proof.ts excludes <img>/<video>/<canvas>/<svg> and background-image
   // regions. On image-heavy homepages there's little non-image area left.
   // Coverage % is technically accurate but low-confidence at this scale.
@@ -123,7 +123,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  // ── 5. Single-page color noise ─────────────────────────────────────────
+  //  5. Single-page color noise 
   // designBoundary.anomalies surfaces pages where most colors are unique.
   // That usually means frequency-dominance is including one-offs (campaign
   // banners, decorative gradients) alongside real system tokens.
@@ -149,7 +149,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     }
   }
 
-  // ── 6. Framework detection low confidence ──────────────────────────────
+  //  6. Framework detection low confidence 
   // When a UI framework name is returned but Tailwind detection is null,
   // it's often a heuristic false positive on coincidental class names.
   // (Real Tailwind + UI-framework sites usually report both.)
@@ -166,7 +166,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  // ── 7. Dark mode detected but empty variable diff ──────────────────────
+  //  7. Dark mode detected but empty variable diff 
   // Site supports dark mode (toggle clicked, theme changed) but no CSS
   // variables differ between modes. Means the site uses JS-based theming
   // (className swap with hard-coded values), so DESIGN.md Section 2.5
@@ -187,7 +187,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  // ── 8. Low color count ─────────────────────────────────────────────────
+  //  8. Low color count 
   const colorCount = tokens?.colorTokens?.length ?? 0;
   if (colorCount > 0 && colorCount < 10) {
     diags.push({
@@ -201,7 +201,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  // ── 9. Low typography variety ──────────────────────────────────────────
+  //  9. Low typography variety 
   const typoCount = tokens?.typographyLevels?.length ?? 0;
   if (typoCount > 0 && typoCount < 3) {
     diags.push({
@@ -213,7 +213,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  // ── 10. Primary color appears structural (low chroma) ─────────────────
+  //  10. Primary color appears structural (low chroma) 
   // Frequency-dominance failure: a high-frequency footer / border grey
   // beats the actual brand color in the role-namer's ranking. Detected
   // by checking the role-named "primary" token's HSL-approximated
@@ -228,17 +228,17 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
         id: 'primary-is-grey',
         severity: 'error',
         title: `Primary picked appears structural: ${primary.hex}`,
-        message: `The role-namer selected a low-saturation color (approx HSL S = ${(sat * 100).toFixed(0)}%) as Primary. This is usually a frequency-dominance failure — a footer link grey or hairline border outranks the real brand color.`,
+        message: `The role-namer selected a low-saturation color (approx HSL S = ${(sat * 100).toFixed(0)}%) as Primary. This is usually a frequency-dominance failure  a footer link grey or hairline border outranks the real brand color.`,
         action:
           'Manually inspect the top high-chroma colors in the long-tail. The real primary is likely there but was beaten on raw frequency. Weekend 3 visibility weighting (plan-v1.md) is the structural fix.',
       });
     }
   }
 
-  // ── 11. All extracted colors are low-chroma ───────────────────────────
+  //  11. All extracted colors are low-chroma 
   // Stronger sanity check than primary-is-grey: if the ENTIRE palette is
   // achromatic the extraction probably failed (crawl missed brand pages,
-  // CSS-in-JS didn't hydrate, or the site is genuinely greyscale — rare).
+  // CSS-in-JS didn't hydrate, or the site is genuinely greyscale  rare).
   // Threshold: require ≥10 colors before this fires, otherwise the
   // low-color-count rule already covers it.
   if ((tokens?.colorTokens?.length ?? 0) >= 10) {
@@ -260,7 +260,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     }
   }
 
-  // ── 12. Failed pages ───────────────────────────────────────────────────
+  //  12. Failed pages 
   const failedPages = report?.failedPages ?? [];
   for (let i = 0; i < failedPages.length; i++) {
     const f = failedPages[i];
@@ -275,11 +275,11 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
   return diags;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────
+//  Helpers 
 
 /**
  * Approximates HSL saturation from a 6-digit hex. Returns null on malformed
- * input. Used as a cheap proxy for OKLCH chroma — full OKLCH would require
+ * input. Used as a cheap proxy for OKLCH chroma  full OKLCH would require
  * pulling in culori at this layer; this is a 10-line check that catches
  * the common "primary is grey" miscall without the dependency.
  */

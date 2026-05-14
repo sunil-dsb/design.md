@@ -75,4 +75,4 @@ pnpm engine:validate DESIGN.md output/<domain>/tokens.json
 
 ## Local environment notes
 
-This codebase runs Next.js 16. APIs and conventions may differ from training data — read `node_modules/next/dist/docs/` before editing `app/` or `components/`. Engine lives at `lib/engine/` (not `scripts/`). See [MIRROR.md](./MIRROR.md).
+This codebase runs Next.js 16. APIs and conventions may differ from training data  read `node_modules/next/dist/docs/` before editing `app/` or `components/`. Engine lives at `lib/engine/` (not `scripts/`). See [MIRROR.md](./MIRROR.md).

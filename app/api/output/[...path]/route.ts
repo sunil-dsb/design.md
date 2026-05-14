@@ -3,7 +3,7 @@
 // output/<slug>/ on disk; this route streams those files back over HTTP.
 //
 // Why an API route instead of public/ static serving? On Vercel public/ is
-// build-time only — files written at runtime are not visible to the static
+// build-time only  files written at runtime are not visible to the static
 // handler. This route reads from process.cwd()/output/ at request time so the
 // same code works in dev (pnpm dev) and prod (Vercel function disk).
 //
@@ -38,7 +38,7 @@ export async function GET(
 ) {
   const { path: segments } = await params;
 
-  // ── Defense in depth ──────────────────────────────────────────────────
+  //  Defense in depth 
   // (1) Reject segments containing path-traversal or NUL bytes outright.
   // (2) Resolve to an absolute path.
   // (3) Verify the resolved path is genuinely inside OUTPUT_ROOT.
@@ -70,7 +70,7 @@ export async function GET(
     headers: {
       "content-type": contentType,
       "content-length": String(buf.length),
-      // Generated artifacts change every extraction — no caching.
+      // Generated artifacts change every extraction  no caching.
       "cache-control": "no-store",
     },
   });

@@ -11,6 +11,9 @@
 
 :root {
   color-scheme: dark;
+  --font-system-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
 }
 
 /* Smooth-scroll on in-page anchor jumps (used by the /extract result nav).
@@ -25,14 +28,14 @@ html,
 body {
   background: #000000;
   color: #ffffff;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-geist-sans), var(--font-system-sans);
   /* Custom pixel cursor across the whole site. Hotspot at top-left (0 0);
      adjust those two numbers if the visible "tip" of the arrow isn't there.
      `auto` fallback for browsers that can't load image cursors. */
   cursor:
     url("/pixel-cursor.png") 0 0,
     auto;
-    user-select: none;
+  user-select: none;
 }
 
 /* Keep the conventional affordance signal on interactive elements, but
@@ -166,7 +169,7 @@ select {
   }
 }
 
-/* Clip-path notched button — stacked shadow + lift on hover, plus a
+/* Clip-path notched button  stacked shadow + lift on hover, plus a
    slight scale-down on the parent so the whole button feels like it
    "presses in" toward the right edge (same direction language as
    .bubble-btn in the navbar). */
@@ -263,7 +266,7 @@ select {
   }
 }
 
-/* Hero marquee — server-rendered horizontal scroll of brand names + emit
+/* Hero marquee  server-rendered horizontal scroll of brand names + emit
    formats + AI agents. CSS-only animation so it works without JS, the
    content lives in the HTML for crawlers, and `prefers-reduced-motion`
    disables the loop without removing the text.
@@ -290,7 +293,7 @@ select {
 .hero-marquee__track {
   display: flex;
   width: max-content;
-  /* No flex gap here — every item carries its own trailing margin instead.
+  /* No flex gap here  every item carries its own trailing margin instead.
      A flex-gap-based marquee leaves a half-gap-wide jump at each loop
      boundary (the gap between the two halves is *also* counted by
      translateX(-50%)). Per-item margin keeps every item's trailing space
@@ -301,7 +304,7 @@ select {
   animation: hero-marquee-scroll 40s linear infinite;
 }
 
-/* Second row variant — opposite direction + different duration so the two
+/* Second row variant  opposite direction + different duration so the two
    rows are never visually aligned. The mismatch in period (40s vs 55s)
    makes the motion feel organic rather than mechanical. */
 .hero-marquee--reverse .hero-marquee__track {
@@ -317,7 +320,7 @@ select {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  /* Trailing space per item, not flex-gap — see comment on __track for why
+  /* Trailing space per item, not flex-gap  see comment on __track for why
      this matters for a seamless loop. */
   margin-right: 1rem;
   gap: 0.5rem;
@@ -514,10 +517,10 @@ select {
   }
 }
 
-/* ── Announcement bar — thinner mesh-gradient sibling of the footer ──
+/*  Announcement bar  thinner mesh-gradient sibling of the footer 
    Same blue-blob recipe, scaled down + clipped to a ~36px-tall bar. The
    blobs intentionally extend beyond the bar bounds so overflow-clipping
-   exposes only their middle band — gives the gradient a flowing-tape feel
+   exposes only their middle band  gives the gradient a flowing-tape feel
    rather than a discrete-blob feel. */
 .announce-scene {
   isolation: isolate;

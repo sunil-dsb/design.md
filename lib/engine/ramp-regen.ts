@@ -1,11 +1,11 @@
-// Ramp regeneration — the wedge differentiator (plan-v1.md §2).
+// Ramp regeneration  the wedge differentiator (plan-v1.md §2).
 //
 // Most competitors emit raw observed colors as the brand palette. We
 // regenerate a clean 12-stop ramp anchored on the brand's seed: hold the
 // hue, walk a canonical lightness curve, taper chroma at the extremes
 // (because saturated colors don't exist near pure white or pure black in
 // sRGB), and gamut-clamp every stop. The result is a coherent system the
-// user can build UI from — without it, downstream emitters (Tailwind /
+// user can build UI from  without it, downstream emitters (Tailwind /
 // shadcn) ship the observed colors and look indistinguishable from
 // designlang.
 //
@@ -21,7 +21,7 @@
 // the Tailwind v4 / Radix convention), or pure grey if the brand itself
 // is near-monochrome.
 //
-// Pure function — same inputs → same outputs. Scoreboard-safe.
+// Pure function  same inputs → same outputs. Scoreboard-safe.
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -30,9 +30,9 @@ import { assignColorRoles, type NamedColor } from './role-namer';
 // @ts-expect-error culori has no bundled declarations in this setup
 import * as culori from 'culori';
 
-// ─── Constants ────────────────────────────────────────────────────────────
+//  Constants 
 
-/** 12 lightness stops from dna.md §3.6 — dense at the extremes, sparser in the middle. */
+/** 12 lightness stops from dna.md §3.6  dense at the extremes, sparser in the middle. */
 export const LIGHTNESS_STOPS = [
   0.99, 0.97, 0.94, 0.90, 0.83, 0.74, 0.63, 0.52, 0.42, 0.32, 0.22, 0.13,
 ] as const;
@@ -46,7 +46,7 @@ export const CHROMATIC_THRESHOLD = 0.04;
 /** Chroma to use for tinted neutrals when the brand is chromatic. */
 export const NEUTRAL_TINT_CHROMA = 0.005;
 
-// ─── Types ────────────────────────────────────────────────────────────────
+//  Types 
 
 export interface OKLCH {
   l: number;
@@ -68,7 +68,7 @@ export interface Ramp {
   seedHex: string;
   /** Seed in OKLCH space. */
   seedOklch: OKLCH;
-  /** Algorithm identifier — only `"oklch-lightness-curve"` today. */
+  /** Algorithm identifier  only `"oklch-lightness-curve"` today. */
   algorithm: 'oklch-lightness-curve';
   /** 12 stops, lightest first. */
   stops: RampStop[];
@@ -81,7 +81,7 @@ export interface RegeneratedRamps {
    */
   brand: Ramp | null;
   /**
-   * Neutral ramp — tinted with brand hue at NEUTRAL_TINT_CHROMA when the
+   * Neutral ramp  tinted with brand hue at NEUTRAL_TINT_CHROMA when the
    * brand is chromatic, otherwise pure grey.
    */
   neutral: Ramp;
@@ -89,7 +89,7 @@ export interface RegeneratedRamps {
   generatedAt: string;
 }
 
-// ─── culori helpers (typed wrappers, since culori ships no .d.ts here) ───
+//  culori helpers (typed wrappers, since culori ships no .d.ts here) 
 
 interface CuloriRgbLike { mode: 'rgb'; r: number; g: number; b: number; alpha?: number }
 interface CuloriOklchLike { mode: 'oklch'; l: number; c: number; h: number; alpha?: number }
@@ -102,7 +102,7 @@ const parse = (culori as { parse: (x: string) => unknown }).parse;
 /**
  * Parse a hex string into OKLCH coordinates. Returns null when the input
  * is unparseable. Pure black and pure white return c=0 and an arbitrary
- * (typically 0) hue — callers that need a meaningful hue for those should
+ * (typically 0) hue  callers that need a meaningful hue for those should
  * substitute a sensible default.
  */
 export function hexToOklch(hex: string): OKLCH | null {
@@ -134,10 +134,10 @@ export function chromaTaper(i: number, N: number): number {
   return 0.6 + 0.4 * t;
 }
 
-// ─── Core ramp builder ────────────────────────────────────────────────────
+//  Core ramp builder 
 
 /**
- * Build a 12-stop ramp from an OKLCH seed. Internal — public callers use
+ * Build a 12-stop ramp from an OKLCH seed. Internal  public callers use
  * `regenerateRamp(hex)` or `regenerateRampsFromTokens(tokens)`.
  */
 function buildRamp(
@@ -167,7 +167,7 @@ function buildRamp(
     //     the canonical value matches the algorithm name
     //     ("oklch-lightness-curve") and what users see in documentation.
     //   c ← actual post-clamp chroma. This is the load-bearing accuracy
-    //     field — for any stop where the requested chroma exceeded sRGB
+    //     field  for any stop where the requested chroma exceeded sRGB
     //     gamut, `stop.oklch.c` now matches what `stop.hex` actually is.
     //   h ← synthesis hue. The algorithm's claim is "every stop shares the
     //     seed hue"; toGamut introduces ~1° drift in the chromatic stops
@@ -244,7 +244,7 @@ export function regenerateRampsFromTokens(tokens: DesignTokens): RegeneratedRamp
   }
 
   // Neutral ramp: flat chroma across all stops (tapering at chroma 0.005
-  // produces ~0.003 at extremes — invisibly small; not worth the math).
+  // produces ~0.003 at extremes  invisibly small; not worth the math).
   const neutralSeed: OKLCH = { l: 0.5, c: neutralChroma, h: neutralHue };
   const neutralSeedClamped = toGamutSrgb({
     mode: 'oklch',

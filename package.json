@@ -20,6 +20,7 @@
     "@icons-pack/react-simple-icons": "^13.13.0",
     "css-tree": "^3.0.0",
     "culori": "^4.0.0",
+    "geist": "^1.7.0",
     "next": "16.2.6",
     "playwright": "^1.50.0",
     "playwright-extra": "^4.3.0",
@@ -38,5 +39,6 @@
     "tsx": "^4.19.0",
     "typescript": "^5",
     "vitest": "^3.0.0"
-  }
+  },
+  "packageManager": "pnpm@9.15.0"
 }

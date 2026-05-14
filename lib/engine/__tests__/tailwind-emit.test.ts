@@ -14,9 +14,8 @@ import type {
   ShadowToken,
   TypographyLevel,
 } from '../types';
-import type { RegeneratedRamps } from '../ramp-regen';
 
-// ─── Fixtures ─────────────────────────────────────────────────────────────
+//  Fixtures 
 
 function makeColorToken(overrides: Partial<ColorToken> = {}): ColorToken {
   return {
@@ -121,9 +120,9 @@ function makeChromaticTokens(): DesignTokens {
 
 const DEFAULT_OPTS = { url: 'https://example.com', date: '2026-05-13' };
 
-// ─── Color emission ────────────────────────────────────────────────────────
+//  Color emission 
 
-describe('buildTailwindCss — colors', () => {
+describe('buildTailwindCss  colors', () => {
   it('emits @theme block with brand ramp when ramps.brand is non-null', () => {
     const tokens = makeChromaticTokens();
     const ramps = regenerateRampsFromTokens(tokens);
@@ -196,9 +195,9 @@ describe('buildTailwindCss — colors', () => {
   });
 });
 
-// ─── Typography ───────────────────────────────────────────────────────────
+//  Typography 
 
-describe('buildTailwindCss — typography', () => {
+describe('buildTailwindCss  typography', () => {
   it('emits --font-sans only when display + body share a family', () => {
     // Most real sites use one family across headings + body. We emit it as
     // --font-sans (Tailwind v4 idiom: the default body font) and SKIP
@@ -340,9 +339,9 @@ describe('buildTailwindCss — typography', () => {
   });
 });
 
-// ─── Spacing ──────────────────────────────────────────────────────────────
+//  Spacing 
 
-describe('buildTailwindCss — spacing', () => {
+describe('buildTailwindCss  spacing', () => {
   it('emits --spacing base unit when spacingSystem.baseUnit is set', () => {
     const tokens = makeTokens({
       spacingSystem: { baseUnit: 4, scale: [4, 8, 16], frequencyMap: {}, maxContentWidth: null, sectionSpacing: [] },
@@ -360,9 +359,9 @@ describe('buildTailwindCss — spacing', () => {
   });
 });
 
-// ─── Radius ───────────────────────────────────────────────────────────────
+//  Radius 
 
-describe('buildTailwindCss — radius', () => {
+describe('buildTailwindCss  radius', () => {
   function radius(value: string, frequency: number): RadiusToken {
     return { value, frequency, typicalElements: [] };
   }
@@ -395,7 +394,7 @@ describe('buildTailwindCss — radius', () => {
       ],
     });
     const css = buildTailwindCss(tokens, null, DEFAULT_OPTS);
-    // Should emit sm/md/lg/xl/2xl — 5 names total
+    // Should emit sm/md/lg/xl/2xl  5 names total
     const matches = css.match(/--radius-(?:sm|md|lg|xl|2xl):/g) ?? [];
     expect(matches.length).toBe(5);
   });
@@ -445,9 +444,9 @@ describe('buildTailwindCss — radius', () => {
   });
 });
 
-// ─── Shadows ──────────────────────────────────────────────────────────────
+//  Shadows 
 
-describe('buildTailwindCss — shadows', () => {
+describe('buildTailwindCss  shadows', () => {
   function shadow(value: string, frequency: number, type: ShadowToken['type']): ShadowToken {
     return { value, frequency, type, typicalElements: [] };
   }
@@ -558,9 +557,9 @@ describe('buildTailwindCss — shadows', () => {
   });
 });
 
-// ─── Output structure / header ────────────────────────────────────────────
+//  Output structure / header 
 
-describe('buildTailwindCss — output structure', () => {
+describe('buildTailwindCss  output structure', () => {
   it('starts with a /* ... */ header comment mentioning site + date', () => {
     const tokens = makeChromaticTokens();
     const ramps = regenerateRampsFromTokens(tokens);
@@ -606,7 +605,7 @@ describe('buildTailwindCss — output structure', () => {
   });
 });
 
-// ─── generateAndWriteTailwindCss (disk wrapper) ──────────────────────────
+//  generateAndWriteTailwindCss (disk wrapper) 
 
 describe('generateAndWriteTailwindCss', () => {
   function withTempDir<T>(fn: (dir: string) => T): T {

@@ -8,7 +8,6 @@ import type {
   DesignTokens,
   DOMCollection,
   ElementStyle,
-  GradientInfo,
   CSSAnalysis,
   InteractionData,
   InteractionCapture,
@@ -19,7 +18,7 @@ import type {
   TypographyLevel,
 } from './types';
 
-// ─── Input Interface ─────────────────────────────────────────────────────────
+//  Input Interface 
 
 interface PageExtraction {
   url: string;
@@ -28,7 +27,7 @@ interface PageExtraction {
   interactions?: InteractionData;
 }
 
-// ─── Named Color Map ─────────────────────────────────────────────────────────
+//  Named Color Map 
 
 const NAMED_COLORS: Record<string, [number, number, number, number]> = {
   white:       [255, 255, 255, 1],
@@ -44,7 +43,7 @@ const NAMED_COLORS: Record<string, [number, number, number, number]> = {
   transparent: [0,   0,   0,   0],
 };
 
-// ─── Color Parsing Helpers ───────────────────────────────────────────────────
+//  Color Parsing Helpers 
 
 interface RGBA {
   r: number;
@@ -190,7 +189,7 @@ function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v));
 }
 
-export function rgbaToHex(r: number, g: number, b: number, _a?: number): string {
+export function rgbaToHex(r: number, g: number, b: number): string {
   const toHex = (n: number) => Math.round(clampByte(n)).toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
@@ -199,7 +198,7 @@ function rgbaKey(c: RGBA): string {
   return `${c.r},${c.g},${c.b},${Math.round(c.a * 1000)}`;
 }
 
-// ─── Shadow & Gradient Parsers ───────────────────────────────────────────────
+//  Shadow & Gradient Parsers 
 
 function extractShadowColors(boxShadow: string): string[] {
   if (!boxShadow || boxShadow === 'none') return [];
@@ -236,7 +235,7 @@ function extractGradientColors(gradient: string): string[] {
   return colors;
 }
 
-// ─── WCAG Contrast ───────────────────────────────────────────────────────────
+//  WCAG Contrast 
 
 function relativeLuminance(r: number, g: number, b: number): number {
   const srgb = [r, g, b].map((c) => {
@@ -257,7 +256,7 @@ export function wcagContrast(hex1: string, hex2: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-// ─── Math Helpers ────────────────────────────────────────────────────────────
+//  Math Helpers 
 
 function gcd(a: number, b: number): number {
   a = Math.abs(Math.round(a));
@@ -299,7 +298,7 @@ export function parsePxValue(val: string): number | null {
   return num;
 }
 
-// ─── Usage Context Type ──────────────────────────────────────────────────────
+//  Usage Context Type 
 
 type UsageContext = 'textColor' | 'bgColor' | 'borderColor' | 'shadowColor' | 'gradientColor' | 'iconColor';
 
@@ -312,7 +311,7 @@ interface ColorEntry {
   cssVariableNames: Set<string>;
 }
 
-// ─── Exported Utilities (for testing) ────────────────────────────────────────
+//  Exported Utilities (for testing) 
 
 export interface OKLCH {
   l: number;
@@ -371,9 +370,9 @@ export function classifyShadow(value: string): 'border-shadow' | 'ring' | 'eleva
   return 'elevation';
 }
 
-// ─── Stability Classification ───────────────────────────────────────────────
+//  Stability Classification 
 
-function classifyColorStability(color: ColorToken, _totalPages: number): StabilityClassification {
+function classifyColorStability(color: ColorToken): StabilityClassification {
   const signals: string[] = [];
   let score = 0;
 
@@ -514,10 +513,8 @@ function classifyComponentStability(component: ComponentGroup): StabilityClassif
 
 /** Classify all tokens in a DesignTokens object by temporal stability layer. Can be called independently. */
 export function classifyTokenStability(tokens: DesignTokens): void {
-  const totalPages = tokens.meta.totalPages;
-
   for (const color of tokens.colorTokens) {
-    color.stability = classifyColorStability(color, totalPages);
+    color.stability = classifyColorStability(color);
   }
 
   for (const typo of tokens.typographyLevels) {
@@ -540,12 +537,12 @@ export function classifyTokenStability(tokens: DesignTokens): void {
   }
 }
 
-// ─── Main Export ─────────────────────────────────────────────────────────────
+//  Main Export 
 
 export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable[]): DesignTokens {
   const totalPages = pages.length;
 
-  // ── 1. Color Clustering ──────────────────────────────────────────────────
+  //  1. Color Clustering 
 
   const colorMap = new Map<string, ColorEntry>();
 
@@ -729,7 +726,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     };
   });
 
-  // ── Color Relationships ────────────────────────────────────────────────
+  //  Color Relationships 
 
   // Lightness scales: group by hue (H ± 10°), different lightness
   const oklchColors = clustered
@@ -803,7 +800,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
 
   contrastPairs.sort((a, b) => b.usageCount - a.usageCount);
 
-  // ── 2. Typography Levels ───────────────────────────────────────────────
+  //  2. Typography Levels 
 
   interface TypoGroup {
     fontFamily: string;
@@ -884,7 +881,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       confidence: g.frequency === 1 ? 'low' as const : (g.frequency >= 5 ? 'high' as const : 'medium' as const),
     }));
 
-  // ── 3. Font Info ───────────────────────────────────────────────────────
+  //  3. Font Info 
 
   const fontFaces: { family: string; weight: string; style: string; src: string }[] = [];
   const loadedFonts: { family: string; weight: string; style: string }[] = [];
@@ -916,7 +913,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     }
   }
 
-  // ── 4. Spacing System ─────────────────────────────────────────────────
+  //  4. Spacing System 
 
   const spacingValues: number[] = [];
   const maxWidthValues: string[] = [];
@@ -996,7 +993,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     frequencyMap[val] = freq;
   }
 
-  // ── 5. Shadow System ──────────────────────────────────────────────────
+  //  5. Shadow System 
 
   const shadowFreq = new Map<string, { value: string; frequency: number; elements: string[] }>();
 
@@ -1064,7 +1061,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       typicalElements: s.elements,
     }));
 
-  // ── 6. Radius System ──────────────────────────────────────────────────
+  //  6. Radius System 
 
   const radiusFreq = new Map<string, { value: string; frequency: number; elements: string[] }>();
 
@@ -1104,7 +1101,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       };
     });
 
-  // ── 7. Component Identification ───────────────────────────────────────
+  //  7. Component Identification 
 
   interface IdentifiedComponent {
     type: string;
@@ -1202,7 +1199,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     }
   }
 
-  // ── Variant Detection ─────────────────────────────────────────────────
+  //  Variant Detection 
 
   function classifyVariant(el: ElementStyle): string {
     const bg = parseColor(el.backgroundColor);
@@ -1337,7 +1334,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     return totalB - totalA;
   });
 
-  // ── 8. Layout Patterns ────────────────────────────────────────────────
+  //  8. Layout Patterns 
 
   const columnCounts = new Set<number>();
   for (const page of pages) {
@@ -1377,7 +1374,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     contentAlignment,
   };
 
-  // ── 9. Cross-page Consistency ─────────────────────────────────────────
+  //  9. Cross-page Consistency 
 
   const varByPage = new Map<string, Map<string, string>>();
   for (const page of pages) {
@@ -1417,17 +1414,12 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     }
   }
 
-  // ── 10. Gradient Aggregation ──────────────────────────────────────────
+  //  10. Gradient Aggregation 
 
   const gradients: { type: string; value: string; elementTag: string; location: string }[] = [];
   const seenGradients = new Set<string>();
 
   for (const page of pages) {
-    const pageHeight = Math.max(
-      ...page.dom.elements.map((el) => el.rect.y + el.rect.height),
-      1000,
-    );
-
     for (const g of page.dom.gradients) {
       const key = `${g.type}|${g.value}`;
       if (seenGradients.has(key)) continue;
@@ -1455,7 +1447,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     }
   }
 
-  // ── Breakpoints ───────────────────────────────────────────────────────
+  //  Breakpoints 
 
   const breakpointMap = new Map<string, MediaBreakpoint>();
   for (const page of pages) {
@@ -1476,7 +1468,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     return aVal - bVal;
   });
 
-  // ── A11y Tokens (basic) ───────────────────────────────────────────────
+  //  A11y Tokens (basic) 
 
   // Focus indicator: check pseudo-class rules for :focus-visible
   let focusStyle: Record<string, string> = {};
@@ -1540,11 +1532,11 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     minFontSize: minFontSize === Infinity ? '16px' : `${Math.round(minFontSize)}px`,
   };
 
-  // ── Total Elements ────────────────────────────────────────────────────
+  //  Total Elements 
 
   const totalElements = pages.reduce((sum, p) => sum + p.dom.elements.length, 0);
 
-  // ── Assemble Final Tokens ─────────────────────────────────────────────
+  //  Assemble Final Tokens 
 
   const result: DesignTokens = {
     meta: {
@@ -1609,20 +1601,20 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     cssVariables,
   };
 
-  // ── Stability Classification Pass ───────────────────────────────────
+  //  Stability Classification Pass 
   classifyTokenStability(result);
 
   return result;
 }
 
-// ─── Incremental Merge ──────────────────────────────────────────────────────
+//  Incremental Merge 
 
 /** Merge incoming tokens into an existing set, deduplicating by perceptual similarity */
 export function mergeTokenSets(existing: DesignTokens, incoming: DesignTokens): DesignTokens {
   // @ts-expect-error culori has no bundled declarations in this setup
   const toOklch = (culori as typeof import('culori')).converter('oklch');
 
-  // ── Color merge: delta-E < 3 → combine frequencies ────────────────────
+  //  Color merge: delta-E < 3 → combine frequencies 
   const mergedColors = [...existing.colorTokens];
 
   for (const ic of incoming.colorTokens) {
@@ -1657,7 +1649,7 @@ export function mergeTokenSets(existing: DesignTokens, incoming: DesignTokens): 
   }
   mergedColors.sort((a, b) => b.frequency - a.frequency);
 
-  // ── Typography merge: key = family|size|weight ────────────────────────
+  //  Typography merge: key = family|size|weight 
   const typoMap = new Map<string, TypographyLevel>();
   for (const t of existing.typographyLevels) {
     typoMap.set(`${t.fontFamily}|${t.fontSize}|${t.fontWeight}`, t);
@@ -1677,7 +1669,7 @@ export function mergeTokenSets(existing: DesignTokens, incoming: DesignTokens): 
     return sizeB - sizeA;
   });
 
-  // ── Shadow merge: exact value match ───────────────────────────────────
+  //  Shadow merge: exact value match 
   const shadowMap = new Map<string, ShadowToken>();
   for (const s of existing.shadowTokens) shadowMap.set(s.value, s);
   for (const s of incoming.shadowTokens) {
@@ -1690,7 +1682,7 @@ export function mergeTokenSets(existing: DesignTokens, incoming: DesignTokens): 
   }
   const mergedShadows = Array.from(shadowMap.values()).sort((a, b) => b.frequency - a.frequency);
 
-  // ── Radius merge: exact value match ───────────────────────────────────
+  //  Radius merge: exact value match 
   const radiusMap = new Map<string, RadiusToken>();
   for (const r of existing.radiusTokens) radiusMap.set(r.value, r);
   for (const r of incoming.radiusTokens) {

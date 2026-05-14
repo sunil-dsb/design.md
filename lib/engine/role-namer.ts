@@ -25,7 +25,7 @@
 import * as culori from 'culori';
 import type { ColorToken, TypographyLevel } from './types';
 
-// ─── Color roles ────────────────────────────────────────────────────────────
+//  Color roles 
 
 export type ColorRole =
   | 'primary'
@@ -135,11 +135,11 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
     if (!assigned.has(hex)) assigned.set(hex, role);
   };
 
-  // ─── 1. PRIMARY ─────────────────────────────────────────────────────────
+  //  1. PRIMARY 
   // High chroma + visual prominence + bonus for --primary / --brand css var.
   //
   // When visibility weighting has run (visibilityScore present on tokens),
-  // it replaces raw `usedAs.bgColor` count as the prominence signal — the
+  // it replaces raw `usedAs.bgColor` count as the prominence signal  the
   // weighted score captures "how visually prominent is this color across
   // all the elements that paint it" (area × fold × interactivity × region),
   // which is structurally better than counting bg-occurrences. dna.md §11.1
@@ -147,7 +147,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
   // color via frequency" failure mode.
   //
   // Falls back to the original bgColor count when visibilityScore is
-  // absent — preserves behaviour on legacy tokens.json (and the 4 gallery
+  // absent  preserves behaviour on legacy tokens.json (and the 4 gallery
   // examples which were extracted before this layer existed).
   const primaryCandidates = withOklch
     .filter(({ oklch }) => oklch && oklch.c >= 0.1)
@@ -155,7 +155,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
       const { color, oklch } = entry;
       const visScore = (color as ColorToken & { visibilityScore?: number }).visibilityScore;
       // Prominence signal:
-      //   Visibility path: log10(vis + 1) * 30 — grows with visibility but
+      //   Visibility path: log10(vis + 1) * 30  grows with visibility but
       //     with diminishing returns. The previous `min(vis*25, 60)` saturated
       //     at vis ≈ 2.4, which collapsed all high-visibility tokens to the
       //     same score and let chroma alone decide. On real data that picked
@@ -187,7 +187,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
   const primaryOklch =
     primaryCandidates.length > 0 ? primaryCandidates[0].entry.oklch : null;
 
-  // ─── 2. CANVAS ──────────────────────────────────────────────────────────
+  //  2. CANVAS 
   // Lightest color with significant bg usage. Almost always #ffffff or very near.
   const canvasCandidates = withOklch
     .filter(({ color, oklch }) => oklch && oklch.l > 0.95 && color.usedAs.bgColor > 0)
@@ -202,7 +202,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
     assign(canvasCandidates[0].color.hex, 'canvas');
   }
 
-  // ─── 3. CANVAS ALT ──────────────────────────────────────────────────────
+  //  3. CANVAS ALT 
   // Second-lightest distinct background covering significant area.
   const canvasAltCandidates = withOklch
     .filter(({ color, oklch }) => oklch && oklch.l > 0.85 && oklch.l <= 0.97 && color.usedAs.bgColor >= 2)
@@ -213,7 +213,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
     assign(canvasAltCandidates[0].color.hex, 'canvas-alt');
   }
 
-  // ─── 4. INK ─────────────────────────────────────────────────────────────
+  //  4. INK 
   // Darkest text color. Strongly prefer slightly-chromatic darks over pure
   // black real brands tint their dark text colors. Stripe uses #061b31,
   // not #000000.
@@ -237,7 +237,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
     assign(inkCandidates[0].entry.color.hex, 'ink');
   }
 
-  // ─── 5. MUTED ───────────────────────────────────────────────────────────
+  //  5. MUTED 
   // Secondary body text: medium luminance, low chroma, used as textColor.
   const mutedCandidates = withOklch
     .filter(({ color, oklch }) =>
@@ -257,7 +257,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
     assign(mutedCandidates[0].color.hex, 'muted');
   }
 
-  // ─── 6. HAIRLINE ────────────────────────────────────────────────────────
+  //  6. HAIRLINE 
   // Light grey border color used heavily as borderColor.
   const hairlineCandidates = withOklch
     .filter(({ color, oklch }) => oklch && oklch.l > 0.82 && color.usedAs.borderColor >= 3)
@@ -274,11 +274,11 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
     assign(hairlineCandidates[0].color.hex, 'hairline');
   }
 
-  // ─── 7. BRAND DARK ──────────────────────────────────────────────────────
+  //  7. BRAND DARK 
   // Same hue as primary, darker. Used for featured tiers, dashboard chrome.
   if (primaryOklch) {
     const brandDarkCandidates = withOklch
-      .filter(({ color, oklch }) =>
+      .filter(({ oklch }) =>
         oklch && oklch.l < primaryOklch.l - 0.1 && oklch.c > 0.04,
       )
       .filter(({ color }) => !assigned.has(color.hex))
@@ -289,10 +289,10 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
       assign(brandDarkCandidates[0].color.hex, 'brand-dark');
     }
 
-    // ─── 8. BRAND SOFT ────────────────────────────────────────────────────
+    //  8. BRAND SOFT 
     // Same hue as primary, lighter product UI accent / hover state.
     const brandSoftCandidates = withOklch
-      .filter(({ color, oklch }) =>
+      .filter(({ oklch }) =>
         oklch && oklch.l > primaryOklch.l + 0.1 && oklch.c > 0.04,
       )
       .filter(({ color }) => !assigned.has(color.hex))
@@ -304,12 +304,12 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
     }
   }
 
-  // ─── 9. ACCENT ──────────────────────────────────────────────────────────
+  //  9. ACCENT 
   // Highest-chroma color in a hue family distinct from primary (ΔH > 30°).
   // Visibility-aware: when a weighted score is present, prefer it over raw
   // frequency. Same fallback logic as PRIMARY.
   const accentCandidates = withOklch
-    .filter(({ color, oklch }) => oklch && oklch.c >= 0.1)
+    .filter(({ oklch }) => oklch && oklch.c >= 0.1)
     .filter(({ color }) => !assigned.has(color.hex))
     .filter(({ oklch }) => !primaryOklch || hueDelta(oklch!.h, primaryOklch.h) > 30)
     .map(({ color, oklch }) => {
@@ -330,7 +330,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
     assign(accentCandidates[0].color.hex, 'accent');
   }
 
-  // ─── 10. SEMANTIC (success / warning / error / info) ────────────────────
+  //  10. SEMANTIC (success / warning / error / info) 
   // Saturated colors matching standard hue bands, distinct from brand.
   const semanticHues: Array<{ hue: number; tolerance: number; role: NonNullable<ColorRole> }> = [
     { hue: 25, tolerance: 25, role: 'error' }, // Red-orange
@@ -341,7 +341,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
 
   for (const { hue, tolerance, role } of semanticHues) {
     const candidates = withOklch
-      .filter(({ color, oklch }) =>
+      .filter(({ oklch }) =>
         oklch && oklch.c >= 0.1 && oklch.l > 0.3 && oklch.l < 0.75,
       )
       .filter(({ color }) => !assigned.has(color.hex))
@@ -355,7 +355,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
     }
   }
 
-  // ─── 11. ON PRIMARY ─────────────────────────────────────────────────────
+  //  11. ON PRIMARY 
   // White (or near-white) text color, used when primary is dark enough that
   // light text pairs with it.
   if (primaryOklch && primaryOklch.l < 0.65) {
@@ -380,7 +380,7 @@ export function assignColorRoles(colors: ColorToken[]): NamedColor[] {
   });
 }
 
-// ─── Typography roles ───────────────────────────────────────────────────────
+//  Typography roles 
 
 export type TypeRole =
   | 'display-xxl'

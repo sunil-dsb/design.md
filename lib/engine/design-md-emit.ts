@@ -1,4 +1,4 @@
-// Deterministic DESIGN.md emitter — Path A, honest scope.
+// Deterministic DESIGN.md emitter  Path A, honest scope.
 //
 // Templates the sections that have crisp tokenized data. Skips the
 // subjective ones (Brand Context, Visual Theme, Content & Voice, Do's
@@ -6,7 +6,7 @@
 // (prompts/universal.md) for agent-written premium versions.
 //
 // Pure function: same tokens.json input → same DESIGN.md output. No LLM,
-// no network. This is what the scoreboard scores against — see plan
+// no network. This is what the scoreboard scores against  see plan
 // §10 deterministic-MVP commitment.
 //
 // What lands in each section:
@@ -29,7 +29,7 @@
 //
 // Total: 11 full/partial sections + 4 skipped hand-offs + 2 conditional.
 // Skipped sections still appear in the output as a stub pointing the
-// reader to the universal prompt — the structure stays complete.
+// reader to the universal prompt  the structure stays complete.
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -37,13 +37,11 @@ import type {
   ColorToken,
   DesignTokens,
   ExtractionReport,
-  RadiusToken,
-  ShadowToken,
   TypographyLevel,
 } from './types';
 import { rolePriority, type ColorRole } from './role-namer';
 
-// ─── Public API ──────────────────────────────────────────────────────────
+//  Public API 
 
 export interface GenerateOptions {
   /** Used in the file header comment + the H1 title. */
@@ -54,7 +52,7 @@ export interface GenerateOptions {
 
 /**
  * Render the full DESIGN.md as a single markdown string. Pure function.
- * No I/O, no environment access — easy to test against synthetic tokens.
+ * No I/O, no environment access  easy to test against synthetic tokens.
  */
 export function generateDesignMd(
   tokens: DesignTokens,
@@ -77,7 +75,7 @@ export function generateDesignMd(
   out.push(
     '<!-- This is not the official design system. Colors, fonts, and spacing may not be 100% accurate. -->',
   );
-  out.push('<!-- Sections 0, 1, 7, 8 are skipped in the deterministic emitter — they require -->');
+  out.push('<!-- Sections 0, 1, 7, 8 are skipped in the deterministic emitter  they require -->');
   out.push('<!-- brand judgement. Paste prompts/universal.md into an AI agent for full coverage. -->');
   out.push('');
   out.push(`# Design System: ${siteName}`);
@@ -107,7 +105,7 @@ export function generateDesignMd(
   if (tokens.iconSystem) {
     out.push(emitSection12Iconography(tokens));
   }
-  out.push(emitSection13AgentGuide(tokens, opts.url));
+  out.push(emitSection13AgentGuide(tokens));
 
   return out.join('\n') + '\n';
 }
@@ -138,7 +136,7 @@ export function generateAndWriteDesignMd(
   return destPath;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────
+//  Helpers 
 
 function deriveSiteName(url: string): string {
   try {
@@ -188,7 +186,7 @@ function describeColor(c: ColorToken): string {
   const min = Math.min(r, g, b);
   const sat = max === 0 ? 0 : (max - min) / max;
   if (sat < 0.1) return lum > 0.5 ? 'Mid Neutral' : 'Dark Neutral';
-  // Chromatic — describe by hue
+  // Chromatic  describe by hue
   if (r > g && r > b) return g > b ? 'Warm Tone' : 'Crimson Tone';
   if (g > r && g > b) return 'Green Tone';
   if (b > r && b > g) return r > g ? 'Violet Tone' : 'Blue Tone';
@@ -203,13 +201,13 @@ function isChromatic(c: ColorToken): boolean {
   return sat >= 0.1;
 }
 
-// ─── Section emitters ────────────────────────────────────────────────────
+//  Section emitters 
 
 function emitSection0Stub(): string {
   return [
     '## 0. Brand Context',
     '',
-    '_Skipped by the deterministic emitter — Brand Context requires world knowledge about the company, audience, and personality that no extraction can produce reliably._',
+    '_Skipped by the deterministic emitter  Brand Context requires world knowledge about the company, audience, and personality that no extraction can produce reliably._',
     '',
     'For a complete, agent-written Brand Context section, paste `prompts/universal.md` (downloadable from the SPA result panel) into Claude Code / Claude.ai / ChatGPT / Cursor.',
     '',
@@ -220,7 +218,7 @@ function emitSection1Stub(): string {
   return [
     '## 1. Visual Theme & Atmosphere',
     '',
-    '_Skipped by the deterministic emitter — Visual Theme requires aesthetic judgement ("could this describe 3 other sites?") that no extraction can produce reliably._',
+    '_Skipped by the deterministic emitter  Visual Theme requires aesthetic judgement ("could this describe 3 other sites?") that no extraction can produce reliably._',
     '',
     'For a complete, agent-written Visual Theme section, paste `prompts/universal.md` into an AI agent.',
     '',
@@ -233,7 +231,7 @@ function emitSection2Colors(tokens: DesignTokens): string {
     return '## 2. Color Palette & Roles\n\n_No color tokens extracted._\n';
   }
 
-  // ── Spec-compliant filtering by 4-layer stability ────────────────────
+  //  Spec-compliant filtering by 4-layer stability 
   // resources/design-md-format.md §2 requires:
   //   - main palette: L1 (infrastructure) + L2 (system) ONLY
   //   - L3 (campaign): separate "Current Campaign Colors" subsection
@@ -324,10 +322,10 @@ function emitSection2Colors(tokens: DesignTokens): string {
     out.push('| Hex | Frequency | Used as | CSS Variable |');
     out.push('|-----|-----------|---------|--------------|');
     for (const c of campaign) {
-      const usage = usageSuffix(c).replace(/^\(|\)$/g, '') || '—';
+      const usage = usageSuffix(c).replace(/^\(|\)$/g, '') || '';
       const cssVar = c.cssVariableNames && c.cssVariableNames.length > 0
         ? `\`${c.cssVariableNames[0]}\``
-        : '—';
+        : '';
       out.push(`| \`${c.hex}\` | ${c.frequency} | ${usage} | ${cssVar} |`);
     }
     out.push('');
@@ -421,7 +419,7 @@ function emitSection3Typography(tokens: DesignTokens): string {
     const family = (l.fontFamily || '').split(',')[0].trim().replace(/^["']|["']$/g, '');
     const tags = (l.typicalTags || []).slice(0, 4).join(', ');
     const features = l.fontFeatureSettings && l.fontFeatureSettings !== 'normal'
-      ? `\`${l.fontFeatureSettings}\`` : '—';
+      ? `\`${l.fontFeatureSettings}\`` : '';
     out.push(
       `| ${role} | \`${family}\` | \`${l.fontSize}\` | \`${l.fontWeight}\` | \`${l.lineHeight}\` | \`${l.letterSpacing}\` | ${features} | ${l.frequency} | ${tags} |`,
     );
@@ -511,7 +509,7 @@ function emitSection5Layout(tokens: DesignTokens): string {
     if (layout.commonColumnCounts && layout.commonColumnCounts.length > 0) {
       out.push(`- **Common column counts:** ${layout.commonColumnCounts.join(', ')}`);
     }
-    out.push(`- **Content alignment:** ${layout.contentAlignment ?? '—'}`);
+    out.push(`- **Content alignment:** ${layout.contentAlignment ?? ''}`);
     if (layout.maxContentWidth) {
       out.push(`- **Max content width:** \`${layout.maxContentWidth}\``);
     }
@@ -524,7 +522,7 @@ function emitSection5Layout(tokens: DesignTokens): string {
     out.push('| Value | Frequency | Typical Elements |');
     out.push('|-------|-----------|------------------|');
     for (const r of radii) {
-      const els = (r.typicalElements || []).slice(0, 4).join(', ') || '—';
+      const els = (r.typicalElements || []).slice(0, 4).join(', ') || '';
       out.push(`| \`${r.value}\` | ${r.frequency} | ${els} |`);
     }
     out.push('');
@@ -548,7 +546,7 @@ function emitSection6Depth(tokens: DesignTokens): string {
   out.push('| Type | Value | Frequency | Typical Elements |');
   out.push('|------|-------|-----------|------------------|');
   for (const s of shadows) {
-    const els = (s.typicalElements || []).slice(0, 4).join(', ') || '—';
+    const els = (s.typicalElements || []).slice(0, 4).join(', ') || '';
     out.push(`| ${s.type} | \`${s.value}\` | ${s.frequency} | ${els} |`);
   }
   out.push('');
@@ -604,7 +602,7 @@ function emitSection7Stub(): string {
   return [
     '## 7. Content & Voice',
     '',
-    '_Skipped by the deterministic emitter — Content & Voice requires reading microcopy and inferring brand voice, which no extraction can do reliably._',
+    '_Skipped by the deterministic emitter  Content & Voice requires reading microcopy and inferring brand voice, which no extraction can do reliably._',
     '',
     'For a complete, agent-written Content & Voice section, paste `prompts/universal.md` into an AI agent.',
     '',
@@ -615,7 +613,7 @@ function emitSection8Stub(): string {
   return [
     "## 8. Do's and Don'ts",
     '',
-    "_Skipped by the deterministic emitter — Do's and Don'ts are brand-specific judgement calls._",
+    "_Skipped by the deterministic emitter  Do's and Don'ts are brand-specific judgement calls._",
     '',
     "For a complete, agent-written Do's and Don'ts section, paste `prompts/universal.md` into an AI agent.",
     '',
@@ -675,7 +673,7 @@ function emitSection9A11y(tokens: DesignTokens): string {
   if (a.tabOrder) {
     out.push(`### Tab Order\n\n- **Tabbable elements:** ${a.tabOrder.tabbableCount}`);
     if (a.tabOrder.hasPositiveTabindex) {
-      out.push(`- **Positive tabindex values:** ${a.tabOrder.positiveTabindexCount} (anti-pattern — most sites should rely on document order)`);
+      out.push(`- **Positive tabindex values:** ${a.tabOrder.positiveTabindexCount} (anti-pattern  most sites should rely on document order)`);
     }
     out.push('');
   }
@@ -739,7 +737,7 @@ function emitSection11StateMatrix(tokens: DesignTokens): string {
   out.push('|---------------------|---------|-------|---------------|--------|----------|');
   for (const r of rows.slice(0, 20)) {
     out.push(
-      `| ${r.component} | ✓ | ${r.hasHover ? '✓' : '—'} | ${r.hasFocusVisible ? '✓' : '—'} | ${r.hasActive ? '✓' : '—'} | ${r.hasDisabled ? '✓' : '—'} |`,
+      `| ${r.component} | ✓ | ${r.hasHover ? '✓' : ''} | ${r.hasFocusVisible ? '✓' : ''} | ${r.hasActive ? '✓' : ''} | ${r.hasDisabled ? '✓' : ''} |`,
     );
   }
   out.push('');
@@ -768,7 +766,7 @@ function emitSection12Iconography(tokens: DesignTokens): string {
   return out.join('\n');
 }
 
-function emitSection13AgentGuide(tokens: DesignTokens, _url: string): string {
+function emitSection13AgentGuide(tokens: DesignTokens): string {
   const out: string[] = [];
   out.push('## 13. Agent Prompt Guide');
   out.push('');

@@ -1,4 +1,4 @@
-// Tailwind v4 `@theme` emitter — Phase 4 Piece 2.
+// Tailwind v4 `@theme` emitter  Phase 4 Piece 2.
 //
 // Takes the regenerated brand + neutral ramps (Piece 1) and the extracted
 // typography / spacing / radius / shadow scales from tokens.json, emits a
@@ -10,10 +10,10 @@
 // Why this is the wedge (plan-v1.md §2): every other extraction tool that
 // emits Tailwind config (designlang ships v3 `theme.extend`) uses the raw
 // observed colors. We use our regenerated 12-stop OKLCH ramps anchored on
-// the brand seed, so the emitted scale is coherent — every step has the
+// the brand seed, so the emitted scale is coherent  every step has the
 // right relationship to every other step. Designers can build with it.
 //
-// Pure function — same inputs → same output. Scoreboard-safe.
+// Pure function  same inputs → same output. Scoreboard-safe.
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -25,12 +25,12 @@ import {
 } from './role-namer';
 import type { RegeneratedRamps, Ramp } from './ramp-regen';
 
-// ─── Constants ────────────────────────────────────────────────────────────
+//  Constants 
 
 /** Tailwind-style size labels for radii and shadows, in ascending order. */
 const SCALE_NAMES = ['sm', 'md', 'lg', 'xl', '2xl'] as const;
 
-/** Typography display order — same as prompt-pack.ts. */
+/** Typography display order  same as prompt-pack.ts. */
 const TYPE_DISPLAY_ORDER: NonNullable<TypeRole>[] = [
   'display-xxl',
   'display-xl',
@@ -49,11 +49,11 @@ const TYPE_DISPLAY_ORDER: NonNullable<TypeRole>[] = [
   'overline',
 ];
 
-/** Shadow types to include — elevation-like only. Border-shadows are borders,
+/** Shadow types to include  elevation-like only. Border-shadows are borders,
  *  not box-shadow utilities; ring-shadows are focus-state, also separate. */
 const ELEVATION_SHADOW_TYPES = new Set(['elevation', 'complex-stack', 'inset']);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
+//  Helpers 
 
 function isPermanent(t: { stability?: { layer?: string } }): boolean {
   const layer = t.stability?.layer;
@@ -114,11 +114,11 @@ function lineHeightRatio(fontSize: string, lineHeight: string): string {
  *
  * Multi-layer shadows often start with transparent placeholder layers
  * (`rgba(0,0,0,0) 0px 0px 0px 0px, ..., rgba(0,0,0,0.1) 0px 10px 15px -3px`)
- * — Supabase and Tailwind preflight do this. We need to find the
+ *  Supabase and Tailwind preflight do this. We need to find the
  * dominant elevation across the whole stack, not just the first layer,
  * or we'd misclassify these stacks as borders.
  *
- * Returns 0 when no `<x>px <y>px <blur>px` triple is found — caller treats
+ * Returns 0 when no `<x>px <y>px <blur>px` triple is found  caller treats
  * that as "this is a border-style shadow, not elevation."
  */
 function shadowElevationProxy(value: string): number {
@@ -135,7 +135,7 @@ function shadowElevationProxy(value: string): number {
   return max;
 }
 
-// ─── Section emitters (each returns an array of lines, no trailing blank) ─
+//  Section emitters (each returns an array of lines, no trailing blank) 
 
 function emitRamp(family: string, ramp: Ramp): string[] {
   const out: string[] = [];
@@ -193,17 +193,17 @@ function emitFontFamilies(types: NamedType[]): string[] {
   })();
 
   // Emission rules:
-  //   --font-sans    — the body / default font. Tailwind v4 idiom — the
+  //   --font-sans     the body / default font. Tailwind v4 idiom  the
   //                    `font-sans` utility falls back to this, which is what
   //                    most components use by default.
-  //   --font-display — only when the display family genuinely DIFFERS from
+  //   --font-display  only when the display family genuinely DIFFERS from
   //                    --font-sans. On most sites display + body share a
   //                    family, so this var is omitted and `font-sans` covers
   //                    headings too. When only display roles were extracted
   //                    (sansStack === null), the `!== sansStack` check still
   //                    passes ("Inter" !== null), so --font-display emits
   //                    alone.
-  //   --font-mono    — when a monospace family was detected (code/pre tags
+  //   --font-mono     when a monospace family was detected (code/pre tags
   //                    or a family-name pattern match).
   const out: string[] = [];
   if (sansStack) out.push(`  --font-sans: ${sansStack};`);
@@ -292,7 +292,7 @@ function emitRadii(radii: RadiusToken[]): string[] {
 function emitShadows(shadows: ShadowToken[]): string[] {
   // First filter: only stable shadows tagged as elevation-like. Second
   // filter: shadows with y=0 AND blur=0 are pure borders (1px rings, focus
-  // outlines) regardless of how the extractor labelled them — exclude
+  // outlines) regardless of how the extractor labelled them  exclude
   // those too. Otherwise sites like Vercel surface a `0px 0px 0px 1px`
   // ring as `--shadow-lg`, which is wrong: Tailwind's `shadow-*` utilities
   // are for elevation, not borders.
@@ -317,7 +317,7 @@ function emitShadows(shadows: ShadowToken[]): string[] {
   return out;
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────
+//  Public API 
 
 export interface BuildOptions {
   /** Used in the file header comment. */
@@ -327,7 +327,7 @@ export interface BuildOptions {
 }
 
 /**
- * Build the full Tailwind v4 `@theme` CSS as a string. Pure function — no
+ * Build the full Tailwind v4 `@theme` CSS as a string. Pure function  no
  * I/O, no environment access.
  *
  * Applies role-namer in-memory so typography levels carry their role
@@ -345,9 +345,9 @@ export function buildTailwindCss(
   const siteName = deriveSiteName(opts.url);
   const date = opts.date ?? new Date().toISOString().slice(0, 10);
 
-  // ── Header comment ─────────────────────────────────────────────────
+  //  Header comment 
   const headerLines: string[] = [];
-  headerLines.push(`/* Tailwind v4 @theme — ${siteName} (${opts.url})`);
+  headerLines.push(`/* Tailwind v4 @theme  ${siteName} (${opts.url})`);
   headerLines.push(` *`);
   headerLines.push(` * Generated: ${date}`);
   if (ramps?.brand) {
@@ -365,13 +365,13 @@ export function buildTailwindCss(
   headerLines.push(` */`);
   headerLines.push(``);
 
-  // ── Section blocks ─────────────────────────────────────────────────
+  //  Section blocks 
   const themeLines: string[] = [];
   themeLines.push(`@theme {`);
 
   // Colors
   if (ramps?.brand) {
-    themeLines.push(`  /* Brand ramp — regenerated 12-stop OKLCH, anchored on ${ramps.brand.seedHex}. */`);
+    themeLines.push(`  /* Brand ramp  regenerated 12-stop OKLCH, anchored on ${ramps.brand.seedHex}. */`);
     themeLines.push(...emitRamp('brand', ramps.brand));
     themeLines.push(``);
   }
@@ -380,7 +380,7 @@ export function buildTailwindCss(
       ramps.brand && ramps.brand.seedOklch.c >= 0.04
         ? `tinted with brand hue ${ramps.neutral.seedOklch.h.toFixed(0)}° at chroma ${ramps.neutral.seedOklch.c.toFixed(3)}`
         : 'pure grey';
-    themeLines.push(`  /* Neutral ramp — ${neutralLabel}. */`);
+    themeLines.push(`  /* Neutral ramp  ${neutralLabel}. */`);
     themeLines.push(...emitRamp('neutral', ramps.neutral));
     themeLines.push(``);
   }
@@ -397,7 +397,7 @@ export function buildTailwindCss(
     themeLines.push(``);
   }
   if (typeScaleLines.length > 0) {
-    themeLines.push(`  /* Type scale (role-named — e.g. \`text-display-xxl\`, \`text-body-md\`). */`);
+    themeLines.push(`  /* Type scale (role-named  e.g. \`text-display-xxl\`, \`text-body-md\`). */`);
     themeLines.push(...typeScaleLines);
     themeLines.push(``);
   }
@@ -405,7 +405,7 @@ export function buildTailwindCss(
   // Spacing
   const spacingLines = emitSpacing(tokens);
   if (spacingLines.length > 0) {
-    themeLines.push(`  /* Spacing base unit — Tailwind derives the whole numeric scale from this. */`);
+    themeLines.push(`  /* Spacing base unit  Tailwind derives the whole numeric scale from this. */`);
     themeLines.push(...spacingLines);
     themeLines.push(``);
   }
@@ -423,7 +423,7 @@ export function buildTailwindCss(
   const shadows = Array.isArray(tokens.shadowTokens) ? tokens.shadowTokens : [];
   const shadowLines = emitShadows(shadows);
   if (shadowLines.length > 0) {
-    themeLines.push(`  /* Shadows (elevation only — border-shadows and rings are emitted separately). */`);
+    themeLines.push(`  /* Shadows (elevation only  border-shadows and rings are emitted separately). */`);
     themeLines.push(...shadowLines);
     themeLines.push(``);
   }

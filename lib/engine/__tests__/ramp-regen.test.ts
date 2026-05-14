@@ -14,7 +14,7 @@ import {
 } from '../ramp-regen';
 import type { ColorToken, DesignTokens } from '../types';
 
-// ─── Fixtures ─────────────────────────────────────────────────────────────
+//  Fixtures 
 
 function makeColorToken(overrides: Partial<ColorToken> = {}): ColorToken {
   return {
@@ -81,7 +81,7 @@ function makeTokens(colorTokens: ColorToken[]): DesignTokens {
 
 const HEX_PATTERN = /^#[0-9a-f]{6}$/;
 
-// ─── chromaTaper ──────────────────────────────────────────────────────────
+//  chromaTaper 
 
 describe('chromaTaper', () => {
   it('returns 0.6 at the lower extreme (i=0)', () => {
@@ -129,7 +129,7 @@ describe('chromaTaper', () => {
   });
 });
 
-// ─── hexToOklch ───────────────────────────────────────────────────────────
+//  hexToOklch 
 
 describe('hexToOklch', () => {
   it('parses a 6-digit hex into OKLCH', () => {
@@ -169,7 +169,7 @@ describe('hexToOklch', () => {
   });
 });
 
-// ─── regenerateRamp ───────────────────────────────────────────────────────
+//  regenerateRamp 
 
 describe('regenerateRamp', () => {
   it('returns null for an unparseable seed', () => {
@@ -264,7 +264,7 @@ describe('regenerateRamp', () => {
   });
 });
 
-// ─── regenerateRampsFromTokens ────────────────────────────────────────────
+//  regenerateRampsFromTokens 
 
 describe('regenerateRampsFromTokens', () => {
   it('returns brand ramp + neutral when tokens have a chromatic primary', () => {
@@ -320,7 +320,7 @@ describe('regenerateRampsFromTokens', () => {
   });
 
   it('uses pure grey neutrals when brand chroma is below CHROMATIC_THRESHOLD', () => {
-    // Slightly chromatic but below threshold — role-namer's primary filter
+    // Slightly chromatic but below threshold  role-namer's primary filter
     // requires c >= 0.1 so this wouldn't even get role-named "primary", so
     // brand should be null and neutrals should be pure grey.
     const tokens = makeTokens([
@@ -343,7 +343,7 @@ describe('regenerateRampsFromTokens', () => {
     expect(JSON.stringify(original)).toBe(snapshot);
   });
 
-  it('is deterministic — same input → same output', () => {
+  it('is deterministic  same input → same output', () => {
     const tokens = makeTokens([
       makeColorToken({ hex: '#635bff', usedAs: { textColor: 0, bgColor: 30, borderColor: 0, shadowColor: 0, gradientColor: 0, iconColor: 0 } }),
     ]);
@@ -355,7 +355,7 @@ describe('regenerateRampsFromTokens', () => {
   });
 });
 
-// ─── generateAndWriteRamps (disk wrapper) ────────────────────────────────
+//  generateAndWriteRamps (disk wrapper) 
 
 describe('generateAndWriteRamps', () => {
   function withTempDir<T>(fn: (dir: string) => T): T {
@@ -396,7 +396,7 @@ describe('generateAndWriteRamps', () => {
     });
   });
 
-  it('handles tokens with no chromatic primary — emits brand=null + grey neutral', () => {
+  it('handles tokens with no chromatic primary  emits brand=null + grey neutral', () => {
     withTempDir((dir) => {
       const tokensPath = path.join(dir, 'tokens.json');
       const tokens = makeTokens([makeColorToken({ hex: '#808080' })]);

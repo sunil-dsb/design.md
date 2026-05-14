@@ -12,7 +12,7 @@ import {
 } from '../cluster';
 import type { DesignTokens, ColorToken } from '../types';
 
-// ─── parseColor ─────────────────────────────────────────────────────────────
+//  parseColor 
 
 describe('parseColor', () => {
   it('parses 6-digit hex', () => {
@@ -74,7 +74,7 @@ describe('parseColor', () => {
   });
 });
 
-// ─── parsePxValue ───────────────────────────────────────────────────────────
+//  parsePxValue 
 
 describe('parsePxValue', () => {
   it('parses px values', () => {
@@ -105,7 +105,7 @@ describe('parsePxValue', () => {
   });
 });
 
-// ─── rgbaToHex ──────────────────────────────────────────────────────────────
+//  rgbaToHex 
 
 describe('rgbaToHex', () => {
   it('converts RGB to 6-digit hex', () => {
@@ -123,7 +123,7 @@ describe('rgbaToHex', () => {
   });
 });
 
-// ─── wcagContrast ───────────────────────────────────────────────────────────
+//  wcagContrast 
 
 describe('wcagContrast', () => {
   it('returns 21:1 for black on white', () => {
@@ -147,7 +147,7 @@ describe('wcagContrast', () => {
   });
 });
 
-// ─── deltaE (OKLCH) ────────────────────────────────────────────────────────
+//  deltaE (OKLCH) 
 
 describe('deltaE', () => {
   it('returns 0 for identical colors', () => {
@@ -181,7 +181,7 @@ describe('deltaE', () => {
   });
 });
 
-// ─── classifyShadow ─────────────────────────────────────────────────────────
+//  classifyShadow 
 
 describe('splitShadowLayers', () => {
   it('treats rgba commas as non-separators', () => {
@@ -234,7 +234,7 @@ describe('classifyShadow', () => {
   });
 });
 
-// ─── mergeTokenSets ─────────────────────────────────────────────────────────
+//  mergeTokenSets 
 
 function makeColor(hex: string, freq: number): ColorToken {
   const r = parseInt(hex.slice(1, 3), 16);

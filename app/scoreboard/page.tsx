@@ -12,16 +12,16 @@ import type { GoldTokens } from "../../eval/gold/types";
 export const metadata: Metadata = {
   title: "Scoreboard",
   description:
-    "Public accuracy scoreboard — our deterministic extraction scored against hand-curated gold tokens per brand.",
+    "Public accuracy scoreboard  our deterministic extraction scored against hand-curated gold tokens per brand.",
 };
 
 // Server-rendered: we score every brand that has both a gold file and an
-// extraction (under examples/ or output/). Numbers are deterministic — same
+// extraction (under examples/ or output/). Numbers are deterministic  same
 // gold + same extraction → same score, every time. Plan-v1.md §10's
 // reproducibility commitment depends on this.
 
 // Force dynamic so we score fresh on every request (file system may have
-// changed). Cheap — each score is ~50ms with no Playwright.
+// changed). Cheap  each score is ~50ms with no Playwright.
 export const dynamic = "force-dynamic";
 
 interface ScoreboardRow {
@@ -65,7 +65,7 @@ function readBrandRows(): ScoreboardRow[] {
         brand,
         score: null,
         goldPath,
-        tokensSource: "—",
+        tokensSource: "",
         error: `No tokens.json found for ${brand}.`,
       });
       continue;
@@ -73,9 +73,11 @@ function readBrandRows(): ScoreboardRow[] {
     try {
       // Apply role-namer + type-namer in memory so primary scoring sees
       // the `role` field, then score directly via the in-memory function.
-      // No temp files in committed directories — that pattern would write
+      // No temp files in committed directories  that pattern would write
       // .tokens-roled-*.json into examples/<brand>/ on every request.
-      const tokens = JSON.parse(fs.readFileSync(tokensPath, "utf-8")) as DesignTokens;
+      const tokens = JSON.parse(
+        fs.readFileSync(tokensPath, "utf-8"),
+      ) as DesignTokens;
       if (Array.isArray(tokens.colorTokens)) {
         tokens.colorTokens = assignColorRoles(tokens.colorTokens);
       }
@@ -110,7 +112,8 @@ export default function ScoreboardPage() {
     scored.length === 0
       ? 0
       : Math.round(
-          scored.reduce((s, r) => s + (r.score?.composite ?? 0), 0) / scored.length,
+          scored.reduce((s, r) => s + (r.score?.composite ?? 0), 0) /
+            scored.length,
         );
 
   return (
@@ -138,10 +141,11 @@ export default function ScoreboardPage() {
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/70">
               Every extraction in this table is scored against{" "}
               <strong className="text-white">hand-curated gold tokens</strong>{" "}
-              for that brand — the canonical primary color, font family,
-              spacing base unit, and palette. The same scoring functions you
-              see here run on every code change via{" "}
-              <code className="font-mono text-white/85">pnpm engine:score</code>.
+              for that brand the canonical primary color, font family, spacing
+              base unit, and palette. The same scoring functions you see here
+              run on every code change via{" "}
+              <code className="font-mono text-white/85">pnpm engine:score</code>
+              .
             </p>
           </header>
 
@@ -150,7 +154,13 @@ export default function ScoreboardPage() {
             <Stat
               label="avg composite"
               value={`${avgComposite}/100`}
-              accent={avgComposite >= 80 ? "good" : avgComposite >= 60 ? "warn" : "bad"}
+              accent={
+                avgComposite >= 80
+                  ? "good"
+                  : avgComposite >= 60
+                    ? "warn"
+                    : "bad"
+              }
             />
             <Stat
               label="primary matches"
@@ -161,8 +171,8 @@ export default function ScoreboardPage() {
           {scored.length === 0 ? (
             <p className="mt-10 text-sm text-white/55">
               No brands available to score yet. Add gold tokens under{" "}
-              <code className="font-mono text-white/70">eval/gold/</code>{" "}
-              and run an extraction.
+              <code className="font-mono text-white/70">eval/gold/</code> and
+              run an extraction.
             </p>
           ) : (
             <ScoreboardTable rows={rows} />
@@ -186,9 +196,9 @@ export default function ScoreboardPage() {
                 </li>
                 <li>
                   <strong className="text-white">Palette F1 (25 pts).</strong>{" "}
-                  Precision × recall of extracted colors matching gold within
-                  ΔE 5. Captures both noise (low precision) and missing
-                  brand colors (low recall).
+                  Precision × recall of extracted colors matching gold within ΔE
+                  5. Captures both noise (low precision) and missing brand
+                  colors (low recall).
                 </li>
                 <li>
                   <strong className="text-white">Typography (20 pts).</strong>{" "}
@@ -196,20 +206,22 @@ export default function ScoreboardPage() {
                   gold. 10 points each.
                 </li>
                 <li>
-                  <strong className="text-white">Spacing (15 pts).</strong>{" "}
-                  Base unit exact match (7 pts) + scale recall against the
-                  gold step list (8 pts).
+                  <strong className="text-white">Spacing (15 pts).</strong> Base
+                  unit exact match (7 pts) + scale recall against the gold step
+                  list (8 pts).
                 </li>
                 <li>
-                  <strong className="text-white">Coverage floor (10 pts).</strong>{" "}
-                  Awarded when any colors were extracted, so a pipeline that
-                  ran but missed everything still earns the lowest credit.
+                  <strong className="text-white">
+                    Coverage floor (10 pts).
+                  </strong>{" "}
+                  Awarded when any colors were extracted, so a pipeline that ran
+                  but missed everything still earns the lowest credit.
                 </li>
               </ul>
               <p>
-                Scoring is{" "}
-                <strong className="text-white">deterministic</strong>: same
-                gold + same extraction → same score. The functions live at{" "}
+                Scoring is <strong className="text-white">deterministic</strong>
+                : same gold + same extraction → same score. The functions live
+                at{" "}
                 <code className="font-mono text-white/85">eval/score.ts</code>{" "}
                 and are covered by{" "}
                 <code className="font-mono text-white/85">22 unit tests</code>.
@@ -257,7 +269,9 @@ function Stat({
       <p className="mb-2 font-pixel text-[10px] uppercase tracking-widest text-white/40">
         {label}
       </p>
-      <p className={`font-pixel text-4xl leading-none tracking-tight sm:text-5xl ${accentClass}`}>
+      <p
+        className={`font-pixel text-4xl leading-none tracking-tight sm:text-5xl ${accentClass}`}
+      >
         {value}
       </p>
     </div>
@@ -317,7 +331,7 @@ function ScoreboardRow({ row }: { row: ScoreboardRow }) {
         primary={
           s.colors.primary.pass
             ? `${s.colors.primary.extracted} ✓`
-            : `${s.colors.primary.extracted ?? "—"} ✗`
+            : `${s.colors.primary.extracted ?? ""} ✗`
         }
         secondary={`Δ${s.colors.primary.deltaE === Infinity ? "∞" : s.colors.primary.deltaE.toFixed(1)} · gold ${s.colors.primary.gold}`}
         pass={s.colors.primary.pass}
@@ -328,12 +342,16 @@ function ScoreboardRow({ row }: { row: ScoreboardRow }) {
         pass={s.colors.palette.f1 >= 0.6}
       />
       <Cell
-        primary={s.typography.display.extracted ?? "—"}
+        primary={s.typography.display.extracted ?? ""}
         secondary={`gold ${s.typography.display.gold}`}
         pass={s.typography.display.pass && s.typography.body.pass}
       />
       <Cell
-        primary={s.spacing.baseUnit.extracted ? `${s.spacing.baseUnit.extracted}px base` : "—"}
+        primary={
+          s.spacing.baseUnit.extracted
+            ? `${s.spacing.baseUnit.extracted}px base`
+            : ""
+        }
         secondary={`scale ${(s.spacing.scaleRecall * 100).toFixed(0)}%`}
         pass={s.spacing.baseUnit.pass && s.spacing.scaleRecall >= 0.7}
       />

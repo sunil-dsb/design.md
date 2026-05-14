@@ -8,7 +8,7 @@ import type {
   AnimationInfo,
 } from './types';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+//  Helpers 
 
 const TRACKED_PSEUDO_CLASSES = new Set([
   'hover',
@@ -89,7 +89,7 @@ function extractDeclarations(block: csstree.CssNode): Record<string, string> {
   return props;
 }
 
-// ─── Pseudo-class extraction ─────────────────────────────────────────────────
+//  Pseudo-class extraction 
 
 function extractPseudoClassRules(ast: csstree.CssNode): PseudoClassRule[] {
   const rules: PseudoClassRule[] = [];
@@ -146,7 +146,7 @@ function extractPseudoClassRules(ast: csstree.CssNode): PseudoClassRule[] {
   return rules;
 }
 
-// ─── Media breakpoint extraction ─────────────────────────────────────────────
+//  Media breakpoint extraction 
 
 function classifyMediaQuery(queryStr: string): {
   type: MediaBreakpoint['type'];
@@ -197,7 +197,7 @@ function extractMediaBreakpoints(ast: csstree.CssNode): MediaBreakpoint[] {
   return breakpoints;
 }
 
-// ─── Transition extraction ───────────────────────────────────────────────────
+//  Transition extraction 
 
 function parseTransitionShorthand(value: string): Partial<TransitionInfo>[] {
   // A transition shorthand can contain comma-separated transitions
@@ -256,7 +256,7 @@ function extractTransitions(ast: csstree.CssNode): TransitionInfo[] {
   return transitions;
 }
 
-// ─── Animation extraction ────────────────────────────────────────────────────
+//  Animation extraction 
 
 interface KeyframeData {
   name: string;
@@ -379,7 +379,7 @@ function extractAnimations(ast: csstree.CssNode): AnimationInfo[] {
   return animations;
 }
 
-// ─── @supports and @container ────────────────────────────────────────────────
+//  @supports and @container 
 
 function extractAtRuleQueries(
   ast: csstree.CssNode,
@@ -398,7 +398,7 @@ function extractAtRuleQueries(
   return queries;
 }
 
-// ─── Main analyzer ──────────────────────────────────────────────────────────
+//  Main analyzer 
 
 function countTotalRules(ast: csstree.CssNode): number {
   let count = 0;

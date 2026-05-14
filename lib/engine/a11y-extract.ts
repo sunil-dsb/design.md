@@ -49,18 +49,6 @@ function parseFontSize(fontSize: string): number {
   return isNaN(val) ? 0 : val;
 }
 
-function isLargeText(fontSize: string, fontWeight: string): boolean {
-  const size = parseFontSize(fontSize);
-  const weight = parseInt(fontWeight, 10);
-  const isBold = weight >= 700 || fontWeight === 'bold';
-  return size >= 18 || (isBold && size >= 14);
-}
-
-interface ContrastPairKey {
-  foreground: string;
-  background: string;
-}
-
 function pairKey(fg: string, bg: string): string {
   return `${fg}|||${bg}`;
 }
@@ -107,7 +95,7 @@ function extractFocusIndicator(
   return { style: { ...first }, consistent };
 }
 
-// ─── ARIA Role Statistics ───────────────────────────────────────────────────
+//  ARIA Role Statistics 
 
 function extractAriaRoleStats(domCollections: DOMCollection[]): Record<string, number> {
   const roleCounts: Record<string, number> = {};
@@ -123,7 +111,7 @@ function extractAriaRoleStats(domCollections: DOMCollection[]): Record<string, n
   return roleCounts;
 }
 
-// ─── Tab Order Analysis ─────────────────────────────────────────────────────
+//  Tab Order Analysis 
 
 async function extractTabOrder(
   page: Page,
@@ -158,7 +146,7 @@ async function extractTabOrder(
   });
 }
 
-// ─── Lang Attribute ─────────────────────────────────────────────────────────
+//  Lang Attribute 
 
 async function extractLangAttribute(page: Page): Promise<string | null> {
   return page.evaluate(() => {
@@ -167,7 +155,7 @@ async function extractLangAttribute(page: Page): Promise<string | null> {
   });
 }
 
-// ─── Skip Link Detection ────────────────────────────────────────────────────
+//  Skip Link Detection 
 
 async function extractSkipLink(page: Page): Promise<boolean> {
   return page.evaluate(() => {
@@ -188,7 +176,7 @@ async function extractSkipLink(page: Page): Promise<boolean> {
   });
 }
 
-// ─── Reduced Motion Support ─────────────────────────────────────────────────
+//  Reduced Motion Support 
 
 function extractReducedMotionSupport(cssAnalyses: CSSAnalysis[]): boolean {
   for (const css of cssAnalyses) {
@@ -199,7 +187,7 @@ function extractReducedMotionSupport(cssAnalyses: CSSAnalysis[]): boolean {
   return false;
 }
 
-// ─── Alt Text Coverage ──────────────────────────────────────────────────────
+//  Alt Text Coverage 
 
 async function extractAltTextCoverage(
   page: Page,
@@ -228,13 +216,12 @@ async function extractAltTextCoverage(
   });
 }
 
-// ─── Main Export ─────────────────────────────────────────────────────────────
+//  Main Export 
 
 export function extractA11y(
   domCollections: DOMCollection[],
   interactions: InteractionData[],
   cssAnalyses?: CSSAnalysis[],
-  page?: Page,
 ): A11yTokens {
   const focusIndicator = extractFocusIndicator(interactions);
 
@@ -332,7 +319,7 @@ export function extractA11y(
   };
 }
 
-// ─── Async A11y Extraction (Page-dependent) ─────────────────────────────────
+//  Async A11y Extraction (Page-dependent) 
 
 export async function extractA11yAsync(
   page: Page,

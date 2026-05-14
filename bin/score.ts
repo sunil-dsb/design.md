@@ -57,7 +57,7 @@ if (!fs.existsSync(goldPath)) {
 
 // Apply role-namer in-memory so the primary-pick scoring sees a `role`
 // field on each ColorToken. Persisted tokens.json may or may not have it
-// depending on whether the SPA's API route wrote it back. No temp files —
+// depending on whether the SPA's API route wrote it back. No temp files 
 // scoreTokens takes the parsed in-memory objects directly.
 const tokens = JSON.parse(fs.readFileSync(tokensPath, 'utf-8')) as DesignTokens;
 if (Array.isArray(tokens.colorTokens)) tokens.colorTokens = assignColorRoles(tokens.colorTokens);
@@ -73,22 +73,22 @@ const gold = JSON.parse(fs.readFileSync(goldPath, 'utf-8')) as GoldTokens;
   console.log('');
   console.log(`  Scoreboard · ${result.brand}`);
   console.log(`  ${result.url}`);
-  console.log('  ' + '─'.repeat(60));
+  console.log('  ' + ''.repeat(60));
   console.log('');
   console.log(`  COMPOSITE                                       ${result.composite}/100`);
   console.log('');
   console.log('  Colors');
-  console.log(`    Primary       ${c.primary.extracted ?? '—'}  vs  ${c.primary.gold}      ΔE ${c.primary.deltaE.toFixed(2)}  ${c.primary.pass ? '✓' : '✗'}`);
+  console.log(`    Primary       ${c.primary.extracted ?? ''}  vs  ${c.primary.gold}      ΔE ${c.primary.deltaE.toFixed(2)}  ${c.primary.pass ? '✓' : '✗'}`);
   console.log(`    Palette F1    ${(c.palette.f1 * 100).toFixed(1)}%   (P ${(c.palette.precision * 100).toFixed(1)}% · R ${(c.palette.recall * 100).toFixed(1)}%)`);
   console.log(`                  matched ${c.palette.matched}/${c.palette.goldCount} gold colors in ${c.palette.extractedCount} extracted`);
   console.log('');
   console.log('  Typography');
-  console.log(`    Display       ${t.display.extracted ?? '—'}  vs  ${t.display.gold}        ${t.display.pass ? '✓' : '✗'}`);
-  console.log(`    Body          ${t.body.extracted ?? '—'}  vs  ${t.body.gold}        ${t.body.pass ? '✓' : '✗'}`);
+  console.log(`    Display       ${t.display.extracted ?? ''}  vs  ${t.display.gold}        ${t.display.pass ? '✓' : '✗'}`);
+  console.log(`    Body          ${t.body.extracted ?? ''}  vs  ${t.body.gold}        ${t.body.pass ? '✓' : '✗'}`);
   console.log('');
   console.log('  Spacing');
-  console.log(`    Base unit     ${s.baseUnit.extracted ?? '—'}px  vs  ${s.baseUnit.gold}px        ${s.baseUnit.pass ? '✓' : '✗'}`);
-  console.log(`    Scale recall  ${(s.scaleRecall * 100).toFixed(1)}%  (MAE ${s.scaleMae === Infinity ? '—' : s.scaleMae.toFixed(2) + 'px'})`);
+  console.log(`    Base unit     ${s.baseUnit.extracted ?? ''}px  vs  ${s.baseUnit.gold}px        ${s.baseUnit.pass ? '✓' : '✗'}`);
+  console.log(`    Scale recall  ${(s.scaleRecall * 100).toFixed(1)}%  (MAE ${s.scaleMae === Infinity ? '' : s.scaleMae.toFixed(2) + 'px'})`);
   console.log('');
 
   process.exit(result.composite >= 80 ? 0 : 1);

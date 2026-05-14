@@ -7,7 +7,7 @@ import type {
   TypographyLevel,
 } from './types';
 
-// ─── PageGroup Input ─────────────────────────────────────────────────────────
+//  PageGroup Input 
 
 export interface PageGroup {
   label: string;
@@ -21,7 +21,7 @@ export interface PageGroup {
   fontFamilies: string[];
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+//  Helpers 
 
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace('#', '');
@@ -60,7 +60,7 @@ function arrayOverlap(a: number[], b: number[]): number {
   return union === 0 ? 100 : (intersection / union) * 100;
 }
 
-// ─── Dimension Scorers ───────────────────────────────────────────────────────
+//  Dimension Scorers 
 
 function scoreFontOverlap(a: PageGroup, b: PageGroup): number {
   const setA = new Set(a.fontFamilies.map(f => f.toLowerCase().trim()));
@@ -134,7 +134,7 @@ function scoreShadow(a: PageGroup, b: PageGroup): number {
   return union === 0 ? 100 : (intersection / union) * 100;
 }
 
-// ─── Anomaly Detection ───────────────────────────────────────────────────────
+//  Anomaly Detection 
 
 function detectAnomalies(group: PageGroup): { url: string; description: string }[] {
   const anomalies: { url: string; description: string }[] = [];
@@ -175,7 +175,7 @@ function detectAnomalies(group: PageGroup): { url: string; description: string }
   return anomalies;
 }
 
-// ─── Shared Token Summary ────────────────────────────────────────────────────
+//  Shared Token Summary 
 
 function buildSharedSummary(scores: DesignBoundary['dimensionScores']): string {
   const shared: string[] = [];
@@ -203,7 +203,7 @@ function buildSharedSummary(scores: DesignBoundary['dimensionScores']): string {
   return `Share ${shared.join(' and ')}, diverge on ${diverged.join(' and ')}`;
 }
 
-// ─── Main Export ─────────────────────────────────────────────────────────────
+//  Main Export 
 
 export function detectBoundaries(pageGroups: PageGroup[]): DesignBoundary {
   const groups = pageGroups.map(g => ({

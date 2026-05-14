@@ -1,6 +1,6 @@
 // File-based per-IP rate limiter for /api/extract.
 //
-// Each extraction is 60-240s of Playwright work — without a cap, an
+// Each extraction is 60-240s of Playwright work  without a cap, an
 // unattended script could DOS the worker. Default cap is 5 extractions per
 // IP per 24-hour sliding window.
 //
@@ -9,14 +9,14 @@
 // on every read so the file doesn't grow unbounded. The file is gitignored
 // (under /output/) and survives container restarts on persistent disk
 // (HF Spaces with persistent storage enabled; ephemeral filesystems reset
-// the limiter on rebuild, which is fine — the limit isn't a security
+// the limiter on rebuild, which is fine  the limit isn't a security
 // boundary, just an abuse brake).
 //
 // Concurrency: best-effort. Two simultaneous requests from the same IP at
 // exactly the same moment could both observe count = N-1 and both proceed,
 // resulting in N+1 recorded. For 5/IP/24h on an HF Space getting < 1000
 // requests/day this virtually never fires. The downside is the user
-// occasionally gets one extra slot — not a security issue. Atomic
+// occasionally gets one extra slot  not a security issue. Atomic
 // read-modify-write via tmpfile + rename keeps the file from being
 // half-written under crash.
 //
@@ -36,7 +36,7 @@ import * as path from 'path';
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_LIMIT = 5;
 
-// ─── Public types ────────────────────────────────────────────────────────
+//  Public types 
 
 /** IP → list of UTC ms timestamps within the 24h window. */
 export type RateLimitState = Record<string, number[]>;
@@ -50,7 +50,7 @@ export interface RateLimitResult {
   limit: number;
   /** Seconds until the oldest timestamp falls out of the window. 0 when allowed. */
   retryAfterSeconds: number;
-  /** Human-readable "in 3 hours" / "in 45 minutes" — for error messaging. */
+  /** Human-readable "in 3 hours" / "in 45 minutes"  for error messaging. */
   resetIn: string;
 }
 
@@ -65,7 +65,7 @@ export interface RateLimitOptions {
   skipEnvBypass?: boolean;
 }
 
-// ─── Pure logic (no I/O — easy to unit-test) ─────────────────────────────
+//  Pure logic (no I/O  easy to unit-test) 
 
 /**
  * Drop timestamps older than the sliding window. Removes IPs whose entire
@@ -86,7 +86,7 @@ export function pruneStale(state: RateLimitState, now: number): RateLimitState {
  * decide whether the request is allowed and produce the next state.
  *
  * The caller persists `nextState` only on allowed requests (or, optionally,
- * always — to compact the pruned file).
+ * always  to compact the pruned file).
  */
 export function evaluateRateLimit(
   state: RateLimitState,
@@ -131,7 +131,7 @@ function formatResetIn(seconds: number): string {
   return `in ${Math.ceil(seconds / 3600)} hours`;
 }
 
-// ─── File I/O ────────────────────────────────────────────────────────────
+//  File I/O 
 
 function defaultStatePath(): string {
   return path.join(process.cwd(), 'output', '.rate-limits.json');
@@ -147,7 +147,7 @@ export function readState(stateFilePath: string): RateLimitState {
     }
     return {};
   } catch {
-    // Corrupted file — start fresh. Returning {} means the next write will
+    // Corrupted file  start fresh. Returning {} means the next write will
     // overwrite the bad content with valid JSON.
     return {};
   }
@@ -159,7 +159,7 @@ export function writeState(stateFilePath: string, state: RateLimitState): void {
 
   // Atomic write via tmpfile + rename. On Linux (HF Spaces Docker target)
   // rename is atomic. On Windows we fall back to direct overwrite if
-  // rename fails — atomicity is lost but the state still updates.
+  // rename fails  atomicity is lost but the state still updates.
   const tmp = stateFilePath + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(state));
   try {
@@ -174,7 +174,7 @@ export function writeState(stateFilePath: string, state: RateLimitState): void {
   }
 }
 
-// ─── Env-aware wrapper (what the route calls) ────────────────────────────
+//  Env-aware wrapper (what the route calls) 
 
 function getEnvLimit(): number {
   const raw = process.env.RATE_LIMIT_PER_IP_PER_DAY;
@@ -219,13 +219,13 @@ export function checkAndRecordRateLimit(
   const now = opts.now ?? Date.now();
   const stateFile = opts.stateFilePath ?? defaultStatePath();
 
-  // Dev bypass — auto-allow when running locally. Tests can disable via
+  // Dev bypass  auto-allow when running locally. Tests can disable via
   // skipEnvBypass to exercise the real path.
   if (!opts.skipEnvBypass && process.env.NODE_ENV !== 'production') {
     return devBypassResult(limit);
   }
 
-  // Key bypass — auto-allow if a known secret was passed.
+  // Key bypass  auto-allow if a known secret was passed.
   const expectedKey = getBypassKey();
   if (expectedKey && bypassKey && bypassKey === expectedKey) {
     return devBypassResult(limit);
@@ -234,7 +234,7 @@ export function checkAndRecordRateLimit(
   const state = readState(stateFile);
   const result = evaluateRateLimit(state, ip, now, limit);
 
-  // Always persist the pruned state — keeps the file tidy even when we
+  // Always persist the pruned state  keeps the file tidy even when we
   // reject. The pruned state is identical to the input minus stale entries.
   writeState(stateFile, result.nextState);
 
@@ -247,21 +247,21 @@ export function checkAndRecordRateLimit(
   };
 }
 
-// ─── IP extraction ───────────────────────────────────────────────────────
+//  IP extraction 
 
 /**
  * Extract the client IP from request headers. Tries x-forwarded-for first
- * (the standard reverse-proxy header — HF Spaces, Cloudflare, and Vercel
+ * (the standard reverse-proxy header  HF Spaces, Cloudflare, and Vercel
  * all set it), then x-real-ip, then falls back to `unknown`.
  *
- * Unknown clients share a single bucket — slightly more restrictive than
+ * Unknown clients share a single bucket  slightly more restrictive than
  * per-real-IP but never unsafe. An attacker who can spoof XFF can dodge
  * the limit anyway; this is a brake, not a security wall.
  */
 export function getClientIp(req: Request): string {
   const xff = req.headers.get('x-forwarded-for');
   if (xff) {
-    // X-Forwarded-For: client, proxy1, proxy2 — client is leftmost.
+    // X-Forwarded-For: client, proxy1, proxy2  client is leftmost.
     const first = xff.split(',')[0]?.trim();
     if (first) return first;
   }

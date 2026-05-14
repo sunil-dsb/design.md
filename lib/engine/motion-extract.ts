@@ -78,8 +78,9 @@ function classifyKeyframeAnimation(
 
 export function extractMotion(
   cssAnalysis: CSSAnalysis,
-  _domCollections: DOMCollection[],
+  domCollections: DOMCollection[],
 ): MotionSystem | null {
+  void domCollections;
   const durationValues: number[] = [];
   const timingFunctionValues: string[] = [];
 
@@ -98,7 +99,6 @@ export function extractMotion(
     return null;
   }
 
-  const durationFreq = buildFrequencyMap(durationValues.map((d) => `${d}ms`));
   const tierMap = new Map<string, { value: string; frequency: number }>();
 
   for (const ms of durationValues) {

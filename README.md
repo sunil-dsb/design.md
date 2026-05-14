@@ -18,7 +18,7 @@ short_description: Paste any URL → get a DESIGN.md your AI agent can read.
 
 ### Paste a URL. Get a DESIGN.md your AI agent can read.
 
-Extract real design systems  colors, typography, spacing, tokens  from any public website.
+Extract real design systems colors, typography, spacing, tokens from any public website.
 Built for Claude Code, Cursor, v0, Lovable, Replit, Windsurf, and GitHub Copilot.
 
 <br />
@@ -42,17 +42,17 @@ Built for Claude Code, Cursor, v0, Lovable, Replit, Windsurf, and GitHub Copilot
 
 ## What it does
 
-When you ask AI to *"build me a landing page like Stripe,"* the agent doesn't actually know what Stripe looks like. It averages millions of pages and ships you something generic.
+When you ask AI to _"build me a landing page like Stripe,"_ the agent doesn't actually know what Stripe looks like. It averages millions of pages and ships you something generic.
 
 `design.md` fixes that by extracting the **real** design system from any website and writing it into a file your AI agent can read **before** it generates any UI.
 
-| File | What it explains to the agent |
-|---|---|
-| `README.md` | What the project does |
-| `AGENTS.md` | How the AI should build it |
+| File            | What it explains to the agent       |
+| --------------- | ----------------------------------- |
+| `README.md`     | What the project does               |
+| `AGENTS.md`     | How the AI should build it          |
 | **`DESIGN.md`** | **How the UI should look and feel** |
 
-Drop a `DESIGN.md` next to your `README.md`. Tell your agent: *"Read DESIGN.md before generating UI."* Every component it makes now follows your colors, typography, and spacing  not the internet's average.
+Drop a `DESIGN.md` next to your `README.md`. Tell your agent: _"Read DESIGN.md before generating UI."_ Every component it makes now follows your colors, typography, and spacing not the internet's average.
 
 ---
 
@@ -91,13 +91,13 @@ No signup. No API key. No waitlist. Free, open source, MIT licensed.
 
 ## What gets extracted
 
-- 🎨 **Colors**  OKLCH ΔE perceptual clustering, not hex-string dedup. 4-layer stability classification so a sale banner can't pollute your primary brand color.
-- 🔤 **Typography**  full type scale, weights, line-heights, letter-spacing, OpenType features.
-- 📐 **Spacing**  base unit auto-detected (4/8-pt grid), scale steps, section spacing.
-- 🌗 **Dark mode**  4 detection methods, full variable diff between modes.
-- 🪟 **Shadows + radii**  multi-layer parsing, named elevation ramps.
-- 🎯 **Pixel-fidelity proof**  every output verified against the live site at ΔE<12 with image-region exclusion.
-- 📍 **Per-token provenance**  every value tagged with source page, CSS variable name, and structural region (nav / header / main / footer / aside).
+- 🎨 **Colors** OKLCH ΔE perceptual clustering, not hex-string dedup. 4-layer stability classification so a sale banner can't pollute your primary brand color.
+- 🔤 **Typography** full type scale, weights, line-heights, letter-spacing, OpenType features.
+- 📐 **Spacing** base unit auto-detected (4/8-pt grid), scale steps, section spacing.
+- 🌗 **Dark mode** 4 detection methods, full variable diff between modes.
+- 🪟 **Shadows + radii** multi-layer parsing, named elevation ramps.
+- 🎯 **Pixel-fidelity proof** every output verified against the live site at ΔE<12 with image-region exclusion.
+- 📍 **Per-token provenance** every value tagged with source page, CSS variable name, and structural region (nav / header / main / footer / aside).
 
 ---
 
@@ -125,27 +125,27 @@ Deterministic. Same URL → same output. The 4 gallery brands ship with agent-wr
 
 ### Shipped today
 
-| Capability | **design.md** | designlang | getdesign.md |
-|---|:---:|:---:|:---:|
-| Color clustering | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;OKLCH ΔE | sRGB only | LLM heuristic |
-| Pixel-fidelity verification | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;ΔE &lt; 12 | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
-| 4-layer stability classification | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
-| Multi-page crawl + dark-mode | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;up to 8 pages | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> |
-| Open source | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;MIT | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;MIT | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> &nbsp;closed |
-| Pricing | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;Free forever | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;Free forever | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> &nbsp;Paid |
-| Free, no signup or waitlist | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| Capability                       |                                                  **design.md**                                                   |                                                   designlang                                                    |                                               getdesign.md                                               |
+| -------------------------------- | :--------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------: |
+| Color clustering                 |   <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;OKLCH ΔE    |                                                    sRGB only                                                    |                                              LLM heuristic                                               |
+| Pixel-fidelity verification      |  <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;ΔE &lt; 12   |           <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no">           |       <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no">        |
+| 4-layer stability classification |           <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes">           |           <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no">           |       <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no">        |
+| Multi-page crawl + dark-mode     | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;up to 8 pages |          <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes">           |       <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes">       |
+| Open source                      |      <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;MIT      |     <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;MIT      | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> &nbsp;closed |
+| Pricing                          | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;Free forever  | <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes"> &nbsp;Free forever |  <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> &nbsp;Paid  |
+| Free, no signup or waitlist      |           <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes">           |          <img src="https://api.iconify.design/lucide/check.svg?color=%2322c55e" width="16" alt="yes">           |       <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no">        |
 
 ### On our roadmap
 
-| Capability | **design.md** | designlang | getdesign.md |
-|---|:---:|:---:|:---:|
-| AI prompt packs | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;5 agents planned | 4 agents shipped | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
-| Tailwind v4 `@theme` emit | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned | v3 only | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
-| shadcn theme emit (17-slot, WCAG-verified) | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned | partial | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
-| Regenerated OKLCH ramps | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned | raw observed | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
-| Public accuracy scoreboard | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| Capability                                 |                                                      **design.md**                                                      |                                         designlang                                          |                                        getdesign.md                                         |
+| ------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------: |
+| AI prompt packs                            | <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;5 agents planned |                                      4 agents shipped                                       | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| Tailwind v4 `@theme` emit                  |     <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned      |                                           v3 only                                           | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| shadcn theme emit (17-slot, WCAG-verified) |     <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned      |                                           partial                                           | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| Regenerated OKLCH ramps                    |     <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned      |                                        raw observed                                         | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
+| Public accuracy scoreboard                 |     <img src="https://api.iconify.design/lucide/clock.svg?color=%23f59e0b" width="16" alt="planned"> &nbsp;planned      | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> | <img src="https://api.iconify.design/lucide/minus.svg?color=%236b7280" width="16" alt="no"> |
 
-**Where we win today:** perceptual color clustering, pixel-fidelity verification, and stability classification  the three accuracy levers nobody else has.
+**Where we win today:** perceptual color clustering, pixel-fidelity verification, and stability classification the three accuracy levers nobody else has.
 **Where they ship and we don't yet:** designlang has 4 working AI prompt packs in production; we have zero. We're catching up.
 **The longer-term wedge:** regenerated coherent ramps (not raw observed colors) + public accuracy scoreboard measuring our output against hand-curated gold tokens.
 
@@ -155,14 +155,14 @@ Deterministic. Same URL → same output. The 4 gallery brands ship with agent-wr
 
 Four gold-standard extractions ship with the repo:
 
-| Brand | Sector | Files |
-|---|---|---|
-| [Stripe](./examples/stripe/) | Payments | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
-| [Linear](./examples/linear/) | Issue tracking | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
-| [Vercel](./examples/vercel/) | Frontend cloud | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
+| Brand                            | Sector          | Files                                                    |
+| -------------------------------- | --------------- | -------------------------------------------------------- |
+| [Stripe](./examples/stripe/)     | Payments        | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
+| [Linear](./examples/linear/)     | Issue tracking  | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
+| [Vercel](./examples/vercel/)     | Frontend cloud  | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
 | [Supabase](./examples/supabase/) | Postgres + auth | `DESIGN.md`, `tokens.json`, `preview.html`, `proof.html` |
 
-Each `DESIGN.md` is ~300 lines of brand-specific prose tied to extracted values. The HTML artifacts are stand-alone  open them in a browser to inspect.
+Each `DESIGN.md` is ~300 lines of brand-specific prose tied to extracted values. The HTML artifacts are stand-alone open them in a browser to inspect.
 
 ---
 
@@ -229,14 +229,14 @@ public/          Static assets (hero image, footer image, pixel font)
 - [x] Dark-mode auto-detection (4 methods)
 - [x] **Visibility-and-importance weighting** layered on cluster.ts (area × fold × interactivity × semantic-region weighting, integrated into the role-namer's primary pick so footer-grey can't outrank a hero CTA on raw frequency)
 - [x] **Deterministic DESIGN.md emitter** on the on-demand path (11 of 17 sections templated; 4 subjective sections stubbed with hand-off to the universal prompt; scores 100/100 on the engine's own `validate.ts`)
-- [x] **Universal AI prompt** that works in any agent surface (Claude Code · Claude.ai · ChatGPT · Cursor · Codex · Windsurf · Lovable · Replit Agent) — see `prompts/universal.md` per extraction
+- [x] **Universal AI prompt** that works in any agent surface (Claude Code · Claude.ai · ChatGPT · Cursor · Codex · Windsurf · Lovable · Replit Agent) see `prompts/universal.md` per extraction
 - [x] Engine diagnostics panel in the result UI (12 rules surfacing low coverage, single-page noise, framework miscall, primary-is-grey, etc.)
 - [x] SSE-streamed extraction progress (7-stage checklist visible in real time)
 - [x] File-serving route (`/api/output/[...path]`) with path-traversal defence
 
 **In progress**
 
-- [ ] Per-agent prompt-pack variants (the 5 framed copies for Claude Code · Cursor · v0 · Lovable · Replit — the universal prompt covers all of them today, but per-agent framing tweaks are a follow-up)
+- [ ] Per-agent prompt-pack variants (the 5 framed copies for Claude Code · Cursor · v0 · Lovable · Replit the universal prompt covers all of them today, but per-agent framing tweaks are a follow-up)
 - [ ] Tailwind v4 `@theme` emitter
 - [ ] shadcn theme emitter (17-slot mapping, conditional on 5 required signals)
 - [ ] CSS variables export · DTCG token export
@@ -248,9 +248,9 @@ public/          Static assets (hero image, footer image, pixel font)
 
 ## Built on
 
-- [**Google Stitch's DESIGN.md spec**](https://stitch.withgoogle.com/docs/design-md/overview)  introduced the format
-- [**jasonhnd/design-md-generator**](https://github.com/jasonhnd/design-md-generator)  the engine we forked (MIT)
-- [**Project Wallace**](https://www.projectwallace.com/)  DTCG conversion patterns we mirror
+- [**Google Stitch's DESIGN.md spec**](https://stitch.withgoogle.com/docs/design-md/overview) introduced the format
+- [**jasonhnd/design-md-generator**](https://github.com/jasonhnd/design-md-generator) the engine we forked (MIT)
+- [**Project Wallace**](https://www.projectwallace.com/) DTCG conversion patterns we mirror
 
 ---
 

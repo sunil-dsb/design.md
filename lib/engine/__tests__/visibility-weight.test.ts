@@ -11,13 +11,13 @@ import {
 import { assignColorRoles } from '../role-namer';
 import type { ColorToken, ElementStyle } from '../types';
 
-// ─── Test fixtures ────────────────────────────────────────────────────────
+//  Test fixtures 
 
 const VIEWPORT = { width: 1440, height: 900 };
 
 /**
  * Build a minimal-but-valid ElementStyle. Defaults are chosen to NOT trigger
- * any boost or visibility gate — so the returned weight reflects only the
+ * any boost or visibility gate  so the returned weight reflects only the
  * fields you override.
  */
 function makeElement(overrides: Partial<ElementStyle> = {}): ElementStyle {
@@ -95,9 +95,9 @@ function makeColorToken(overrides: Partial<ColorToken> = {}): ColorToken {
   };
 }
 
-// ─── computeElementWeight: visibility gate ─────────────────────────────────
+//  computeElementWeight: visibility gate 
 
-describe('computeElementWeight — visibility gate', () => {
+describe('computeElementWeight  visibility gate', () => {
   it('returns 0 for display:none elements', () => {
     const el = makeElement({ display: 'none', rect: { x: 0, y: 0, width: 200, height: 200 } });
     expect(computeElementWeight(el, VIEWPORT)).toBe(0);
@@ -120,7 +120,7 @@ describe('computeElementWeight — visibility gate', () => {
 
   it('does NOT zero-out partial opacity (0.5 still contributes)', () => {
     // Partial opacity is visible. Engine should weight it the same as opacity:1
-    // (we don't multiply by alpha — the user can still see it).
+    // (we don't multiply by alpha  the user can still see it).
     const el = makeElement({
       opacity: '0.5',
       rect: { x: 0, y: 0, width: 200, height: 200 },
@@ -130,9 +130,9 @@ describe('computeElementWeight — visibility gate', () => {
   });
 });
 
-// ─── computeElementWeight: area ────────────────────────────────────────────
+//  computeElementWeight: area 
 
-describe('computeElementWeight — area', () => {
+describe('computeElementWeight  area', () => {
   it('scales weight roughly with sqrt(rect area / viewport area)', () => {
     // A 100×100 element (1% of a 1440×900 viewport area) should produce a
     // smaller weight than a 1440×900 element (full viewport).
@@ -156,9 +156,9 @@ describe('computeElementWeight — area', () => {
   });
 });
 
-// ─── computeElementWeight: semantic boost ──────────────────────────────────
+//  computeElementWeight: semantic boost 
 
-describe('computeElementWeight — semantic boost', () => {
+describe('computeElementWeight  semantic boost', () => {
   it('h1 gets a 2.0× boost over a generic div', () => {
     const div = makeElement({ rect: { x: 0, y: 0, width: 200, height: 200 } });
     const h1 = makeElement({ tag: 'h1', rect: { x: 0, y: 0, width: 200, height: 200 } });
@@ -204,9 +204,9 @@ describe('computeElementWeight — semantic boost', () => {
   });
 });
 
-// ─── computeElementWeight: interactive boost ───────────────────────────────
+//  computeElementWeight: interactive boost 
 
-describe('computeElementWeight — interactive boost', () => {
+describe('computeElementWeight  interactive boost', () => {
   it.each(['a', 'button', 'input', 'select', 'textarea'])(
     '<%s> gets 1.5× interactive boost',
     (tag) => {
@@ -228,9 +228,9 @@ describe('computeElementWeight — interactive boost', () => {
   );
 });
 
-// ─── computeElementWeight: fold boost ──────────────────────────────────────
+//  computeElementWeight: fold boost 
 
-describe('computeElementWeight — fold boost', () => {
+describe('computeElementWeight  fold boost', () => {
   it('above-the-fold (y < viewport.height) gets 2.0×', () => {
     const above = makeElement({ rect: { x: 0, y: 100, width: 200, height: 200 } });
     const below = makeElement({ rect: { x: 0, y: 2000, width: 200, height: 200 } });
@@ -248,7 +248,7 @@ describe('computeElementWeight — fold boost', () => {
   });
 });
 
-// ─── aggregateColorWeights ────────────────────────────────────────────────
+//  aggregateColorWeights 
 
 describe('aggregateColorWeights', () => {
   it('attributes element weight to the nearest token cluster within ΔE', () => {
@@ -330,7 +330,7 @@ describe('aggregateColorWeights', () => {
   });
 });
 
-// ─── applyVisibilityWeighting (integration) ────────────────────────────────
+//  applyVisibilityWeighting (integration) 
 
 describe('applyVisibilityWeighting', () => {
   function withTempDir<T>(fn: (dir: string) => T): T {
@@ -364,7 +364,7 @@ describe('applyVisibilityWeighting', () => {
         structuralRegion: 'main',
         backgroundColor: '#635bff',
       });
-      // Tiny 8×8 footer hairlines below the fold — minimal area, minimal
+      // Tiny 8×8 footer hairlines below the fold  minimal area, minimal
       // semantic, no interactive, no fold boost. 50 of them sum to roughly
       // half a hero's weight, so the hero still wins.
       const tinyGreyHairline = makeElement({
@@ -415,7 +415,7 @@ describe('applyVisibilityWeighting', () => {
   });
 });
 
-// ─── End-to-end wedge: role-namer + visibility weighting ──────────────────
+//  End-to-end wedge: role-namer + visibility weighting 
 //
 // This is THE wedge test: it proves that visibility weighting actually
 // changes which color role-namer picks as Primary, not just the array
@@ -428,14 +428,14 @@ describe('visibility-weight + role-namer integration (the wedge)', () => {
     // Two saturated colors. A real brand purple (#635bff) used on a few
     // prominent elements. A campaign red (#cc0033) used on many small
     // decorative icons. WITHOUT visibility weighting, raw bgColor count
-    // dominates and the campaign red wins — which is wrong.
+    // dominates and the campaign red wins  which is wrong.
     const tokens: ColorToken[] = [
       makeColorToken({ hex: '#635bff', frequency: 8, usedAs: { textColor: 0, bgColor: 5, borderColor: 0, shadowColor: 0, gradientColor: 0, iconColor: 0 } }),
       makeColorToken({ hex: '#cc0033', frequency: 50, usedAs: { textColor: 0, bgColor: 50, borderColor: 0, shadowColor: 0, gradientColor: 0, iconColor: 0 } }),
     ];
     const named = assignColorRoles(tokens);
     const primary = named.find((c) => c.role === 'primary');
-    expect(primary?.hex).toBe('#cc0033'); // wrong — but reproducible without visibility weighting
+    expect(primary?.hex).toBe('#cc0033'); // wrong  but reproducible without visibility weighting
   });
 
   it('WITH visibilityScore, role-namer correctly picks the visibility-prominent token', () => {
@@ -461,11 +461,11 @@ describe('visibility-weight + role-namer integration (the wedge)', () => {
     ];
     const named = assignColorRoles(tokens);
     const primary = named.find((c) => c.role === 'primary');
-    expect(primary?.hex).toBe('#635bff'); // correct — visibility weighting did its job
+    expect(primary?.hex).toBe('#635bff'); // correct  visibility weighting did its job
   });
 
   it('role-namer falls back to bgColor count when visibilityScore is absent (legacy tokens.json)', () => {
-    // Same as the first test (no visibility scores) — proves the fallback
+    // Same as the first test (no visibility scores)  proves the fallback
     // path is intact for old extractions and the committed gallery examples.
     const tokens: ColorToken[] = [
       makeColorToken({ hex: '#635bff', frequency: 8, usedAs: { textColor: 0, bgColor: 5, borderColor: 0, shadowColor: 0, gradientColor: 0, iconColor: 0 } }),
@@ -477,7 +477,7 @@ describe('visibility-weight + role-namer integration (the wedge)', () => {
     }
     const named = assignColorRoles(tokens);
     const primary = named.find((c) => c.role === 'primary');
-    // Same outcome as first test — fallback path picks red on raw count.
+    // Same outcome as first test  fallback path picks red on raw count.
     expect(primary?.hex).toBe('#cc0033');
   });
 });

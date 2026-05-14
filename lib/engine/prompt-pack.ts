@@ -1,4 +1,4 @@
-// Prompt-pack emitter — the SPA's Phase 2 wiring.
+// Prompt-pack emitter  the SPA's Phase 2 wiring.
 //
 // Emits a self-contained "build UI from this design system" prompt the user
 // can paste into ANY agent surface (Claude.ai, ChatGPT, Cursor, Codex,
@@ -22,7 +22,6 @@ import type {
   DesignTokens,
   RadiusToken,
   ShadowToken,
-  TypographyLevel,
 } from './types';
 import {
   assignColorRoles,
@@ -34,8 +33,8 @@ import {
   type TypeRole,
 } from './role-namer';
 
-// ─── Usage hints (what each role is for) ─────────────────────────────────
-// Short phrase per role so the agent reads "Primary — main CTAs, focused
+//  Usage hints (what each role is for) 
+// Short phrase per role so the agent reads "Primary  main CTAs, focused
 // state" instead of just "Primary #635bff". Helps the model pick the right
 // token for each component without guessing.
 
@@ -77,10 +76,10 @@ const TYPE_DISPLAY_ORDER: NonNullable<TypeRole>[] = [
   'overline',
 ];
 
-// ─── Stability filter (L1 + L2 only) ──────────────────────────────────────
+//  Stability filter (L1 + L2 only) 
 // The 4-layer stability classification puts campaign (L3) tokens in an
 // "expires per launch" bucket and content (L4) tokens in product-imagery
-// territory. Neither belongs in a build prompt — the agent shouldn't hard-
+// territory. Neither belongs in a build prompt  the agent shouldn't hard-
 // code a launch-week banner color into the user's component library.
 // Tokens missing an explicit stability default to inclusion (no signal to
 // exclude).
@@ -108,12 +107,12 @@ function canonicalFamily(fontFamily: string): string {
     .replace(/^["']|["']$/g, '');
 }
 
-// ─── Line formatters ──────────────────────────────────────────────────────
+//  Line formatters 
 
 function colorLine(c: NamedColor): string | null {
   if (!c.role || !c.roleLabel) return null;
   const hint = COLOR_USAGE_HINTS[c.role];
-  const hintPart = hint ? ` — ${hint}` : '';
+  const hintPart = hint ? `  ${hint}` : '';
   return `- **${c.roleLabel}:** \`${c.hex}\`${hintPart}`;
 }
 
@@ -149,11 +148,11 @@ function typeLine(t: NamedType): string | null {
   return `- **${t.roleLabel}:** \`${family}\` · ${t.fontSize} / weight ${t.fontWeight} / lh ${lh}${ls}${features}`;
 }
 
-// ─── Public API ──────────────────────────────────────────────────────────
+//  Public API 
 
 /**
  * Build the universal "use this design system to build UI" prompt as a
- * single markdown string. Pure function — same inputs → same output, no
+ * single markdown string. Pure function  same inputs → same output, no
  * I/O, no environment access.
  *
  * Applies role-namer in-memory so colors and typography levels carry their
@@ -164,7 +163,7 @@ function typeLine(t: NamedType): string | null {
 export function buildUniversalPrompt(tokens: DesignTokens, url: string): string {
   const siteName = deriveSiteName(url);
 
-  // ── Role-assign in memory ───────────────────────────────────────────
+  //  Role-assign in memory 
   // role-namer attaches `role` + `roleLabel` to every color / typo level.
   // Same pattern the SPA's API response layer uses. The disk-resident
   // tokens.json is never touched.
@@ -175,7 +174,7 @@ export function buildUniversalPrompt(tokens: DesignTokens, url: string): string 
     ? assignTypeRoles(tokens.typographyLevels)
     : [];
 
-  // ── Filter + sort colors ───────────────────────────────────────────
+  //  Filter + sort colors 
   // Stability filter first (no L3 campaign / L4 content), then role-assigned
   // first, then by display priority. Falls back to top-frequency permanent
   // tokens when role-namer couldn't classify anything (rare but defensive).
@@ -194,8 +193,8 @@ export function buildUniversalPrompt(tokens: DesignTokens, url: string): string 
     ? colorsAll.filter(isPermanent).slice(0, 8)
     : [];
 
-  // ── Filter + sort typography levels ────────────────────────────────
-  // Dedupe by role label — role-namer's size-band buckets can collide
+  //  Filter + sort typography levels 
+  // Dedupe by role label  role-namer's size-band buckets can collide
   // (a 44px and 48px heading both land in "Display XL"). For a build
   // prompt we want one canonical entry per role so the agent has an
   // unambiguous mapping; users who need the full granular hierarchy can
@@ -235,7 +234,7 @@ export function buildUniversalPrompt(tokens: DesignTokens, url: string): string 
     .filter(isPermanent)
     .slice(0, 5);
 
-  // ── Build the markdown ─────────────────────────────────────────────
+  //  Build the markdown 
   const out: string[] = [];
 
   out.push(`# Design System: ${siteName} (${url})`);
@@ -258,7 +257,7 @@ export function buildUniversalPrompt(tokens: DesignTokens, url: string): string 
     out.push('## Colors');
     out.push('');
     out.push(
-      '_Role-namer could not classify these — they\'re listed by frequency. Inspect before using._',
+      '_Role-namer could not classify these  they\'re listed by frequency. Inspect before using._',
     );
     out.push('');
     for (const c of fallbackColors) {
@@ -307,7 +306,7 @@ export function buildUniversalPrompt(tokens: DesignTokens, url: string): string 
     out.push('');
     for (const r of radii) {
       const elems = r.typicalElements && r.typicalElements.length > 0
-        ? ` — ${r.typicalElements.slice(0, 3).join(', ')}`
+        ? `  ${r.typicalElements.slice(0, 3).join(', ')}`
         : '';
       out.push(`- \`${r.value}\` (used ${r.frequency}×)${elems}`);
     }
@@ -338,7 +337,7 @@ export function buildUniversalPrompt(tokens: DesignTokens, url: string): string 
   );
   out.push('- "Make a sign-up form following the design system above."');
   out.push(
-    '- "Build a dashboard sidebar with nav items + active state — design system above."',
+    '- "Build a dashboard sidebar with nav items + active state  design system above."',
   );
   out.push(
     '- "Convert this Figma mockup to React using the design system above."',

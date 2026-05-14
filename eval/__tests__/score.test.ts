@@ -18,7 +18,7 @@ import {
 import type { GoldTokens } from '../gold/types';
 import type { ColorToken, DesignTokens, TypographyLevel } from '../../lib/engine/types';
 
-// ─── Fixtures ─────────────────────────────────────────────────────────────
+//  Fixtures 
 
 function makeColorToken(over: Partial<ColorToken> = {}): ColorToken {
   return {
@@ -73,7 +73,7 @@ function makeGold(over: Partial<GoldTokens> = {}): GoldTokens {
   };
 }
 
-// ─── scorePrimary ─────────────────────────────────────────────────────────
+//  scorePrimary 
 
 describe('scorePrimary', () => {
   it('returns deltaE=0 + pass when extracted matches gold exactly', () => {
@@ -87,7 +87,7 @@ describe('scorePrimary', () => {
   });
 
   it('passes when ΔE is below the configured threshold', () => {
-    // #635aff is one byte off from #635bff — perceptually identical.
+    // #635aff is one byte off from #635bff  perceptually identical.
     const tokens = [
       Object.assign(makeColorToken({ hex: '#635aff' }), { role: 'primary' }),
     ];
@@ -120,7 +120,7 @@ describe('scorePrimary', () => {
   });
 });
 
-// ─── scorePalette ─────────────────────────────────────────────────────────
+//  scorePalette 
 
 describe('scorePalette', () => {
   it('returns perfect F1 when extracted palette = gold palette exactly', () => {
@@ -182,7 +182,7 @@ describe('scorePalette', () => {
   });
 });
 
-// ─── scoreTypography ──────────────────────────────────────────────────────
+//  scoreTypography 
 
 describe('scoreTypography', () => {
   it('passes when display family matches gold', () => {
@@ -221,7 +221,7 @@ describe('scoreTypography', () => {
   });
 });
 
-// ─── scoreSpacing ─────────────────────────────────────────────────────────
+//  scoreSpacing 
 
 describe('scoreSpacing', () => {
   it('passes baseUnit and recall when extracted matches gold', () => {
@@ -272,7 +272,7 @@ describe('scoreSpacing', () => {
   });
 });
 
-// ─── computeComposite ─────────────────────────────────────────────────────
+//  computeComposite 
 
 describe('computeComposite', () => {
   it('returns 100 for a perfect extraction', () => {
@@ -335,7 +335,7 @@ describe('computeComposite', () => {
   });
 });
 
-// ─── DELTA_E_MATCH exported ───────────────────────────────────────────────
+//  DELTA_E_MATCH exported 
 
 describe('exported thresholds', () => {
   it('exposes DELTA_E_MATCH and PRIMARY_PASS_DELTA_E for tuning', () => {
@@ -344,7 +344,7 @@ describe('exported thresholds', () => {
   });
 });
 
-// ─── scoreTokens (in-memory end-to-end) ──────────────────────────────────
+//  scoreTokens (in-memory end-to-end) 
 
 describe('scoreTokens', () => {
   it('assembles every sub-score + composite from in-memory objects', () => {
@@ -377,7 +377,7 @@ describe('scoreTokens', () => {
   });
 });
 
-// ─── scoreExtraction (file-reading wrapper) ──────────────────────────────
+//  scoreExtraction (file-reading wrapper) 
 
 describe('scoreExtraction', () => {
   function withTempDir<T>(fn: (dir: string) => T): T {
@@ -419,7 +419,7 @@ describe('scoreExtraction', () => {
   });
 });
 
-// ─── goldPathFor helper ──────────────────────────────────────────────────
+//  goldPathFor helper 
 
 describe('goldPathFor', () => {
   it('returns eval/gold/<brand>.json relative to the project root', () => {
@@ -428,7 +428,7 @@ describe('goldPathFor', () => {
   });
 });
 
-// ─── Type marker — OverallScore exported ─────────────────────────────────
+//  Type marker  OverallScore exported 
 
 // Ensures the type is exposed; compile-time check only.
 const _marker: OverallScore | null = null;

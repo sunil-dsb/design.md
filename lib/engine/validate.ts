@@ -1,7 +1,6 @@
-import * as fs from 'fs';
 import type { DesignTokens } from './types';
 
-// ─── Result Types ────────────────────────────────────────────────────────────
+//  Result Types 
 
 interface ValidationIssue {
   type: string;
@@ -16,7 +15,7 @@ export interface ValidationResult {
   score: number;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+//  Helpers 
 
 function normalizeHex(raw: string): string {
   const h = raw.replace('#', '').toLowerCase();
@@ -36,7 +35,7 @@ function stripHtmlComments(md: string): string {
   return md.replace(/<!--[\s\S]*?-->/g, '');
 }
 
-// ─── Checks ──────────────────────────────────────────────────────────────────
+//  Checks 
 
 function checkPhantomColors(md: string, tokens: DesignTokens): { passed: boolean; failures: ValidationIssue[] } {
   const cleaned = stripHtmlComments(md);
@@ -259,7 +258,7 @@ function checkContent(md: string): { passed: boolean; warnings: ValidationIssue[
   return { passed: warnings.length === 0, warnings };
 }
 
-// ─── Main Validation ─────────────────────────────────────────────────────────
+//  Main Validation 
 
 export function validateDesignMd(mdContent: string, tokens: DesignTokens): ValidationResult {
   const passed: string[] = [];
@@ -289,46 +288,6 @@ export function validateDesignMd(mdContent: string, tokens: DesignTokens): Valid
   const score = Math.max(0, 100 - failures.length * 5 - warnings.length * 1);
 
   return { passed, warnings, failures, score };
-}
-
-// ─── CLI ─────────────────────────────────────────────────────────────────────
-
-const RED = '\x1b[31m';
-const YELLOW = '\x1b[33m';
-const GREEN = '\x1b[32m';
-const BOLD = '\x1b[1m';
-const RESET = '\x1b[0m';
-
-function printResult(result: ValidationResult): void {
-  console.log(`\n${BOLD}=== DESIGN.md Validation ===${RESET}\n`);
-
-  if (result.passed.length > 0) {
-    console.log(`${GREEN}Passed checks:${RESET}`);
-    for (const p of result.passed) {
-      console.log(`  ${GREEN}[PASS]${RESET} ${p}`);
-    }
-  }
-
-  if (result.failures.length > 0) {
-    console.log(`\n${RED}Failures (${result.failures.length}):${RESET}`);
-    for (const f of result.failures) {
-      console.log(`  ${RED}[FAIL]${RESET} ${f.type}: ${f.value} ${f.message}`);
-    }
-  }
-
-  if (result.warnings.length > 0) {
-    console.log(`\n${YELLOW}Warnings (${result.warnings.length}):${RESET}`);
-    for (const w of result.warnings) {
-      console.log(`  ${YELLOW}[WARN]${RESET} ${w.type}: ${w.value} ${w.message}`);
-    }
-  }
-
-  console.log(`\n${BOLD}Score: ${result.score}/100${RESET}`);
-  if (result.score >= 80) {
-    console.log(`${GREEN}Result: PASS${RESET}\n`);
-  } else {
-    console.log(`${RED}Result: FAIL (minimum 80 required)${RESET}\n`);
-  }
 }
 
 // CLI guard removed imported as a library from API routes.

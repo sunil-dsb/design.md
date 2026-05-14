@@ -3,7 +3,7 @@
 // is the welcome surface) and the 404 page (no extra noise on errors).
 //
 // The whole bar is one anchor link to the promoted product, so any click
-// inside it navigates — keyboard-accessible by default (Tab → Enter).
+// inside it navigates  keyboard-accessible by default (Tab → Enter).
 //
 // Background animation is a thinner cousin of the footer's mesh-gradient:
 // three blue blobs animated under the bar height, blurred + overflow-clipped
@@ -14,7 +14,7 @@ export function AnnouncementBar() {
       href="https://www.makemyaisite.com"
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Make My AI Site — drop your LinkedIn or resume, get a beautiful animated portfolio site in 20 seconds"
+      aria-label="Make My AI Site  drop your LinkedIn or resume, get a beautiful animated portfolio site in 20 seconds"
       className="announce-bar group relative block w-full overflow-hidden bg-black"
     >
       <div
@@ -28,8 +28,8 @@ export function AnnouncementBar() {
 
       <div className="relative mx-auto flex w-full max-w-6xl items-center justify-center gap-2 px-4 py-2.5 text-center font-pixel text-[10px] uppercase tracking-widest text-white sm:text-xs">
         <span className="hidden sm:inline">
-          Drop your LinkedIn or resume, get a beautiful animated portfolio site in 20
-          sec.
+          Drop your LinkedIn or resume, get a beautiful animated portfolio site
+          in 20 sec.
         </span>
         <span className="sm:hidden">
           Portfolio site from your LinkedIn · 20s

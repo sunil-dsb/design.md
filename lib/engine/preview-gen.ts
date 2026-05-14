@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import type { DesignTokens, ColorToken, TypographyLevel, ShadowToken, RadiusToken } from './types';
+import type { DesignTokens, ColorToken } from './types';
 
-// ─── HTML Generation ────────────────────────────────────────────────────────
+//  HTML Generation 
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -228,7 +228,7 @@ ${shadows.map((s) => `  <div class="shadow-card" style="box-shadow:${escapeHtml(
 </html>`;
 }
 
-// ─── Main Export ─────────────────────────────────────────────────────────────
+//  Main Export 
 
 export function generatePreview(tokensPath: string, outputDir: string): void {
   const tokens: DesignTokens = JSON.parse(fs.readFileSync(tokensPath, 'utf-8'));

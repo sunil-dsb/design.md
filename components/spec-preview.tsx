@@ -17,7 +17,7 @@ export async function SpecPreview() {
     fs.readFile(path.join(dir, "preview.html"), "utf8"),
   ]);
 
-  // Stats for the bottom status bar — derived once at render time.
+  // Stats for the bottom status bar  derived once at render time.
   const lineCount = designMd.split("\n").length;
   const sectionCount = (designMd.match(/^##\s/gm) || []).length;
   const tokenCount = (designMd.match(/^\s{2,}[a-z][a-z0-9-]*:/gim) || [])
@@ -35,8 +35,8 @@ export async function SpecPreview() {
           example
         </h2>
         <p className="mt-2 text-sm text-white/60">
-          A real DESIGN.md — markdown source on the left, rendered preview on
-          the right. Switch tabs to see what we&apos;ll emit alongside.
+          A real DESIGN.md markdown source on the left, rendered preview on the
+          right. Switch tabs to see what we&apos;ll emit alongside.
         </p>
       </header>
 

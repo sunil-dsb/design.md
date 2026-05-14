@@ -139,13 +139,13 @@ export function SpecTabs({ designMd, previewHtml, exampleLabel }: Props) {
           {active === "tailwind" ? (
             <EditorPane
               source={TAILWIND_SAMPLE}
-              banner="Tailwind v4 @theme — generated per brand"
+              banner="Tailwind v4 @theme  generated per brand"
             />
           ) : null}
           {active === "shadcn" ? (
             <EditorPane
               source={SHADCN_SAMPLE}
-              banner="shadcn/ui theme — generated per brand"
+              banner="shadcn/ui theme  generated per brand"
             />
           ) : null}
 
@@ -156,7 +156,7 @@ export function SpecTabs({ designMd, previewHtml, exampleLabel }: Props) {
           />
         </div>
 
-        {/* Preview pane (always the same — the rendered HTML preview) */}
+        {/* Preview pane (always the same  the rendered HTML preview) */}
         <div className="relative h-80 border-t border-white/15 lg:h-112 lg:border-t-0 lg:border-l">
           <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 font-mono text-[10px] text-black/50">
             <span

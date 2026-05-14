@@ -13,7 +13,7 @@ import { BubbleButton } from "@/components/bubble-button";
 import type { Diagnostic } from "@/lib/engine/diagnostics";
 import { rolePriority, type ColorRole } from "@/lib/engine/role-namer";
 
-// ─── Stage-tracking types ───────────────────────────────────────────────────
+//  Stage-tracking types
 // Mirrors the SSE protocol defined in app/api/extract/route.ts. Four stages
 // match the four awaited blocks server-side; ordering is fixed so the loading
 // UI can render them as a deterministic checklist.
@@ -53,28 +53,30 @@ const STAGE_ORDER: StageKey[] = [
 ];
 
 const INITIAL_STAGES: Record<StageKey, StageState> = {
-  extract:   { status: "pending", label: "extracting tokens" },
+  extract: { status: "pending", label: "extracting tokens" },
   weighting: { status: "pending", label: "applying visibility weighting" },
-  ramps:     { status: "pending", label: "regenerating brand + neutral ramps" },
-  tailwind:  { status: "pending", label: "emitting tailwind v4 @theme" },
-  shadcn:    { status: "pending", label: "emitting shadcn 17-slot theme" },
-  preview:   { status: "pending", label: "generating preview" },
-  proof:     { status: "pending", label: "running pixel-fidelity proof" },
-  report:    { status: "pending", label: "generating report" },
-  prompts:   { status: "pending", label: "preparing prompt pack" },
-  designmd:  { status: "pending", label: "writing deterministic DESIGN.md" },
+  ramps: { status: "pending", label: "regenerating brand + neutral ramps" },
+  tailwind: { status: "pending", label: "emitting tailwind v4 @theme" },
+  shadcn: { status: "pending", label: "emitting shadcn 17-slot theme" },
+  preview: { status: "pending", label: "generating preview" },
+  proof: { status: "pending", label: "running pixel-fidelity proof" },
+  report: { status: "pending", label: "generating report" },
+  prompts: { status: "pending", label: "preparing prompt pack" },
+  designmd: { status: "pending", label: "writing deterministic DESIGN.md" },
 };
 
 // Server emits stage kinds like "extract:start" / "preview:done" /
 // "proof:error". Strip the suffix to get the StageKey.
-function parseStageKind(kind: string): { key: StageKey; phase: "start" | "done" | "error" } | null {
+function parseStageKind(
+  kind: string,
+): { key: StageKey; phase: "start" | "done" | "error" } | null {
   const [base, phase] = kind.split(":");
   if (!STAGE_ORDER.includes(base as StageKey)) return null;
   if (phase !== "start" && phase !== "done" && phase !== "error") return null;
   return { key: base as StageKey, phase };
 }
 
-// ─── SSE reader ─────────────────────────────────────────────────────────────
+//  SSE reader
 // Parses a text/event-stream body into discrete (event, data) callbacks.
 // Handles message framing on \n\n boundaries, decodes JSON `data:` payloads,
 // and silently skips heartbeats (lines starting with `:`).
@@ -113,7 +115,7 @@ async function readSse(
           const dataParts: string[] = [];
           // Tolerate CRLF line endings inside a message too.
           for (const line of rawMessage.split(/\r?\n/)) {
-            // Comment line — heartbeat or note. Skip.
+            // Comment line  heartbeat or note. Skip.
             if (line.startsWith(":")) continue;
             if (line.startsWith("event:")) {
               eventName = line.slice(6).trim();
@@ -180,10 +182,19 @@ interface ExtractResponse {
       typicalElements?: string[];
     }>;
     motionSystem?: {
-      durationScale?: Array<{ label: string; value: string; frequency: number }>;
+      durationScale?: Array<{
+        label: string;
+        value: string;
+        frequency: number;
+      }>;
       primaryTimingFunction?: string;
       timingFunctions?: Array<{ value: string; frequency: number }>;
-      keyframeAnimations?: Array<{ name: string; type: string; duration: string; properties?: string[] }>;
+      keyframeAnimations?: Array<{
+        name: string;
+        type: string;
+        duration: string;
+        properties?: string[];
+      }>;
       prefersReducedMotion?: boolean;
     } | null;
     a11yTokens?: {
@@ -197,12 +208,26 @@ interface ExtractResponse {
         usageCount?: number;
       }>;
       minTouchTarget?: { width: number; height: number };
-      altTextCoverage?: { withAlt: number; withoutAlt: number; total: number; percentage: number };
-      tabOrder?: { tabbableCount: number; hasPositiveTabindex: boolean; positiveTabindexCount: number };
+      altTextCoverage?: {
+        withAlt: number;
+        withoutAlt: number;
+        total: number;
+        percentage: number;
+      };
+      tabOrder?: {
+        tabbableCount: number;
+        hasPositiveTabindex: boolean;
+        positiveTabindexCount: number;
+      };
       skipLinkDetected?: boolean;
       reducedMotionSupport?: boolean;
     };
-    breakpoints?: Array<{ query?: string; type: string; value: string; ruleCount: number }>;
+    breakpoints?: Array<{
+      query?: string;
+      type: string;
+      value: string;
+      ruleCount: number;
+    }>;
     components?: Array<{
       type: string;
       variants: Array<{
@@ -241,8 +266,8 @@ interface ExtractResponse {
     tokensJsonUrl: string;
     regeneratedRampUrl: string | null;
     tailwindCssUrl: string | null;
-    shadcnThemeUrl: string | null;       // shadcn-theme.css when gates passed
-    shadcnOmitReasonUrl: string | null;  // shadcn-omit-reason.md when gates failed
+    shadcnThemeUrl: string | null; // shadcn-theme.css when gates passed
+    shadcnOmitReasonUrl: string | null; // shadcn-omit-reason.md when gates failed
     previewHtmlUrl: string | null;
     proofHtmlUrl: string | null;
     reportHtmlUrl: string | null;
@@ -251,13 +276,23 @@ interface ExtractResponse {
   };
   // proof.ts ΔE<12 pixel coverage, 0..1. Null when proof step skipped/failed.
   proofCoverage?: number | null;
-  phase3?: { ramps: boolean; tailwind: boolean; shadcnCss: boolean; shadcnOmit: boolean; preview: boolean; proof: boolean; report: boolean; prompts: boolean; designmd: boolean };
+  phase3?: {
+    ramps: boolean;
+    tailwind: boolean;
+    shadcnCss: boolean;
+    shadcnOmit: boolean;
+    preview: boolean;
+    proof: boolean;
+    report: boolean;
+    prompts: boolean;
+    designmd: boolean;
+  };
   warnings?: string[];
   /**
    * Engine diagnostics from lib/engine/diagnostics.ts. Surfaces things the
    * engine flagged as suspicious or low-confidence (low pixel coverage,
    * single-page noise, primary-is-grey, framework miscall, etc.). Always
-   * an array — empty means clean extraction.
+   * an array  empty means clean extraction.
    */
   diagnostics?: Diagnostic[];
 }
@@ -268,8 +303,8 @@ export function ExtractClient() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ExtractResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [stages, setStages] = useState<Record<StageKey, StageState>>(
-    () => structuredClone(INITIAL_STAGES),
+  const [stages, setStages] = useState<Record<StageKey, StageState>>(() =>
+    structuredClone(INITIAL_STAGES),
   );
   // Allow aborting an in-flight stream if the user resubmits or navigates.
   const abortRef = useRef<AbortController | null>(null);
@@ -298,7 +333,7 @@ export function ExtractClient() {
 
     try {
       const res = await fetch("/api/extract", {
-        // maxPages intentionally omitted — the API route's default is 8,
+        // maxPages intentionally omitted  the API route's default is 8,
         // matching the CLI default. Hard-coding 5 here would silently
         // override that.
         method: "POST",
@@ -325,7 +360,7 @@ export function ExtractClient() {
         return;
       }
 
-      // Track terminal events locally — React state updates inside the
+      // Track terminal events locally  React state updates inside the
       // onEvent callback are async, so we can't read `result`/`error`
       // state immediately after readSse returns. These locals give us a
       // reliable signal to detect a dropped connection mid-stream.
@@ -334,7 +369,12 @@ export function ExtractClient() {
 
       await readSse(res.body, (event, data) => {
         if (event === "stage" && data && typeof data === "object") {
-          const ev = data as { kind?: string; label?: string; durationMs?: number; detail?: { message?: string } };
+          const ev = data as {
+            kind?: string;
+            label?: string;
+            durationMs?: number;
+            detail?: { message?: string };
+          };
           const parsed = ev.kind ? parseStageKind(ev.kind) : null;
           if (!parsed) return;
           setStages((prev) => ({
@@ -344,8 +384,8 @@ export function ExtractClient() {
                 parsed.phase === "start"
                   ? "running"
                   : parsed.phase === "done"
-                  ? "done"
-                  : "error",
+                    ? "done"
+                    : "error",
               label: ev.label ?? prev[parsed.key].label,
               durationMs: ev.durationMs ?? prev[parsed.key].durationMs,
               message: ev.detail?.message ?? prev[parsed.key].message,
@@ -359,7 +399,7 @@ export function ExtractClient() {
           const ev = data as { message?: string };
           setError(ev.message ?? "Unknown server error.");
         }
-        // 'done' is just a stream sentinel — no UI action needed.
+        // 'done' is just a stream sentinel  no UI action needed.
       });
 
       // Stream ended without a terminal event. Connection dropped between
@@ -372,7 +412,7 @@ export function ExtractClient() {
         );
       }
     } catch (err) {
-      // AbortError happens on intentional cancel — don't surface as an error.
+      // AbortError happens on intentional cancel  don't surface as an error.
       if (err instanceof DOMException && err.name === "AbortError") return;
       // Same guard as the finally block: only surface our own error if we
       // are still the current request. A superseded request must not write
@@ -393,24 +433,24 @@ export function ExtractClient() {
     }
   }
 
-  // Thin form wrapper — just prevents default and delegates to runExtraction
+  // Thin form wrapper  just prevents default and delegates to runExtraction
   // with the current input state.
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     await runExtraction(url);
   }
 
-  // ── Auto-fire on mount when ?url= is present in the URL ─────────────
+  //  Auto-fire on mount when ?url= is present in the URL
   // The homepage hero submits its form as `GET /extract?url=...`, so users
   // arrive here with a URL already chosen. Pre-filling the input is good
-  // but not enough — the visual signal of having clicked GENERATE on the
+  // but not enough  the visual signal of having clicked GENERATE on the
   // homepage implies the work should already be in flight. We start it
   // automatically the moment this client component hydrates.
   //
   // `autoFiredRef` is a useRef (survives re-renders, not affected by
   // strict-mode double-invocation) so the request only fires once per
   // genuine mount. The user can re-extract by editing the URL and
-  // re-submitting — the ref doesn't block that path.
+  // re-submitting  the ref doesn't block that path.
   useEffect(() => {
     const initial = searchParams.get("url");
     if (initial && !autoFiredRef.current) {
@@ -449,9 +489,7 @@ export function ExtractClient() {
           type="submit"
           disabled={loading || !url.trim()}
           aria-label={
-            loading
-              ? "Extracting DESIGN.md"
-              : "Extract DESIGN.md from this URL"
+            loading ? "Extracting DESIGN.md" : "Extract DESIGN.md from this URL"
           }
           className="clip-btn shrink-0 disabled:opacity-40"
         >
@@ -507,11 +545,11 @@ function Header({ url, hasResult }: { url: string; hasResult: boolean }) {
 // the first stage report arrives.
 const STAGE_DESCRIPTIONS: Record<StageKey, string> = {
   extract:
-    "Spinning up a headless browser, loading your site, and reading every painted style from the live DOM — colors, fonts, spacing, the lot.",
+    "Spinning up a headless browser, loading your site, and reading every painted style from the live DOM  colors, fonts, spacing, the lot.",
   weighting:
     "Promoting the tokens that appear on visible, above-the-fold elements above background noise so the brand-defining colors actually rank first.",
   ramps:
-    "Anchoring on the brand-primary, holding the hue, walking a 12-stop OKLCH lightness curve — and tapering chroma at the extremes so each step is in-gamut.",
+    "Anchoring on the brand-primary, holding the hue, walking a 12-stop OKLCH lightness curve  and tapering chroma at the extremes so each step is in-gamut.",
   tailwind:
     "Packing the regenerated ramps + your type, spacing, radius, and shadow scales into a paste-ready Tailwind v4 @theme block.",
   shadcn:
@@ -521,24 +559,18 @@ const STAGE_DESCRIPTIONS: Record<StageKey, string> = {
   proof:
     "Pixel-level side-by-side: the live site versus our extracted palette. Anywhere we miss a color by more than ΔE 12, it gets flagged.",
   report:
-    "Building the human-readable report.html that explains every token decision — the value picked, the alternatives, and why.",
+    "Building the human-readable report.html that explains every token decision  the value picked, the alternatives, and why.",
   prompts:
-    "Packing the universal prompt — your tokens.json embedded with the full v2 spec — so any AI agent can take it from here.",
+    "Packing the universal prompt  your tokens.json embedded with the full v2 spec  so any AI agent can take it from here.",
   designmd:
     "Final pass: writing the deterministic DESIGN.md with all canonical sections. This is the file you drop in your repo.",
 };
 
-function LoadingState({
-  stages,
-}: {
-  stages: Record<StageKey, StageState>;
-}) {
+function LoadingState({ stages }: { stages: Record<StageKey, StageState> }) {
   // Current stage drives the headline + body copy. Falls back to a generic
   // "starting" state before any stage report arrives.
   const runningKey = STAGE_ORDER.find((k) => stages[k].status === "running");
-  const headerLabel = runningKey
-    ? stages[runningKey].label
-    : "starting up";
+  const headerLabel = runningKey ? stages[runningKey].label : "starting up";
   const description = runningKey
     ? STAGE_DESCRIPTIONS[runningKey]
     : "Warming up the engine. The browser is about to load your site and start reading.";
@@ -583,7 +615,7 @@ function LoadingState({
 }
 
 // 5-minute soft countdown shown in the loading header. After the timer hits
-// zero we display "any moment" instead of going negative — most extractions
+// zero we display "any moment" instead of going negative  most extractions
 // finish in 90–240 s, so 5 min is a generous ceiling. State is local and
 // resets on unmount, so re-submitting an extraction restarts the clock.
 function Countdown({ startSeconds }: { startSeconds: number }) {
@@ -619,17 +651,11 @@ function Countdown({ startSeconds }: { startSeconds: number }) {
   );
 }
 
-function StageRow({
-  index,
-  state,
-}: {
-  index: number;
-  state: StageState;
-}) {
+function StageRow({ index, state }: { index: number; state: StageState }) {
   const indicator = (() => {
     switch (state.status) {
       case "done":
-        // Bright emerald green tick — completion deserves a different colour
+        // Bright emerald green tick  completion deserves a different colour
         // from "in progress" (primary blue) so users instantly read the
         // status without reading the label.
         return (
@@ -673,10 +699,10 @@ function StageRow({
     state.status === "done"
       ? "text-emerald-300"
       : state.status === "running"
-      ? "text-white"
-      : state.status === "error"
-      ? "text-red-300"
-      : "text-white/60";
+        ? "text-white"
+        : state.status === "error"
+          ? "text-red-300"
+          : "text-white/60";
 
   return (
     <li
@@ -704,15 +730,12 @@ function StageRow({
         )}
       </div>
 
-      <span
-        aria-hidden="true"
-        className="font-mono text-[11px] text-white/60"
-      >
+      <span aria-hidden="true" className="font-mono text-[11px] text-white/60">
         {state.durationMs !== undefined
           ? `${(state.durationMs / 1000).toFixed(1)}s`
           : state.status === "running"
-          ? "…"
-          : ""}
+            ? "…"
+            : ""}
       </span>
     </li>
   );
@@ -735,7 +758,7 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-// ─── Result-section nav ───────────────────────────────────────────────────
+//  Result-section nav
 // Grouped table-of-contents for the long extract result. Order inside each
 // group matches render order so the nav reads top-to-bottom. Headline tokens
 // (Colors → Typography → Components) sit at the top of the first group so
@@ -782,7 +805,7 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 // IntersectionObserver-driven active-section tracker. Triggers when a target
-// crosses the band 20–80% down the viewport — the "user is reading here" zone.
+// crosses the band 20–80% down the viewport  the "user is reading here" zone.
 // Picks the lowest-on-page id that is currently intersecting so the active
 // item moves DOWN the nav as you scroll, never jumps.
 function useActiveSection(ids: string[]): string | null {
@@ -828,10 +851,7 @@ function ResultNav() {
   const activeId = useActiveSection(allIds);
 
   return (
-    <nav
-      aria-label="Result sections"
-      className="flex flex-col gap-6 text-left"
-    >
+    <nav aria-label="Result sections" className="flex flex-col gap-6 text-left">
       {/* Eyebrow + total count gives users a sense of scope */}
       <div className="flex items-baseline justify-between">
         <p className="font-pixel text-[10px] uppercase tracking-widest text-white">
@@ -898,9 +918,7 @@ function NavLink({
       <span
         aria-hidden="true"
         className={`size-1.5 shrink-0 transition-all ${
-          isActive
-            ? "bg-primary"
-            : "bg-white/25 group-hover:bg-white/55"
+          isActive ? "bg-primary" : "bg-white/25 group-hover:bg-white/55"
         }`}
       />
       <span className="truncate">{label}</span>
@@ -909,10 +927,16 @@ function NavLink({
 }
 
 function ResultState({ result }: { result: ExtractResponse }) {
-  const { tokens, durationMs, outputDir, artifacts, proofCoverage, diagnostics } =
-    result;
+  const {
+    tokens,
+    durationMs,
+    outputDir,
+    artifacts,
+    proofCoverage,
+    diagnostics,
+  } = result;
   const colors = tokens.colorTokens ?? [];
-  // Show named colors in role-priority order — Primary first, then Accent,
+  // Show named colors in role-priority order  Primary first, then Accent,
   // then brand-dark/soft, then text/surface/structural. Within each role,
   // ties break on the engine's existing frequency. The visibility-weighted
   // order on `colors` is preserved for the long-tail block below.
@@ -928,17 +952,20 @@ function ResultState({ result }: { result: ExtractResponse }) {
   const longTailColors = colors.filter((c) => !c.roleLabel);
   const typography = tokens.typographyLevels ?? [];
 
-  // Replace "framework" with "fidelity" when proof.ts ran successfully — it's
+  // Replace "framework" with "fidelity" when proof.ts ran successfully  it's
   // the wedge stat (regenerated ramps & visible accuracy, plan-v1.md §2). Falls
   // back to framework name when proof is unavailable so we never show a blank.
   const fidelityStat =
     typeof proofCoverage === "number"
-      ? { label: "ΔE<12 fidelity", value: `${(proofCoverage * 100).toFixed(1)}%` }
+      ? {
+          label: "ΔE<12 fidelity",
+          value: `${(proofCoverage * 100).toFixed(1)}%`,
+        }
       : {
           label: "framework",
           value:
             tokens.meta?.framework?.uiFramework ??
-            (tokens.meta?.framework?.tailwind?.detected ? "tailwind" : "—"),
+            (tokens.meta?.framework?.tailwind?.detected ? "tailwind" : ""),
         };
 
   return (
@@ -966,15 +993,25 @@ function ResultState({ result }: { result: ExtractResponse }) {
       </section>
 
       {/* Engine diagnostics moved BELOW (just before the full-tokens.json
-          details) — they're "things to verify" notes, not the headline.
+          details)  they're "things to verify" notes, not the headline.
           Surfacing them under the stats made them feel like a problem with
           the result; they're more useful as a tucked-away review aid. */}
 
       {namedColors.length > 0 && (
-        <SectionHeader index={1} label="named colors" count={namedColors.length}>
+        <SectionHeader
+          index={1}
+          label="named colors"
+          count={namedColors.length}
+        >
           <div className="grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-3 md:grid-cols-4">
             {namedColors.map((c, i) => (
-              <ColorCell key={`${c.hex}-${i}`} hex={c.hex} label={c.roleLabel!} frequency={c.frequency} layer={c.stability?.layer} />
+              <ColorCell
+                key={`${c.hex}-${i}`}
+                hex={c.hex}
+                label={c.roleLabel!}
+                frequency={c.frequency}
+                layer={c.stability?.layer}
+              />
             ))}
           </div>
         </SectionHeader>
@@ -993,10 +1030,7 @@ function ResultState({ result }: { result: ExtractResponse }) {
             className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8"
           >
             {longTailColors.slice(0, 16).map((c, i) => (
-              <li
-                key={`${c.hex}-${i}`}
-                className="border border-white/10 p-2"
-              >
+              <li key={`${c.hex}-${i}`} className="border border-white/10 p-2">
                 <div
                   aria-hidden="true"
                   className="aspect-square w-full"
@@ -1013,7 +1047,9 @@ function ResultState({ result }: { result: ExtractResponse }) {
 
       {typography.length > 0 && (
         <SectionHeader
-          index={namedColors.length > 0 ? (longTailColors.length > 0 ? 3 : 2) : 1}
+          index={
+            namedColors.length > 0 ? (longTailColors.length > 0 ? 3 : 2) : 1
+          }
           label="typography"
           count={typography.length}
         >
@@ -1043,7 +1079,7 @@ function ResultState({ result }: { result: ExtractResponse }) {
       <IconographySection iconSystem={tokens.iconSystem} />
 
       {/* The fidelity-proof side-by-side is still iframe-loaded because its
-          value IS the pixel-rendered side-by-side comparison — there's no
+          value IS the pixel-rendered side-by-side comparison  there's no
           better native equivalent. Keeping it inline below the rendered
           tokens so users can verify what they're seeing. */}
       {artifacts?.proofHtmlUrl && (
@@ -1054,18 +1090,13 @@ function ResultState({ result }: { result: ExtractResponse }) {
         <PromptPackSection promptPackUrl={artifacts.promptPackUrl} />
       )}
 
-      {artifacts && (
-        <Downloads
-          artifacts={artifacts}
-          outputDir={outputDir}
-        />
-      )}
+      {artifacts && <Downloads artifacts={artifacts} outputDir={outputDir} />}
 
-      {/* WarningsList replaced by DiagnosticsPanel up top — pipeline
+      {/* WarningsList replaced by DiagnosticsPanel up top  pipeline
           warnings are now folded into the diagnostics module as
           pipeline-warning-* entries (see lib/engine/diagnostics.ts §1). */}
 
-      {/* Engine diagnostics — review aid positioned after the primary
+      {/* Engine diagnostics  review aid positioned after the primary
           result content so they don't dominate the page. Accordion-style:
           each row collapsed by default, expand for the full reason. */}
       {diagnostics && diagnostics.length > 0 && (
@@ -1075,7 +1106,11 @@ function ResultState({ result }: { result: ExtractResponse }) {
       <details className="overflow-hidden border border-white/15">
         <summary className="flex cursor-pointer items-center justify-between bg-white/3 px-4 py-3 font-pixel text-xs uppercase tracking-widest text-white/70">
           full tokens.json
-          <ArrowIcon className="size-4 rotate-90 text-white/50" aria-hidden="true" focusable="false" />
+          <ArrowIcon
+            className="size-4 rotate-90 text-white/50"
+            aria-hidden="true"
+            focusable="false"
+          />
         </summary>
         <pre className="overflow-x-auto px-5 py-4 font-mono text-[11px] leading-relaxed text-white/70">
           <code>{JSON.stringify(tokens, null, 2)}</code>
@@ -1090,17 +1125,11 @@ function ResultState({ result }: { result: ExtractResponse }) {
   );
 }
 
-// ─── Small copy-to-clipboard chip used inline next to tokens ──────────────
+//  Small copy-to-clipboard chip used inline next to tokens
 // Single-button UX: shows "copy" by default, flips to "copied ✓" for 1.5s
-// after a successful write. Fails silently — the visible value is always
+// after a successful write. Fails silently  the visible value is always
 // readable so the user can copy by hand if clipboard API isn't available.
-function CopyValue({
-  value,
-  label,
-}: {
-  value: string;
-  label?: string;
-}) {
+function CopyValue({ value, label }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -1109,7 +1138,7 @@ function CopyValue({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // No-op — assistive UX fallback is the visible value itself.
+      // No-op  assistive UX fallback is the visible value itself.
     }
   }
 
@@ -1119,9 +1148,7 @@ function CopyValue({
       onClick={handleCopy}
       aria-label={`Copy ${label ?? value} to clipboard`}
       className={`shrink-0 px-2 py-1 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
-        copied
-          ? "text-primary"
-          : "text-white/55 hover:text-white"
+        copied ? "text-primary" : "text-white/55 hover:text-white"
       }`}
     >
       {copied ? "copied ✓" : "copy"}
@@ -1129,7 +1156,7 @@ function CopyValue({
   );
 }
 
-// ─── Reusable section header for the new native sections ─────────────────
+//  Reusable section header for the new native sections
 // Mirrors the existing SectionHeader pattern (pixel index + horizontal rule
 // + label + count) but takes a `subtitle` slot for short human-readable
 // blurbs, and lets the section body live as its children.
@@ -1159,29 +1186,28 @@ function PanelHeader({
           )}
         </h2>
         {count !== undefined && (
-          <span
-            aria-hidden="true"
-            className="font-pixel text-xs text-white/60"
-          >
+          <span aria-hidden="true" className="font-pixel text-xs text-white/60">
             {count}
           </span>
         )}
         {rightSlot}
       </div>
-      {subtitle && (
-        <p className="mt-2 text-xs text-white/60">{subtitle}</p>
-      )}
+      {subtitle && <p className="mt-2 text-xs text-white/60">{subtitle}</p>}
     </header>
   );
 }
 
-// ─── Spacing scale — actual gaps between two blocks, t-shirt-named ────────
+//  Spacing scale  actual gaps between two blocks, t-shirt-named
 function SpacingSection({
   spacingSystem,
 }: {
   spacingSystem?: ExtractResponse["tokens"]["spacingSystem"];
 }) {
-  if (!spacingSystem || !spacingSystem.scale || spacingSystem.scale.length === 0) {
+  if (
+    !spacingSystem ||
+    !spacingSystem.scale ||
+    spacingSystem.scale.length === 0
+  ) {
     return null;
   }
   const base = spacingSystem.baseUnit;
@@ -1212,14 +1238,8 @@ function SpacingSection({
         className="grid grid-cols-1 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-2"
       >
         {spacingSystem.scale.map((step) => (
-          <li
-            key={step}
-            className="flex items-center gap-5 bg-black px-5 py-5"
-          >
-            <div
-              aria-hidden="true"
-              className="flex h-10 shrink-0 items-center"
-            >
+          <li key={step} className="flex items-center gap-5 bg-black px-5 py-5">
+            <div aria-hidden="true" className="flex h-10 shrink-0 items-center">
               <span className="size-6 bg-white/80" />
               <span
                 className="h-px bg-primary"
@@ -1243,19 +1263,20 @@ function SpacingSection({
           </li>
         ))}
       </ul>
-      {spacingSystem.sectionSpacing && spacingSystem.sectionSpacing.length > 0 && (
-        <p className="mt-4 text-xs text-white/60">
-          Section gaps:{" "}
-          <code className="font-mono text-white/80">
-            {spacingSystem.sectionSpacing.map((n) => `${n}px`).join(" · ")}
-          </code>
-        </p>
-      )}
+      {spacingSystem.sectionSpacing &&
+        spacingSystem.sectionSpacing.length > 0 && (
+          <p className="mt-4 text-xs text-white/60">
+            Section gaps:{" "}
+            <code className="font-mono text-white/80">
+              {spacingSystem.sectionSpacing.map((n) => `${n}px`).join(" · ")}
+            </code>
+          </p>
+        )}
     </section>
   );
 }
 
-// ─── Border radius scale — actual rounded swatches per value ──────────────
+//  Border radius scale  actual rounded swatches per value
 function RadiusSection({
   radiusTokens,
 }: {
@@ -1267,7 +1288,8 @@ function RadiusSection({
   // "pill" explicitly. Otherwise we bucket by px to match a familiar scale.
   function radiusLabel(value: string): string {
     const num = parseFloat(value);
-    if (value.includes("9999") || value.includes("50%") || num >= 500) return "pill";
+    if (value.includes("9999") || value.includes("50%") || num >= 500)
+      return "pill";
     if (num === 0) return "none";
     if (num <= 4) return "sm";
     if (num <= 8) return "md";
@@ -1315,7 +1337,7 @@ function RadiusSection({
   );
 }
 
-// ─── Shadow tokens — real shadow-rendered cards ───────────────────────────
+//  Shadow tokens  real shadow-rendered cards
 function ShadowsSection({
   shadowTokens,
 }: {
@@ -1355,10 +1377,7 @@ function ShadowsSection({
                   {s.value}
                 </code>
               </div>
-              <CopyValue
-                value={s.value}
-                label={`${s.type ?? "shadow"} CSS`}
-              />
+              <CopyValue value={s.value} label={`${s.type ?? "shadow"} CSS`} />
             </div>
           </li>
         ))}
@@ -1367,7 +1386,7 @@ function ShadowsSection({
   );
 }
 
-// ─── Motion — duration scale + easing ─────────────────────────────────────
+//  Motion  duration scale + easing
 function MotionSection({
   motionSystem,
 }: {
@@ -1429,8 +1448,7 @@ function MotionSection({
                 aria-hidden="true"
                 className="font-pixel text-[10px] uppercase tracking-widest text-white/60"
               >
-                {easings.length}{" "}
-                {easings.length === 1 ? "curve" : "curves"}
+                {easings.length} {easings.length === 1 ? "curve" : "curves"}
               </span>
             )}
           </header>
@@ -1481,7 +1499,7 @@ function MotionSection({
 }
 
 // One row in the duration table. Hovering the row plays a small bar
-// animation across the track at the row's captured duration + easing — gives
+// animation across the track at the row's captured duration + easing  gives
 // users an actual feel for what "200ms ease-in-out" looks like, not just a
 // number on a screen.
 function DurationRow({
@@ -1600,7 +1618,7 @@ function parseEasing(value: string): [number, number, number, number] {
   return [0, 0, 1, 1]; // linear fallback
 }
 
-// ─── Live component preview — actual rendered buttons / cards ──────────────
+//  Live component preview  actual rendered buttons / cards
 // The wedge: render real DOM elements using the extracted style dicts so
 // users see the real component, not a screenshot. Hover applies the
 // extracted hoverChanges via React state.
@@ -1615,14 +1633,11 @@ function LiveComponentsSection({
       <PanelHeader
         label="components (live)"
         count={components.reduce((n, g) => n + g.variants.length, 0)}
-        subtitle="Real components rendered with the captured CSS. Hover to see hover-state changes. Layout-heavy components (cards, footer, hero, nav) may render incomplete — the engine only captures visual props, not internal structure."
+        subtitle="Real components rendered with the captured CSS. Hover to see hover-state changes. Layout-heavy components (cards, footer, hero, nav) may render incomplete  the engine only captures visual props, not internal structure."
       />
       <div className="space-y-6">
         {components.map((g) => (
-          <div
-            key={g.type}
-            className="overflow-hidden border border-white/10"
-          >
+          <div key={g.type} className="overflow-hidden border border-white/10">
             <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/3 px-4 py-2.5">
               <h3 className="font-pixel text-xs uppercase tracking-widest text-white">
                 {g.type}
@@ -1671,7 +1686,7 @@ function LiveComponentsSection({
   );
 }
 
-// Style fields we copy onto the rendered element. Visual-only — we
+// Style fields we copy onto the rendered element. Visual-only  we
 // deliberately exclude layout / positioning fields (width/height/position/
 // transform) so the preview can flow inside our grid.
 const SAFE_STYLE_PROPS = [
@@ -1727,16 +1742,20 @@ function LiveVariant({
   variant,
 }: {
   type: string;
-  variant: NonNullable<ExtractResponse["tokens"]["components"]>[number]["variants"][number];
+  variant: NonNullable<
+    ExtractResponse["tokens"]["components"]
+  >[number]["variants"][number];
 }) {
   const [hover, setHover] = useState(false);
   const baseStyle = styleFromDict(variant.style);
-  const hoverOverride = hover && variant.hoverChanges ? styleFromDict(variant.hoverChanges) : {};
+  const hoverOverride =
+    hover && variant.hoverChanges ? styleFromDict(variant.hoverChanges) : {};
   const mergedStyle = { ...baseStyle, ...hoverOverride };
 
-  const sample = variant.sampleTexts && variant.sampleTexts[0]
-    ? variant.sampleTexts[0].slice(0, 24)
-    : variant.name;
+  const sample =
+    variant.sampleTexts && variant.sampleTexts[0]
+      ? variant.sampleTexts[0].slice(0, 24)
+      : variant.name;
 
   // Pick a render shape based on the component type. Buttons / links get
   // semantic elements; cards just get a div. Falls back to a generic
@@ -1773,7 +1792,7 @@ function LiveVariant({
   return <div {...sharedProps}>{sample}</div>;
 }
 
-// ─── Accessibility — contrast pairs + focus + touch target ────────────────
+//  Accessibility  contrast pairs + focus + touch target
 function AccessibilitySection({
   a11yTokens,
 }: {
@@ -1855,7 +1874,7 @@ function AccessibilitySection({
                       : "border-white/15 text-white/55"
                   }`}
                 >
-                  AAA {p.meetsAAA ? "✓" : "—"}
+                  AAA {p.meetsAAA ? "✓" : ""}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2 font-mono text-[10px] text-white/60">
@@ -1881,7 +1900,7 @@ function AccessibilitySection({
             value={
               a11yTokens.minTouchTarget
                 ? `${a11yTokens.minTouchTarget.width}×${a11yTokens.minTouchTarget.height}px`
-                : "—"
+                : ""
             }
             tone={
               a11yTokens.minTouchTarget &&
@@ -1889,8 +1908,8 @@ function AccessibilitySection({
               a11yTokens.minTouchTarget.height >= 24
                 ? "good"
                 : a11yTokens.minTouchTarget
-                ? "bad"
-                : "neutral"
+                  ? "bad"
+                  : "neutral"
             }
           />
           <A11yFact
@@ -1899,15 +1918,15 @@ function AccessibilitySection({
             value={
               a11yTokens.altTextCoverage
                 ? `${a11yTokens.altTextCoverage.percentage.toFixed(0)}%`
-                : "—"
+                : ""
             }
             tone={
               a11yTokens.altTextCoverage
                 ? a11yTokens.altTextCoverage.percentage >= 90
                   ? "good"
                   : a11yTokens.altTextCoverage.percentage >= 60
-                  ? "warn"
-                  : "bad"
+                    ? "warn"
+                    : "bad"
                 : "neutral"
             }
           />
@@ -1916,17 +1935,17 @@ function AccessibilitySection({
             hint="Does the site respect prefers-reduced-motion?"
             value={
               a11yTokens.reducedMotionSupport === undefined
-                ? "—"
+                ? ""
                 : a11yTokens.reducedMotionSupport
-                ? "yes"
-                : "no"
+                  ? "yes"
+                  : "no"
             }
             tone={
               a11yTokens.reducedMotionSupport === undefined
                 ? "neutral"
                 : a11yTokens.reducedMotionSupport
-                ? "good"
-                : "warn"
+                  ? "good"
+                  : "warn"
             }
           />
           <A11yFact
@@ -1934,17 +1953,17 @@ function AccessibilitySection({
             hint="Hidden 'skip to content' link for keyboard users."
             value={
               a11yTokens.skipLinkDetected === undefined
-                ? "—"
+                ? ""
                 : a11yTokens.skipLinkDetected
-                ? "yes"
-                : "no"
+                  ? "yes"
+                  : "no"
             }
             tone={
               a11yTokens.skipLinkDetected === undefined
                 ? "neutral"
                 : a11yTokens.skipLinkDetected
-                ? "good"
-                : "warn"
+                  ? "good"
+                  : "warn"
             }
           />
         </ul>
@@ -1968,10 +1987,10 @@ function A11yFact({
     tone === "good"
       ? "text-emerald-300"
       : tone === "bad"
-      ? "text-red-300"
-      : tone === "warn"
-      ? "text-amber-300"
-      : "text-white";
+        ? "text-red-300"
+        : tone === "warn"
+          ? "text-amber-300"
+          : "text-white";
   return (
     <li className="bg-black px-4 py-4">
       <p className="font-pixel text-[10px] uppercase tracking-widest text-white">
@@ -1987,7 +2006,7 @@ function A11yFact({
   );
 }
 
-// ─── Responsive — breakpoints visualised on a horizontal scale ────────────
+//  Responsive  breakpoints visualised on a horizontal scale
 function ResponsiveSection({
   breakpoints,
 }: {
@@ -2001,7 +2020,10 @@ function ResponsiveSection({
       subtitle="Each row is a media-query breakpoint with the number of CSS rules that scope under it."
       defaultOpen={false}
     >
-      <ul role="list" className="divide-y divide-white/10 border border-white/15">
+      <ul
+        role="list"
+        className="divide-y divide-white/10 border border-white/15"
+      >
         {breakpoints.slice(0, 12).map((bp, i) => (
           <li
             key={`${bp.type}-${bp.value}-${i}`}
@@ -2021,7 +2043,7 @@ function ResponsiveSection({
   );
 }
 
-// ─── Iconography ──────────────────────────────────────────────────────────
+//  Iconography
 function IconographySection({
   iconSystem,
 }: {
@@ -2039,18 +2061,19 @@ function IconographySection({
         <A11yFact
           label="stroke width"
           value={
-            iconSystem.strokeWidth !== null && iconSystem.strokeWidth !== undefined
+            iconSystem.strokeWidth !== null &&
+            iconSystem.strokeWidth !== undefined
               ? String(iconSystem.strokeWidth)
-              : "—"
+              : ""
           }
         />
-        <A11yFact label="color mode" value={iconSystem.colorMode ?? "—"} />
+        <A11yFact label="color mode" value={iconSystem.colorMode ?? ""} />
         <A11yFact
           label="labeled %"
           value={
             iconSystem.labeledPercentage !== undefined
               ? `${iconSystem.labeledPercentage.toFixed(0)}%`
-              : "—"
+              : ""
           }
         />
       </div>
@@ -2066,7 +2089,7 @@ function IconographySection({
   );
 }
 
-// ─── Proof preview — pixel side-by-side stays iframed (only sensible way) ─
+//  Proof preview  pixel side-by-side stays iframed (only sensible way)
 function ProofPreviewSection({ proofHtmlUrl }: { proofHtmlUrl: string }) {
   return (
     <section>
@@ -2100,9 +2123,9 @@ function PromptPackSection({ promptPackUrl }: { promptPackUrl: string }) {
   // Copy-to-clipboard status. Brief visual feedback ("COPIED ✓") then revert
   // to idle. Network errors flag as "COPY FAILED" so the user knows to use
   // the download link as a fallback.
-  const [status, setStatus] = useState<"idle" | "copying" | "copied" | "failed">(
-    "idle",
-  );
+  const [status, setStatus] = useState<
+    "idle" | "copying" | "copied" | "failed"
+  >("idle");
 
   async function handleCopy() {
     setStatus("copying");
@@ -2126,10 +2149,10 @@ function PromptPackSection({ promptPackUrl }: { promptPackUrl: string }) {
     status === "copied"
       ? "COPIED ✓"
       : status === "failed"
-      ? "COPY FAILED"
-      : status === "copying"
-      ? "COPYING…"
-      : "COPY PROMPT";
+        ? "COPY FAILED"
+        : status === "copying"
+          ? "COPYING…"
+          : "COPY PROMPT";
 
   return (
     <section aria-labelledby="panel-build-ui">
@@ -2147,12 +2170,11 @@ function PromptPackSection({ promptPackUrl }: { promptPackUrl: string }) {
           Paste this into any AI agent, then ask it to build.
         </p>
         <p className="mt-2 text-sm text-white/60">
-          A short prompt with the extracted colors, typography, spacing,
-          radius, and shadows. Drop it into Claude Code, Cursor, v0, Lovable,
-          Replit Agent, Windsurf, ChatGPT, Codex, or Copilot and append a
-          one-liner like &ldquo;build a pricing page with this design&rdquo;
-          your agent ships UI grounded in the extracted brand, not generic
-          AI defaults.
+          A short prompt with the extracted colors, typography, spacing, radius,
+          and shadows. Drop it into Claude Code, Cursor, v0, Lovable, Replit
+          Agent, Windsurf, ChatGPT, Codex, or Copilot and append a one-liner
+          like &ldquo;build a pricing page with this design&rdquo; your agent
+          ships UI grounded in the extracted brand, not generic AI defaults.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
           <button
@@ -2199,7 +2221,10 @@ function Downloads({
     { label: "tokens.json", url: artifacts.tokensJsonUrl },
   ];
   if (artifacts.regeneratedRampUrl) {
-    items.push({ label: "regenerated-ramp.json", url: artifacts.regeneratedRampUrl });
+    items.push({
+      label: "regenerated-ramp.json",
+      url: artifacts.regeneratedRampUrl,
+    });
   }
   if (artifacts.tailwindCssUrl) {
     items.push({ label: "tailwind.css", url: artifacts.tailwindCssUrl });
@@ -2207,7 +2232,10 @@ function Downloads({
   if (artifacts.shadcnThemeUrl) {
     items.push({ label: "shadcn-theme.css", url: artifacts.shadcnThemeUrl });
   } else if (artifacts.shadcnOmitReasonUrl) {
-    items.push({ label: "shadcn-omit-reason.md", url: artifacts.shadcnOmitReasonUrl });
+    items.push({
+      label: "shadcn-omit-reason.md",
+      url: artifacts.shadcnOmitReasonUrl,
+    });
   }
   if (artifacts.previewHtmlUrl) {
     items.push({ label: "preview.html", url: artifacts.previewHtmlUrl });
@@ -2236,15 +2264,12 @@ function Downloads({
           downloads
           <span className="sr-only"> ({items.length} files)</span>
         </h2>
-        <span
-          aria-hidden="true"
-          className="font-pixel text-xs text-white/60"
-        >
+        <span aria-hidden="true" className="font-pixel text-xs text-white/60">
           {items.length}
         </span>
       </div>
-      {/* Render each artifact as the project's canonical BubbleButton CTA —
-          same style as the navbar / hero / gallery buttons — so the
+      {/* Render each artifact as the project's canonical BubbleButton CTA 
+          same style as the navbar / hero / gallery buttons  so the
           Downloads block reads as primary actions instead of table cells.
           Flex-wrap lets long filenames flow naturally onto a second row. */}
       <ul role="list" className="flex flex-wrap gap-3">
@@ -2264,26 +2289,25 @@ function Downloads({
         ))}
       </ul>
       <p className="mt-4 text-xs text-white/60">
-        on disk at{" "}
-        <code className="font-mono text-white/80">{outputDir}/</code>
+        on disk at <code className="font-mono text-white/80">{outputDir}/</code>
       </p>
     </section>
   );
 }
 
-// Diagnostics panel — accordion-style review aid positioned at the bottom
+// Diagnostics panel  accordion-style review aid positioned at the bottom
 // of the result panel. Each row shows just the headline + severity by
 // default; expanding reveals the technical message + recommended action.
 // This is intentionally quieter than the previous "loud alert under stats"
 // placement: diagnostics are a "things to verify" list, not a problem
 // report. Rule IDs (e.g. `low-proof-samples`) are dropped from the visible
-// UI — they remain on the Diagnostic object for testing.
+// UI  they remain on the Diagnostic object for testing.
 function DiagnosticsPanel({ diagnostics }: { diagnostics: Diagnostic[] }) {
   const errors = diagnostics.filter((d) => d.severity === "error");
   const warnings = diagnostics.filter((d) => d.severity === "warning");
   const infos = diagnostics.filter((d) => d.severity === "info");
 
-  // Quiet panel chrome — the row contents do the differentiation.
+  // Quiet panel chrome  the row contents do the differentiation.
   return (
     <section
       aria-labelledby="panel-diagnostics"
@@ -2300,8 +2324,17 @@ function DiagnosticsPanel({ diagnostics }: { diagnostics: Diagnostic[] }) {
           aria-hidden="true"
           className="font-pixel text-[10px] uppercase tracking-widest text-white/60"
         >
-          {errors.length > 0 && <>{errors.length} {errors.length === 1 ? "error" : "errors"} · </>}
-          {warnings.length > 0 && <>{warnings.length} {warnings.length === 1 ? "warning" : "warnings"} · </>}
+          {errors.length > 0 && (
+            <>
+              {errors.length} {errors.length === 1 ? "error" : "errors"} ·{" "}
+            </>
+          )}
+          {warnings.length > 0 && (
+            <>
+              {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}{" "}
+              ·{" "}
+            </>
+          )}
           {infos.length > 0 && <>{infos.length} info</>}
         </span>
       </header>
@@ -2317,12 +2350,24 @@ function DiagnosticsPanel({ diagnostics }: { diagnostics: Diagnostic[] }) {
 // Per-severity color palette for the dot + the severity pill. Kept quiet
 // so warnings/info don't visually shout at users.
 const SEVERITY_STYLE = {
-  error:   { dot: "bg-red-400",    pill: "text-red-300/80    border-red-500/25",   pillLabel: "error" },
-  warning: { dot: "bg-amber-400",  pill: "text-amber-300/80  border-amber-500/25", pillLabel: "warn"  },
-  info:    { dot: "bg-white/40",   pill: "text-white/55      border-white/15",     pillLabel: "info"  },
+  error: {
+    dot: "bg-red-400",
+    pill: "text-red-300/80    border-red-500/25",
+    pillLabel: "error",
+  },
+  warning: {
+    dot: "bg-amber-400",
+    pill: "text-amber-300/80  border-amber-500/25",
+    pillLabel: "warn",
+  },
+  info: {
+    dot: "bg-white/40",
+    pill: "text-white/55      border-white/15",
+    pillLabel: "info",
+  },
 } as const;
 
-// Accordion row using native <details>/<summary> — no React state needed.
+// Accordion row using native <details>/<summary>  no React state needed.
 // Collapsed default shows just dot + title + severity pill + chevron.
 // Expanded reveals the engine's technical message, optional next-action,
 // and any supporting detail bullets.
@@ -2361,7 +2406,10 @@ function DiagnosticRow({ diagnostic }: { diagnostic: Diagnostic }) {
             </p>
           )}
           {diagnostic.details && diagnostic.details.length > 0 && (
-            <ul role="list" className="space-y-0.5 font-mono text-[11px] text-white/60">
+            <ul
+              role="list"
+              className="space-y-0.5 font-mono text-[11px] text-white/60"
+            >
               {diagnostic.details.map((d, i) => (
                 <li key={i}>· {d}</li>
               ))}
@@ -2373,11 +2421,7 @@ function DiagnosticRow({ diagnostic }: { diagnostic: Diagnostic }) {
   );
 }
 
-function Stats({
-  items,
-}: {
-  items: Array<{ label: string; value: string }>;
-}) {
+function Stats({ items }: { items: Array<{ label: string; value: string }> }) {
   return (
     <ul
       role="list"
@@ -2410,8 +2454,8 @@ function Stats({
   );
 }
 
-// Collapsible variant of SectionHeader / PanelHeader. Same visual chrome —
-// numbered prefix, hairline rule, white H2 label, count — but wraps the
+// Collapsible variant of SectionHeader / PanelHeader. Same visual chrome
+// numbered prefix, hairline rule, white H2 label, count  but wraps the
 // section in a native <details> so it folds down to just the header bar.
 // Used for non-headline sections (long-tail colors, responsive breakpoints,
 // iconography) that are review-aid material, not the primary result.
@@ -2478,9 +2522,7 @@ function CollapsibleSection({
               className="size-3 shrink-0 rotate-90 text-white/55 transition-transform group-open:-rotate-90"
             />
           </div>
-          {subtitle && (
-            <p className="mt-2 text-xs text-white/60">{subtitle}</p>
-          )}
+          {subtitle && <p className="mt-2 text-xs text-white/60">{subtitle}</p>}
         </summary>
         <div className="mt-4">{children}</div>
       </details>
@@ -2489,7 +2531,7 @@ function CollapsibleSection({
 }
 
 // Renders one typography row with a live preview of the role name in the
-// extracted style — same font-family, size, weight as captured. Browsers
+// extracted style  same font-family, size, weight as captured. Browsers
 // fall back gracefully when the font isn't installed locally; the metadata
 // row below still announces the exact tokens.
 function TypographyRow({
@@ -2528,7 +2570,7 @@ function TypographyRow({
         </p>
         <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="font-pixel text-[10px] uppercase tracking-widest text-white">
-            {t.roleLabel ?? "—"}
+            {t.roleLabel ?? ""}
           </span>
           <span aria-hidden="true" className="font-mono text-xs text-white/35">
             ·
@@ -2587,10 +2629,7 @@ function SectionHeader({
           {label}
           <span className="sr-only"> ({count} items)</span>
         </h2>
-        <span
-          aria-hidden="true"
-          className="font-pixel text-xs text-white/60"
-        >
+        <span aria-hidden="true" className="font-pixel text-xs text-white/60">
           {count}
         </span>
       </div>
@@ -2689,7 +2728,9 @@ function Panel({
             aria-hidden="true"
             className="size-3 rounded-full bg-[#28c840]"
           />
-          <span className="ml-3 font-mono text-xs text-white/80">extract.log</span>
+          <span className="ml-3 font-mono text-xs text-white/80">
+            extract.log
+          </span>
         </div>
         <span
           aria-hidden="true"
@@ -2702,4 +2743,3 @@ function Panel({
     </section>
   );
 }
-

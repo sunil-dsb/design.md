@@ -17,7 +17,7 @@ import type {
   RadiusToken,
 } from '../types';
 
-// ─── Fixtures ─────────────────────────────────────────────────────────────
+//  Fixtures 
 
 function makeColorToken(overrides: Partial<ColorToken> = {}): ColorToken {
   return {
@@ -123,7 +123,7 @@ function getSlot(slots: ShadcnSlot[] | undefined, name: string): string | undefi
   return slots?.find((s) => s.name === name)?.value;
 }
 
-// ─── contrastRatio + pickBestForeground (WCAG primitives) ────────────────
+//  contrastRatio + pickBestForeground (WCAG primitives) 
 
 describe('contrastRatio', () => {
   it('white on black = 21 (the maximum)', () => {
@@ -134,7 +134,7 @@ describe('contrastRatio', () => {
     expect(contrastRatio('#ffffff', '#ffffff')).toBeCloseTo(1, 6);
   });
 
-  it('is symmetric — order of args does not matter', () => {
+  it('is symmetric  order of args does not matter', () => {
     const a = contrastRatio('#635bff', '#ffffff');
     const b = contrastRatio('#ffffff', '#635bff');
     expect(a).toBeCloseTo(b, 6);
@@ -172,9 +172,9 @@ describe('pickBestForeground', () => {
   });
 });
 
-// ─── Gate 1: no chromatic primary → omit ──────────────────────────────────
+//  Gate 1: no chromatic primary → omit 
 
-describe('buildShadcnCss — gate 1 (no primary)', () => {
+describe('buildShadcnCss  gate 1 (no primary)', () => {
   it('omits with the "no chromatic primary" message when ramps.brand is null but ramps itself exists', () => {
     const tokens = makeTokens({
       colorTokens: [
@@ -192,7 +192,7 @@ describe('buildShadcnCss — gate 1 (no primary)', () => {
   });
 
   it('omits with the "no ramps" message when ramps is explicitly null', () => {
-    // Distinct failure mode — ramp regen stage didn't run at all, vs.
+    // Distinct failure mode  ramp regen stage didn't run at all, vs.
     // ramp regen ran but couldn't find a chromatic primary. Each gets its
     // own message so users can diagnose which upstream stage to investigate.
     const tokens = makeViableTokens();
@@ -203,9 +203,9 @@ describe('buildShadcnCss — gate 1 (no primary)', () => {
   });
 });
 
-// ─── Gate 3: no Tailwind or shadcn → omit ─────────────────────────────────
+//  Gate 3: no Tailwind or shadcn → omit 
 
-describe('buildShadcnCss — gate 3 (no Tailwind / shadcn)', () => {
+describe('buildShadcnCss  gate 3 (no Tailwind / shadcn)', () => {
   it('omits when framework is neither Tailwind nor shadcn', () => {
     const tokens = makeViableTokens({
       meta: {
@@ -241,9 +241,9 @@ describe('buildShadcnCss — gate 3 (no Tailwind / shadcn)', () => {
   });
 });
 
-// ─── Confidence labelling ─────────────────────────────────────────────────
+//  Confidence labelling 
 
-describe('buildShadcnCss — confidence label', () => {
+describe('buildShadcnCss  confidence label', () => {
   it('high when source uses shadcn/ui', () => {
     const tokens = makeViableTokens({
       meta: {
@@ -270,9 +270,9 @@ describe('buildShadcnCss — confidence label', () => {
   });
 });
 
-// ─── Slot mapping ─────────────────────────────────────────────────────────
+//  Slot mapping 
 
-describe('buildShadcnCss — slot mapping', () => {
+describe('buildShadcnCss  slot mapping', () => {
   it('emits all 20 slots', () => {
     const tokens = makeViableTokens();
     const ramps = regenerateRampsFromTokens(tokens);
@@ -387,9 +387,9 @@ describe('buildShadcnCss — slot mapping', () => {
   });
 });
 
-// ─── --destructive fallback behaviour ─────────────────────────────────────
+//  --destructive fallback behaviour 
 
-describe('buildShadcnCss — destructive fallback', () => {
+describe('buildShadcnCss  destructive fallback', () => {
   it('uses the sensible default #dc2626 when no error color is extracted', () => {
     const tokens = makeViableTokens();
     const ramps = regenerateRampsFromTokens(tokens);
@@ -407,7 +407,7 @@ describe('buildShadcnCss — destructive fallback', () => {
   it('uses an extracted error color when one was detected', () => {
     // role-namer's ordering: PRIMARY → CANVAS → ALT → INK → MUTED →
     // HAIRLINE → BRAND DARK → BRAND SOFT → ACCENT → SEMANTIC (error etc.).
-    // A red is the strongest 'error' candidate — but if it's the ONLY
+    // A red is the strongest 'error' candidate  but if it's the ONLY
     // chromatic non-primary colour, ACCENT (which runs first) snaps it up
     // and the SEMANTIC step never reaches it. We add a teal as a separate
     // ACCENT candidate so ACCENT picks the teal, leaving the red free for
@@ -422,7 +422,7 @@ describe('buildShadcnCss — destructive fallback', () => {
           hex: '#ffffff',
           usedAs: { textColor: 0, bgColor: 50, borderColor: 0, shadowColor: 0, gradientColor: 0, iconColor: 0 },
         }),
-        // Accent candidate — teal-green at higher frequency than the red.
+        // Accent candidate  teal-green at higher frequency than the red.
         makeColorToken({
           hex: '#10b981',
           frequency: 30,
@@ -444,9 +444,9 @@ describe('buildShadcnCss — destructive fallback', () => {
   });
 });
 
-// ─── --radius extraction ──────────────────────────────────────────────────
+//  --radius extraction 
 
-describe('buildShadcnCss — radius', () => {
+describe('buildShadcnCss  radius', () => {
   it('converts extracted px radius to rem', () => {
     const tokens = makeViableTokens({
       radiusTokens: [
@@ -482,9 +482,9 @@ describe('buildShadcnCss — radius', () => {
   });
 });
 
-// ─── Output structure / formatting ────────────────────────────────────────
+//  Output structure / formatting 
 
-describe('buildShadcnCss — output formatting', () => {
+describe('buildShadcnCss  output formatting', () => {
   it('emits a :root { ... } block', () => {
     const tokens = makeViableTokens();
     const ramps = regenerateRampsFromTokens(tokens);
@@ -528,9 +528,9 @@ describe('buildShadcnCss — output formatting', () => {
   });
 });
 
-// ─── Omit-reason markdown ────────────────────────────────────────────────
+//  Omit-reason markdown 
 
-describe('buildShadcnCss — omit reason markdown', () => {
+describe('buildShadcnCss  omit reason markdown', () => {
   it('starts with a markdown title naming the site', () => {
     const tokens = makeTokens({
       colorTokens: [makeColorToken({ hex: '#808080' })],
@@ -553,7 +553,7 @@ describe('buildShadcnCss — omit reason markdown', () => {
   });
 });
 
-// ─── generateAndWriteShadcnCss (disk wrapper) ────────────────────────────
+//  generateAndWriteShadcnCss (disk wrapper) 
 
 describe('generateAndWriteShadcnCss', () => {
   function withTempDir<T>(fn: (dir: string) => T): T {

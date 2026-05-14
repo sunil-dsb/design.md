@@ -43,7 +43,7 @@ export function Navbar() {
               </a>
             </li>
             <li className="flex items-center px-2 sm:px-3">
-              {/* Placeholder button until auth is wired up — renders as a
+              {/* Placeholder button until auth is wired up  renders as a
                   real <button> so it doesn't 404 like a dead /signin link. */}
               <BubbleButton aria-label="Sign in (coming soon)">
                 sign in

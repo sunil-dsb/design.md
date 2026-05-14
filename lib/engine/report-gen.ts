@@ -3,7 +3,7 @@ import * as path from 'path';
 import type { DesignTokens, ColorToken, TypographyLevel, ShadowToken, RadiusToken } from './types';
 import { validateDesignMd, type ValidationResult } from './validate';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+//  Helpers 
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -192,7 +192,7 @@ function proofLabel(p: number): string {
   return 'Needs Work';
 }
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+//  Types 
 
 interface ProofData {
   sourceUrl: string;
@@ -205,7 +205,7 @@ interface ProofData {
   excludedRegions: number;
 }
 
-// ─── HTML ───────────────────────────────────────────────────────────────────
+//  HTML 
 
 function generateReportHtml(
   tokens: DesignTokens,
@@ -257,7 +257,7 @@ ${googleFontsTag}
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; font-size: 15px; }
 
-  /* ── Header ── */
+  /*  Header  */
   .header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -280,12 +280,12 @@ ${googleFontsTag}
   .stat strong { display: block; font-size: 1.4rem; font-weight: 700; color: var(--text); }
   .stat span { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 
-  /* ── Layout ── */
+  /*  Layout  */
   .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
   @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
 
-  /* ── Card ── */
+  /*  Card  */
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -296,7 +296,7 @@ ${googleFontsTag}
   }
   .card h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
 
-  /* ── Score Ring ── */
+  /*  Score Ring  */
   .score-ring {
     width: 110px; height: 110px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center; flex-direction: column;
@@ -306,7 +306,7 @@ ${googleFontsTag}
   .score-num { position: relative; font-size: 2rem; font-weight: 800; }
   .score-label { position: relative; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
 
-  /* ── Checks ── */
+  /*  Checks  */
   .check-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0; font-size: 0.8rem; border-bottom: 1px solid var(--border); }
   .check-item:last-child { border-bottom: none; }
   .badge { font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 4px; }
@@ -314,7 +314,7 @@ ${googleFontsTag}
   .badge--fail { background: #fef2f2; color: #991b1b; }
   .badge--warn { background: #fefce8; color: #854d0e; }
 
-  /* ── Colors ── */
+  /*  Colors  */
   .color-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   .swatch {
     width: 72px; border-radius: 8px; overflow: hidden;
@@ -324,29 +324,29 @@ ${googleFontsTag}
   .swatch__meta { padding: 3px; color: var(--text-muted); line-height: 1.3; }
   .color-section-label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0.75rem 0 0.4rem; }
 
-  /* ── Typography ── */
+  /*  Typography  */
   .typo-row { display: flex; align-items: baseline; gap: 1rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); }
   .typo-row:last-child { border-bottom: none; }
   .typo-sample { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .typo-spec { font-size: 0.65rem; color: var(--text-muted); font-family: monospace; white-space: nowrap; }
 
-  /* ── Shadow/Radius ── */
+  /*  Shadow/Radius  */
   .shadow-row { display: flex; flex-wrap: wrap; gap: 1rem; }
   .shadow-demo { width: 96px; height: 60px; background: var(--surface); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; font-family: monospace; color: var(--text-muted); border: 1px solid var(--border); }
   .radius-row { display: flex; flex-wrap: wrap; gap: 0.6rem; }
   .radius-demo { width: 48px; height: 48px; background: var(--primary); opacity: 0.15; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--text); }
 
-  /* ── Table ── */
+  /*  Table  */
   .comp-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
   .comp-table th { text-align: left; font-weight: 600; padding: 0.4rem; border-bottom: 2px solid var(--border); }
   .comp-table td { padding: 0.4rem; border-bottom: 1px solid var(--border); }
   .comp-table td:last-child { text-align: right; color: var(--text-muted); }
 
-  /* ── Scoring Methodology ── */
+  /*  Scoring Methodology  */
   .methodology { font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); line-height: 1.7; }
   .methodology strong { color: var(--text); }
 
-  /* ── DESIGN.md ── */
+  /*  DESIGN.md  */
   .md-actions { display: flex; gap: 0.75rem; }
   .md-actions button {
     padding: 0.5rem 1.25rem; font-size: 0.8rem; font-weight: 600;
@@ -362,7 +362,7 @@ ${googleFontsTag}
     font-family: 'SF Mono', 'Fira Code', monospace; margin-top: 1rem;
   }
 
-  /* ── Proof ── */
+  /*  Proof  */
   .proof-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   @media (max-width: 900px) { .proof-comparison { grid-template-columns: 1fr; } }
   .proof-panel { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
@@ -371,7 +371,7 @@ ${googleFontsTag}
 
   .footer { text-align: center; padding: 2rem; font-size: 0.7rem; color: var(--text-muted); }
 
-  /* ── Live Component Preview ── */
+  /*  Live Component Preview  */
   .preview-subtitle { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.25rem; }
   .preview-section-label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 1.25rem 0 0.6rem; }
   .preview-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
@@ -610,7 +610,7 @@ ${designMdContent ? `
 </html>`;
 }
 
-// ─── Main Export ─────────────────────────────────────────────────────────────
+//  Main Export 
 
 export function generateReport(
   tokensPath: string,

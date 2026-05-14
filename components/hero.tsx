@@ -10,11 +10,10 @@ import {
   SiSupabase,
   SiVercel,
 } from "@icons-pack/react-simple-icons";
-import { ArrowIcon } from "@/icons/arrow";
 import { GoogleIcon } from "@/icons/google";
 import { HeroInteractive } from "./hero-interactive";
 
-// ─── Marquee data ──────────────────────────────────────────────────────────
+//  Marquee data
 // Server-rendered text + brand logos, scrolled by a CSS-only animation.
 // Every entry lands in the page's HTML, so crawlers index the keywords
 // without us shipping a single byte of JS for the effect.
@@ -86,7 +85,7 @@ export function Hero() {
         className="pointer-events-none absolute inset-0 hidden sm:block"
       >
         {[...LEFT_SPRITES, ...RIGHT_SPRITES, ...TOP_SPRITES].map((s) => (
-          // `unoptimized` because these are animated WebPs — Next.js's image
+          // `unoptimized` because these are animated WebPs  Next.js's image
           // optimizer can only output single frames and refuses animated
           // sources. Serving the original file preserves the animation.
           <Image
@@ -179,24 +178,18 @@ export function Hero() {
       {/* Two-row scrolling marquee. Pure server-rendered text + inline
           SVG logos (no JS), scrolled by a CSS-only animation. Both rows
           double their content in the markup so the translate(-50%) loop
-          is seamless — the duplicate halves are aria-hidden to keep
+          is seamless  the duplicate halves are aria-hidden to keep
           screen readers from hearing each item twice. */}
-      {/* Section divider — centered pixel-font label flanked by hairlines.
+      {/* Section divider  centered pixel-font label flanked by hairlines.
           Reads as a chapter break between the form and the marquee. The
           lines hide on very narrow screens via responsive width so the
           label keeps room to breathe on a 320px viewport. */}
       <div className="mt-20 mb-6 flex items-center justify-center gap-4">
-        <span
-          aria-hidden="true"
-          className="h-px w-10 bg-white/15 sm:w-20"
-        />
+        <span aria-hidden="true" className="h-px w-10 bg-white/15 sm:w-20" />
         <p className="font-pixel text-[11px] tracking-[0.25em] text-white/55 uppercase">
           extracted from · emits to · used by
         </p>
-        <span
-          aria-hidden="true"
-          className="h-px w-10 bg-white/15 sm:w-20"
-        />
+        <span aria-hidden="true" className="h-px w-10 bg-white/15 sm:w-20" />
       </div>
 
       {/* Row 1: brands with logos, scrolls left.

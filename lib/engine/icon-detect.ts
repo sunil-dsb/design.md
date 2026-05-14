@@ -67,7 +67,7 @@ function determineColorMode(svgColors: string[]): 'currentColor' | 'fixed' | 'mi
   return 'mixed';
 }
 
-// ─── Size Distribution ──────────────────────────────────────────────────────
+//  Size Distribution 
 
 function buildSizeDistribution(sizes: { width: number; height: number }[]): { size: number; count: number }[] {
   const sizeFreq = buildFrequencyMap(sizes.map((s) => Math.round(Math.max(s.width, s.height))));
@@ -76,7 +76,7 @@ function buildSizeDistribution(sizes: { width: number; height: number }[]): { si
     .sort((a, b) => a.size - b.size);
 }
 
-// ─── Stroke Width Distribution ──────────────────────────────────────────────
+//  Stroke Width Distribution 
 
 function buildStrokeWidthDistribution(strokeWidths: number[]): { value: number; count: number }[] {
   const freqMap = buildFrequencyMap(strokeWidths);
@@ -85,7 +85,7 @@ function buildStrokeWidthDistribution(strokeWidths: number[]): { value: number; 
     .sort((a, b) => b.count - a.count);
 }
 
-// ─── Color Usage Breakdown ──────────────────────────────────────────────────
+//  Color Usage Breakdown 
 
 function buildColorUsage(svgColors: string[]): { currentColor: number; fixedFill: number; strokeOnly: number } {
   let currentColor = 0;
@@ -105,7 +105,7 @@ function buildColorUsage(svgColors: string[]): { currentColor: number; fixedFill
   return { currentColor, fixedFill, strokeOnly };
 }
 
-// ─── Main Export ─────────────────────────────────────────────────────────────
+//  Main Export 
 
 export function detectIcons(domCollections: DOMCollection[]): IconSystemInfo | null {
   const allSizes: { width: number; height: number }[] = [];
@@ -170,7 +170,7 @@ export function detectIcons(domCollections: DOMCollection[]): IconSystemInfo | n
   };
 }
 
-// ─── Async Icon Detection (Page-dependent) ──────────────────────────────────
+//  Async Icon Detection (Page-dependent) 
 
 export async function detectIconLabels(page: Page): Promise<number | undefined> {
   try {

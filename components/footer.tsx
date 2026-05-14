@@ -9,7 +9,7 @@ import { DigitRain } from "./digit-rain";
 // to the bottom-center. Mobile gets a shorter footer via Tailwind so the
 // wordmark doesn't crowd the viewport.
 //
-// Sizing was previously over-parametrised — six props nobody set. The
+// Sizing was previously over-parametrised  six props nobody set. The
 // hardcoded values below match what every caller was already passing.
 export function Footer() {
   return (

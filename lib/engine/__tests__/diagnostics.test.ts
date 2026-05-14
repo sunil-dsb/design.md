@@ -6,7 +6,7 @@ import {
 } from '../diagnostics';
 import type { ColorToken, DesignTokens, ExtractionReport } from '../types';
 
-// Test fixtures — minimal-but-valid shapes for each input. Each rule below
+// Test fixtures  minimal-but-valid shapes for each input. Each rule below
 // crafts a small variant to trigger exactly one diagnostic, then asserts:
 //   1. that the expected diagnostic id appears
 //   2. that unrelated diagnostics do NOT appear
@@ -52,7 +52,7 @@ function makeColorToken(overrides: Partial<ColorToken> & { role?: string | null 
   };
 }
 
-// A clean test palette — 20 distinct saturated hexes. Used by `makeTokens`
+// A clean test palette  20 distinct saturated hexes. Used by `makeTokens`
 // so the default `baseInput` represents a "healthy" extraction (otherwise
 // rules like `palette-all-grey` would fire on every test). Greys are
 // deliberately absent so chroma-sensitive rules don't false-fire on the
@@ -97,9 +97,9 @@ function findById(diags: Diagnostic[], id: string): Diagnostic | undefined {
   return diags.find((d) => d.id === id || d.id.startsWith(id + '-'));
 }
 
-// ─── Rule-by-rule tests ───────────────────────────────────────────────────
+//  Rule-by-rule tests 
 
-describe('computeDiagnostics — pipeline warnings', () => {
+describe('computeDiagnostics  pipeline warnings', () => {
   it('emits one diagnostic per pipeline warning', () => {
     const diags = computeDiagnostics({
       ...baseInput,
@@ -119,7 +119,7 @@ describe('computeDiagnostics — pipeline warnings', () => {
   });
 });
 
-describe('computeDiagnostics — proof coverage', () => {
+describe('computeDiagnostics  proof coverage', () => {
   it('flags low coverage (<70%) when sample size is reasonable', () => {
     const diags = computeDiagnostics({
       ...baseInput,
@@ -153,7 +153,7 @@ describe('computeDiagnostics — proof coverage', () => {
   });
 });
 
-describe('computeDiagnostics — single-page noise', () => {
+describe('computeDiagnostics  single-page noise', () => {
   it('flags a 50%+ unique-color anomaly', () => {
     const diags = computeDiagnostics({
       ...baseInput,
@@ -229,7 +229,7 @@ describe('computeDiagnostics — single-page noise', () => {
   });
 });
 
-describe('computeDiagnostics — framework miscall', () => {
+describe('computeDiagnostics  framework miscall', () => {
   it('flags when uiFramework detected but tailwind is null', () => {
     const diags = computeDiagnostics({
       ...baseInput,
@@ -258,7 +258,7 @@ describe('computeDiagnostics — framework miscall', () => {
   });
 });
 
-describe('computeDiagnostics — dark mode empty diff', () => {
+describe('computeDiagnostics  dark mode empty diff', () => {
   it('flags dark mode supported with empty variableDiff', () => {
     const diags = computeDiagnostics({
       ...baseInput,
@@ -317,7 +317,7 @@ describe('computeDiagnostics — dark mode empty diff', () => {
   });
 });
 
-describe('computeDiagnostics — primary is grey', () => {
+describe('computeDiagnostics  primary is grey', () => {
   it('flags when role=primary token has near-zero saturation', () => {
     const diags = computeDiagnostics({
       ...baseInput,
@@ -363,7 +363,7 @@ describe('computeDiagnostics — primary is grey', () => {
   });
 });
 
-describe('computeDiagnostics — low token counts', () => {
+describe('computeDiagnostics  low token counts', () => {
   it('flags when colorTokens has fewer than 10', () => {
     const diags = computeDiagnostics({
       ...baseInput,
@@ -392,7 +392,7 @@ describe('computeDiagnostics — low token counts', () => {
   });
 });
 
-describe('computeDiagnostics — palette all grey', () => {
+describe('computeDiagnostics  palette all grey', () => {
   it('flags when all top tokens are achromatic and count >= 10', () => {
     const diags = computeDiagnostics({
       ...baseInput,
@@ -436,7 +436,7 @@ describe('computeDiagnostics — palette all grey', () => {
   });
 });
 
-describe('computeDiagnostics — failed pages', () => {
+describe('computeDiagnostics  failed pages', () => {
   it('emits one diagnostic per failed page', () => {
     const diags = computeDiagnostics({
       ...baseInput,
@@ -454,7 +454,7 @@ describe('computeDiagnostics — failed pages', () => {
   });
 });
 
-describe('computeDiagnostics — clean extraction', () => {
+describe('computeDiagnostics  clean extraction', () => {
   it('emits zero diagnostics when everything is healthy', () => {
     // baseInput is deliberately clean: 20 colors, 5 typography levels,
     // 95% proof coverage, 1800 samples, no anomalies, no warnings,

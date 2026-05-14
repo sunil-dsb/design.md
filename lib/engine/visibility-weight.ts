@@ -1,4 +1,4 @@
-// Visibility-and-importance weighting — the wedge accuracy lift.
+// Visibility-and-importance weighting  the wedge accuracy lift.
 //
 // dna.md §11.1 calls this *"the single biggest accuracy multiplier."* The
 // upstream engine ranks tokens by frequency of element observations. That
@@ -21,7 +21,7 @@
 //
 // Pipeline: extract.ts produces tokens.json + returns pageExtractions; the
 // API route hands the per-page element arrays directly to
-// applyVisibilityWeighting (in-memory — no disk sidecar), which aggregates
+// applyVisibilityWeighting (in-memory  no disk sidecar), which aggregates
 // weights per token cluster via the same OKLCH ΔE distance cluster.ts uses,
 // adds a `visibilityScore` field to each ColorToken, and re-sorts
 // colorTokens by score descending. Tokens with zero weighted observations
@@ -73,14 +73,14 @@ const COLOR_FIELDS: ReadonlyArray<keyof ElementStyle> = [
  * product of all multipliers.
  */
 export function computeElementWeight(el: ElementStyle, viewport: Viewport): number {
-  // ── Visibility gate ────────────────────────────────────────────────
-  // Short-circuit BEFORE any boost math — invisible elements contribute 0.
+  //  Visibility gate 
+  // Short-circuit BEFORE any boost math  invisible elements contribute 0.
   if (el.display === 'none') return 0;
   const opacity = parseFloat(el.opacity || '1');
   if (Number.isFinite(opacity) && opacity === 0) return 0;
   if (el.rect.width <= 0 || el.rect.height <= 0) return 0;
 
-  // ── Area (sqrt-normalized; viewport-sized hero ≈ 1.0) ───────────────
+  //  Area (sqrt-normalized; viewport-sized hero ≈ 1.0) 
   // Square-rooted on both sides so a 2× wider element is 2× weight, not
   // 4×. Capped at 2 so a single huge element can't dominate the entire
   // page (e.g., a full-bleed image background).
@@ -90,7 +90,7 @@ export function computeElementWeight(el: ElementStyle, viewport: Viewport): numb
     Math.sqrt(Math.max(0, el.rect.width * el.rect.height)) / Math.sqrt(viewportArea || 1),
   );
 
-  // ── Semantic boost: heading hierarchy + structural region ──────────
+  //  Semantic boost: heading hierarchy + structural region 
   const tag = (el.tag || '').toLowerCase();
   let semanticBoost = 1.0;
   if (tag === 'h1') semanticBoost = 2.0;
@@ -107,12 +107,12 @@ export function computeElementWeight(el: ElementStyle, viewport: Viewport): numb
     semanticBoost *= 0.8;
   }
 
-  // ── Interactive boost: real interactive elements get +50% ─────────
+  //  Interactive boost: real interactive elements get +50% 
   const role = (el.role || '').toLowerCase();
   const isInteractive = INTERACTIVE_TAGS.has(tag) || INTERACTIVE_ROLES.has(role);
   const interactiveBoost = isInteractive ? 1.5 : 1.0;
 
-  // ── Fold boost: above the fold = 2.0 ──────────────────────────────
+  //  Fold boost: above the fold = 2.0 
   // rect.y is the element's top edge in the captured viewport. Elements
   // entirely below viewport.height never fire foldBoost.
   const foldBoost = el.rect.y < viewport.height ? 2.0 : 1.0;
@@ -120,7 +120,7 @@ export function computeElementWeight(el: ElementStyle, viewport: Viewport): numb
   return area * semanticBoost * interactiveBoost * foldBoost;
 }
 
-// ─── Internal helpers ────────────────────────────────────────────────────
+//  Internal helpers 
 
 interface TokenWithOklch {
   hex: string;
@@ -142,7 +142,7 @@ function tokenToOklch(toOklch: (rgb: unknown) => unknown, hex: string): OKLCH | 
 
 /**
  * Walk all pages' elements, compute each element's weight, and attribute it
- * to the nearest color cluster (by OKLCH ΔE, threshold default 3 — same as
+ * to the nearest color cluster (by OKLCH ΔE, threshold default 3  same as
  * cluster.ts's clustering threshold). Returns a map of token-hex → total
  * accumulated visibility-weighted score.
  */
@@ -232,7 +232,7 @@ export interface PageElements {
  *
  * Returns a result summary the API route surfaces in the SSE stage event.
  *
- * Safe to call with an empty `pages` array or a missing tokens.json —
+ * Safe to call with an empty `pages` array or a missing tokens.json 
  * returns a no-op result and leaves disk state untouched.
  *
  * **No sidecar file on disk.** Earlier versions persisted `elements.json`

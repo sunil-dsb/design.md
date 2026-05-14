@@ -3,7 +3,7 @@ import { BubbleButton } from "@/components/bubble-button";
 import { ArrowLineIcon } from "@/icons/arrow-line";
 
 // Decorative floating robot mascots. Parent wrapper is aria-hidden so the
-// individual Image alts can stay empty — no need to label decoration twice.
+// individual Image alts can stay empty  no need to label decoration twice.
 const ROBOTS = [
   {
     src: "/robots/thinking.webp",
@@ -35,7 +35,7 @@ export function StartCTA() {
         className="pointer-events-none absolute inset-0 hidden sm:block"
       >
         {ROBOTS.map((r) => (
-          // Animated WebPs — Next.js's optimizer refuses animated sources
+          // Animated WebPs  Next.js's optimizer refuses animated sources
           // (it only emits single frames). `unoptimized` serves the file
           // as-is so the loop stays intact.
           <Image
@@ -65,7 +65,7 @@ export function StartCTA() {
           <BubbleButton
             href="/why"
             size="lg"
-            // Descriptive name for screen readers & Lighthouse — the visible
+            // Descriptive name for screen readers & Lighthouse  the visible
             // "learn more" alone is flagged as non-descriptive link text.
             aria-label="Read why design.md exists"
             icon={<ArrowLineIcon className="size-5" />}

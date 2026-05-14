@@ -3,18 +3,9 @@ import * as path from 'path';
 import { chromium } from 'playwright';
 import type { DesignTokens } from './types';
 
-// ─── Color Math ─────────────────────────────────────────────────────────────
+//  Color Math 
 
 interface RGB { r: number; g: number; b: number }
-
-function hexToRgb(hex: string): RGB {
-  const h = hex.replace('#', '');
-  return {
-    r: parseInt(h.slice(0, 2), 16),
-    g: parseInt(h.slice(2, 4), 16),
-    b: parseInt(h.slice(4, 6), 16),
-  };
-}
 
 function rgbToOklch(c: RGB): { l: number; c: number; h: number } {
   // Simplified sRGB → OKLCH (good enough for scoring)
@@ -47,7 +38,7 @@ function deltaE(a: { l: number; c: number; h: number }, b: { l: number; c: numbe
   return Math.sqrt(dl * dl + dc * dc + dh * dh);
 }
 
-// ─── Pixel Sampling ─────────────────────────────────────────────────────────
+//  Pixel Sampling 
 
 interface SampleResult {
   totalSampled: number;
@@ -68,7 +59,6 @@ function scoreColorCoverage(
   const step = Math.max(1, Math.floor((width * height) / sampleCount));
   let matched = 0;
   let totalSampled = 0;
-  let skippedImage = 0;
   const unmatchedMap = new Map<string, { r: number; g: number; b: number; count: number }>();
 
   for (let i = 0; i < width * height; i += step) {
@@ -83,7 +73,7 @@ function scoreColorCoverage(
         break;
       }
     }
-    if (inExcluded) { skippedImage++; continue; }
+    if (inExcluded) continue;
 
     const idx = i * 4;
     const r = pixels[idx], g = pixels[idx + 1], b = pixels[idx + 2], a = pixels[idx + 3];
@@ -126,7 +116,7 @@ function scoreColorCoverage(
   };
 }
 
-// ─── HTML Report ────────────────────────────────────────────────────────────
+//  HTML Report 
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -276,7 +266,7 @@ ${result.unmatchedColors.map((c) => {
 </html>`;
 }
 
-// ─── Main ───────────────────────────────────────────────────────────────────
+//  Main 
 
 async function runProof(
   url: string,
@@ -411,6 +401,6 @@ async function runProof(
   console.log(`  Generated proof.html → ${outPath}`);
 }
 
-// ─── CLI guard removed imported as a library from API routes ─────────────
+//  CLI guard removed imported as a library from API routes 
 
 export { runProof };

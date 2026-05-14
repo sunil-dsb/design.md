@@ -24,7 +24,7 @@ interface BrowserCollectionResult {
 
 export async function collectDOM(page: Page): Promise<DOMCollection> {
   const result = await page.evaluate((): BrowserCollectionResult => {
-    // ── Helpers ────────────────────────────────────────────────────────────
+    //  Helpers 
 
     function rgbToHex(r: number, g: number, b: number): string {
       return (
@@ -84,7 +84,7 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       return false;
     }
 
-    // ── 1. CSS Custom Properties ──────────────────────────────────────────
+    //  1. CSS Custom Properties 
 
     function extractCSSVariables(): CSSVariable[] {
       const variables: CSSVariable[] = [];
@@ -126,7 +126,7 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       return variables;
     }
 
-    // ── 2. Element Computed Style Census ──────────────────────────────────
+    //  2. Element Computed Style Census 
 
     function extractElements(): ElementStyle[] {
       const allEls = document.querySelectorAll('*');
@@ -170,7 +170,6 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       return selected.map(({ el }) => {
         const rect = el.getBoundingClientRect();
         const cs = getComputedStyle(el);
-        const htmlEl = el as HTMLElement;
 
         return {
           tag: el.tagName.toLowerCase(),
@@ -248,7 +247,7 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       });
     }
 
-    // ── 3. Pseudo-element Extraction ─────────────────────────────────────
+    //  3. Pseudo-element Extraction 
 
     function extractPseudoElements(): PseudoElementInfo[] {
       const results: PseudoElementInfo[] = [];
@@ -283,7 +282,7 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       return results;
     }
 
-    // ── 4. Gradient Extraction ───────────────────────────────────────────
+    //  4. Gradient Extraction 
 
     function extractGradients(): GradientInfo[] {
       const gradients: GradientInfo[] = [];
@@ -318,7 +317,7 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       return gradients;
     }
 
-    // ── 5. SVG Icon Extraction ───────────────────────────────────────────
+    //  5. SVG Icon Extraction 
 
     function extractSVGInfo(): { colors: string[]; sizes: { width: number; height: number }[] } {
       const colors = new Set<string>();
@@ -357,7 +356,7 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       return { colors: Array.from(colors), sizes };
     }
 
-    // ── 6. Font Info Extraction ──────────────────────────────────────────
+    //  6. Font Info Extraction 
 
     function extractFontInfo(): BrowserCollectionResult['fontInfo'] {
       const fontFaces: { family: string; weight: string; style: string; src: string }[] = [];
@@ -414,7 +413,7 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       return { fontFaces, loadedFonts, googleFontsLinks };
     }
 
-    // ── 7. Logo Color Extraction ─────────────────────────────────────────
+    //  7. Logo Color Extraction 
 
     function extractLogoColors(): string[] | null {
       // Try to find a logo image
@@ -531,7 +530,7 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       }
     }
 
-    // ── Run all extractors ───────────────────────────────────────────────
+    //  Run all extractors 
 
     const cssVariables = extractCSSVariables();
     const elements = extractElements();

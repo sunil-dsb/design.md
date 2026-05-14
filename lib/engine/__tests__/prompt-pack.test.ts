@@ -11,11 +11,11 @@ import type {
   TypographyLevel,
 } from '../types';
 
-// ─── Fixtures ──────────────────────────────────────────────────────────────
+//  Fixtures 
 //
 // Fixtures favour role-namer-friendly inputs so the prompt actually surfaces
 // named colors / typography. Bare-minimum tokens that role-namer can't
-// classify would produce a fallback-mode prompt — useful for one test but
+// classify would produce a fallback-mode prompt  useful for one test but
 // not the baseline.
 
 function makeColorToken(overrides: Partial<ColorToken> = {}): ColorToken {
@@ -92,9 +92,9 @@ function makeTokens(overrides: Partial<DesignTokens> = {}): DesignTokens {
   };
 }
 
-// ─── buildUniversalPrompt — header & structure ──────────────────────────────
+//  buildUniversalPrompt  header & structure 
 
-describe('buildUniversalPrompt — header', () => {
+describe('buildUniversalPrompt  header', () => {
   it('derives the site name from the URL hostname', () => {
     const out = buildUniversalPrompt(makeTokens(), 'https://stripe.com/');
     expect(out).toMatch(/^# Design System: Stripe \(https:\/\/stripe\.com\/\)/);
@@ -130,15 +130,15 @@ describe('buildUniversalPrompt — header', () => {
   });
 });
 
-// ─── Colors section ─────────────────────────────────────────────────────────
+//  Colors section 
 
-describe('buildUniversalPrompt — colors', () => {
+describe('buildUniversalPrompt  colors', () => {
   it('renders role-labeled colors with usage hints', () => {
     const out = buildUniversalPrompt(makeTokens(), 'https://stripe.com/');
     expect(out).toContain('## Colors');
-    expect(out).toMatch(/\*\*Primary:\*\* `#635bff` — main CTAs/);
-    expect(out).toMatch(/\*\*Canvas:\*\* `#ffffff` — page background/);
-    expect(out).toMatch(/\*\*Ink:\*\* `#061b31` — body text/);
+    expect(out).toMatch(/\*\*Primary:\*\* `#635bff`  main CTAs/);
+    expect(out).toMatch(/\*\*Canvas:\*\* `#ffffff`  page background/);
+    expect(out).toMatch(/\*\*Ink:\*\* `#061b31`  body text/);
   });
 
   it('orders colors by role priority (Primary first, then Canvas / Ink)', () => {
@@ -204,7 +204,7 @@ describe('buildUniversalPrompt — colors', () => {
   });
 
   it('uses fallback rendering when no colors are role-classifiable', () => {
-    // All-grey palette — role-namer can't classify most of these, but at
+    // All-grey palette  role-namer can't classify most of these, but at
     // least one might still match a role. The fallback only kicks in when
     // ZERO colors are named. Use orphan greys with no usage signals.
     const tokens = makeTokens({
@@ -215,7 +215,7 @@ describe('buildUniversalPrompt — colors', () => {
     });
     const out = buildUniversalPrompt(tokens, 'https://stripe.com/');
     // Should either fall back ("Role-namer could not classify") or omit the
-    // colors block. Either is acceptable — what's NOT acceptable is hex
+    // colors block. Either is acceptable  what's NOT acceptable is hex
     // strings rendered without role labels in the main path.
     if (out.includes('## Colors')) {
       expect(out).toContain('Role-namer could not classify');
@@ -228,9 +228,9 @@ describe('buildUniversalPrompt — colors', () => {
   });
 });
 
-// ─── Typography section ─────────────────────────────────────────────────────
+//  Typography section 
 
-describe('buildUniversalPrompt — typography', () => {
+describe('buildUniversalPrompt  typography', () => {
   it('renders role-labeled typography levels', () => {
     const out = buildUniversalPrompt(makeTokens(), 'https://stripe.com/');
     expect(out).toContain('## Typography');
@@ -299,9 +299,9 @@ describe('buildUniversalPrompt — typography', () => {
   });
 });
 
-// ─── Spacing / radius / shadow sections ─────────────────────────────────────
+//  Spacing / radius / shadow sections 
 
-describe('buildUniversalPrompt — spacing / radius / shadow', () => {
+describe('buildUniversalPrompt  spacing / radius / shadow', () => {
   it('renders the base unit and scale', () => {
     const out = buildUniversalPrompt(makeTokens(), 'https://stripe.com/');
     expect(out).toContain('## Spacing');
@@ -335,8 +335,8 @@ describe('buildUniversalPrompt — spacing / radius / shadow', () => {
     ];
     const out = buildUniversalPrompt(makeTokens({ radiusTokens: radii }), 'https://stripe.com/');
     expect(out).toContain('## Border radius');
-    expect(out).toContain('`4px` (used 50×) — button');
-    expect(out).toContain('`8px` (used 30×) — card');
+    expect(out).toContain('`4px` (used 50×)  button');
+    expect(out).toContain('`8px` (used 30×)  card');
   });
 
   it('renders shadow tokens with their type label', () => {
@@ -355,9 +355,9 @@ describe('buildUniversalPrompt — spacing / radius / shadow', () => {
   });
 });
 
-// ─── generatePromptPack — disk I/O ──────────────────────────────────────────
+//  generatePromptPack  disk I/O 
 
-describe('generatePromptPack — disk write', () => {
+describe('generatePromptPack  disk write', () => {
   let tmpRoot: string;
 
   beforeEach(() => {

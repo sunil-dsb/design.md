@@ -48,7 +48,7 @@ See SKILL.md for the complete 21-step workflow, format spec, writing style guide
 
 ---
 
-## Local environment notes (this codebase only — not upstream)
+## Local environment notes (this codebase only not upstream)
 
 ### Next.js 16 breaking changes
 

@@ -7,7 +7,7 @@ import type {
   TypographyLevel,
 } from '../types';
 
-// ─── Test fixtures ────────────────────────────────────────────────────────
+//  Test fixtures 
 
 function makeColorToken(overrides: Partial<ColorToken> = {}): ColorToken {
   return {
@@ -107,9 +107,9 @@ function makeReport(overrides: Partial<ExtractionReport> = {}): ExtractionReport
 
 const baseOpts = { url: 'https://stripe.com/' };
 
-// ─── Tests ─────────────────────────────────────────────────────────────────
+//  Tests 
 
-describe('generateDesignMd — header + structure', () => {
+describe('generateDesignMd  header + structure', () => {
   it('emits the v2 header comment block with date, source, page count, framework', () => {
     const md = generateDesignMd(makeTokens(), makeReport(), baseOpts);
     expect(md).toContain('<!-- Generated:');
@@ -130,7 +130,7 @@ describe('generateDesignMd — header + structure', () => {
   });
 });
 
-describe('generateDesignMd — skipped subjective sections', () => {
+describe('generateDesignMd  skipped subjective sections', () => {
   it('emits stubs for §0, §1, §7, §8 with a pointer to the universal prompt', () => {
     const md = generateDesignMd(makeTokens(), null, baseOpts);
     for (const heading of ['## 0. Brand Context', '## 1. Visual Theme', '## 7. Content & Voice', "## 8. Do's and Don'ts"]) {
@@ -141,7 +141,7 @@ describe('generateDesignMd — skipped subjective sections', () => {
   });
 });
 
-describe('generateDesignMd — §2 Color Palette', () => {
+describe('generateDesignMd  §2 Color Palette', () => {
   it('splits colors into Brand (chromatic) and Structural (achromatic) groups', () => {
     const tokens = makeTokens({
       colorTokens: [
@@ -247,7 +247,7 @@ describe('generateDesignMd — §2 Color Palette', () => {
   });
 });
 
-describe('generateDesignMd — §2.5 Dark Mode', () => {
+describe('generateDesignMd  §2.5 Dark Mode', () => {
   it('emits §2.5 ONLY when darkMode.supported is true', () => {
     const tokensOff = makeTokens();
     const tokensOn = makeTokens({
@@ -283,7 +283,7 @@ describe('generateDesignMd — §2.5 Dark Mode', () => {
   });
 });
 
-describe('generateDesignMd — §3 Typography', () => {
+describe('generateDesignMd  §3 Typography', () => {
   it('renders the hierarchy table with all standard columns including Role (validate.ts requirement)', () => {
     const tokens = makeTokens({
       typographyLevels: [
@@ -352,14 +352,14 @@ describe('generateDesignMd — §3 Typography', () => {
     expect(familiesInList).toBe(1); // dedup in the list
     expect(familiesBlock).toContain('`Monaspace`');
     // The hierarchy table includes every level (including duplicates),
-    // which is correct — each row represents a distinct size / weight.
+    // which is correct  each row represents a distinct size / weight.
     expect(md).toContain('`48px`');
     expect(md).toContain('`14px`');
     expect(md).toContain('`16px`');
   });
 });
 
-describe('generateDesignMd — §5 Layout', () => {
+describe('generateDesignMd  §5 Layout', () => {
   it('renders spacing base unit + scale + section spacing + max width + radius', () => {
     const tokens = makeTokens({
       spacingSystem: { baseUnit: 4, scale: [4, 8, 16, 24], frequencyMap: {}, maxContentWidth: '1200px', sectionSpacing: [48, 64] },
@@ -377,7 +377,7 @@ describe('generateDesignMd — §5 Layout', () => {
   });
 });
 
-describe('generateDesignMd — §6 Depth & Elevation', () => {
+describe('generateDesignMd  §6 Depth & Elevation', () => {
   it('emits the shadow scale table when shadows exist', () => {
     const tokens = makeTokens({
       shadowTokens: [
@@ -397,7 +397,7 @@ describe('generateDesignMd — §6 Depth & Elevation', () => {
   });
 });
 
-describe('generateDesignMd — §6.5 Motion', () => {
+describe('generateDesignMd  §6.5 Motion', () => {
   it('emits §6.5 only when motionSystem is present', () => {
     const off = generateDesignMd(makeTokens({ motionSystem: null }), null, baseOpts);
     expect(off).not.toContain('## 6.5');
@@ -421,7 +421,7 @@ describe('generateDesignMd — §6.5 Motion', () => {
   });
 });
 
-describe('generateDesignMd — §9 Accessibility', () => {
+describe('generateDesignMd  §9 Accessibility', () => {
   it('renders contrast pair table + focus + touch target + alt text + tab order', () => {
     const tokens = makeTokens({
       a11yTokens: {
@@ -450,7 +450,7 @@ describe('generateDesignMd — §9 Accessibility', () => {
   });
 });
 
-describe('generateDesignMd — §10 Responsive', () => {
+describe('generateDesignMd  §10 Responsive', () => {
   it('renders breakpoints table', () => {
     const tokens = makeTokens({
       breakpoints: [
@@ -465,7 +465,7 @@ describe('generateDesignMd — §10 Responsive', () => {
   });
 });
 
-describe('generateDesignMd — §11 State Matrix', () => {
+describe('generateDesignMd  §11 State Matrix', () => {
   it('emits the matrix only when components are present, with state ticks', () => {
     const tokensNoComponents = makeTokens({ components: [] });
     expect(generateDesignMd(tokensNoComponents, null, baseOpts)).not.toContain('## 11.');
@@ -493,11 +493,11 @@ describe('generateDesignMd — §11 State Matrix', () => {
     });
     const md = generateDesignMd(tokens, null, baseOpts);
     expect(md).toContain('## 11. State Matrix');
-    expect(md).toContain('| Button · Primary | ✓ | ✓ | ✓ | — | ✓ |');
+    expect(md).toContain('| Button · Primary | ✓ | ✓ | ✓ |  | ✓ |');
   });
 });
 
-describe('generateDesignMd — §12 Iconography', () => {
+describe('generateDesignMd  §12 Iconography', () => {
   it('emits §12 only when iconSystem is present', () => {
     expect(generateDesignMd(makeTokens({ iconSystem: null }), null, baseOpts)).not.toContain('## 12');
     const tokens = makeTokens({
@@ -520,7 +520,7 @@ describe('generateDesignMd — §12 Iconography', () => {
   });
 });
 
-describe('generateDesignMd — §13 Agent Prompt Guide', () => {
+describe('generateDesignMd  §13 Agent Prompt Guide', () => {
   it('renders quick color reference + self-containment checklist + pointer to universal prompt', () => {
     const tokens = makeTokens({
       colorTokens: [
@@ -550,7 +550,7 @@ describe('generateDesignMd — §13 Agent Prompt Guide', () => {
   });
 });
 
-describe('generateDesignMd — overall sanity', () => {
+describe('generateDesignMd  overall sanity', () => {
   it('produces a well-formed document that ends with a newline', () => {
     const md = generateDesignMd(makeTokens(), makeReport(), baseOpts);
     expect(md.endsWith('\n')).toBe(true);

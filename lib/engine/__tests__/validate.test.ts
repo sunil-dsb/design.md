@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { validateDesignMd, type ValidationResult } from '../validate';
 import type { DesignTokens } from '../types';
 
-// ─── Minimal tokens fixture ─────────────────────────────────────────────────
+//  Minimal tokens fixture 
 
 function makeTokens(overrides: Partial<DesignTokens> = {}): DesignTokens {
   return {
@@ -32,7 +32,7 @@ function makeTokens(overrides: Partial<DesignTokens> = {}): DesignTokens {
   } as DesignTokens;
 }
 
-// ─── Well-formed markdown fixture ───────────────────────────────────────────
+//  Well-formed markdown fixture 
 
 const VALID_MD = `# DESIGN.md Example
 
@@ -86,7 +86,7 @@ Mobile-first breakpoints at 768px and 1024px.
 Use \`#6b5ce7\` for primary actions.
 `;
 
-// ─── Tests ──────────────────────────────────────────────────────────────────
+//  Tests 
 
 describe('validateDesignMd', () => {
   it('passes a well-formed DESIGN.md', () => {

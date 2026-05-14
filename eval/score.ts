@@ -1,8 +1,8 @@
-// Scoreboard — pure scoring functions over (extraction, gold) → score.
+// Scoreboard  pure scoring functions over (extraction, gold) → score.
 //
 // Inputs are deliberately narrow: an extraction's tokens.json shape and a
 // gold-token JSON file. Outputs are deterministic numerical scores so the
-// scoreboard is reproducible — same inputs → same scores, every time.
+// scoreboard is reproducible  same inputs → same scores, every time.
 //
 // Mirror discipline: this module lives outside lib/engine/. It imports
 // the engine's color math (deltaE, parseColor) so OKLCH ΔE distance is
@@ -16,7 +16,7 @@ import type { GoldTokens } from './gold/types';
 // @ts-expect-error culori has no bundled declarations in this setup
 import * as culori from 'culori';
 
-// ─── Thresholds ──────────────────────────────────────────────────────────
+//  Thresholds 
 // Defaults from dna.md §3.3 + plan-v1.md §8 Weekend 5b's scoring rules.
 
 /** ΔE2000 threshold under which two colors count as the same token. */
@@ -25,7 +25,7 @@ export const DELTA_E_MATCH = 5;
 /** ΔE2000 threshold under which the primary pick counts as "correct enough". */
 export const PRIMARY_PASS_DELTA_E = 5;
 
-// ─── Output shapes ───────────────────────────────────────────────────────
+//  Output shapes 
 
 export interface PrimaryScore {
   /** What the extractor picked as Primary (after role-namer). Null if none. */
@@ -96,7 +96,7 @@ export interface OverallScore {
   composite: number;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────
+//  Helpers 
 
 function lowercaseHex(hex: string): string {
   return hex.trim().toLowerCase();
@@ -122,18 +122,7 @@ function canonicalFamily(family: string): string {
     .toLowerCase();
 }
 
-/** Convert a CSS dimension like "16px" or "1.5rem" to px (best-effort). */
-function dimToPx(value: string): number | null {
-  const m = /^(-?\d*\.?\d+)(px|rem|em)$/.exec(value.trim());
-  if (!m) return null;
-  const n = parseFloat(m[1]);
-  if (!Number.isFinite(n)) return null;
-  if (m[2] === 'px') return n;
-  if (m[2] === 'rem' || m[2] === 'em') return n * 16; // standard 16px base
-  return null;
-}
-
-// ─── Scoring functions ───────────────────────────────────────────────────
+//  Scoring functions 
 
 /**
  * Score the extractor's Primary pick against the gold Primary. The
@@ -315,31 +304,31 @@ export function scoreSpacing(
 /**
  * Weighted composite score 0..100.
  *
- * Weights reflect plan-v1.md §2's wedge order — color accuracy is the
+ * Weights reflect plan-v1.md §2's wedge order  color accuracy is the
  * primary claim, typography matters but is more bimodal (right/wrong),
  * spacing is structural but less brand-defining.
  */
 export function computeComposite(score: Omit<OverallScore, 'composite' | 'scoredAt' | 'brand' | 'url'>): number {
-  // Primary correctness — 30 points. Pass / partial / fail.
+  // Primary correctness  30 points. Pass / partial / fail.
   const primaryPoints = score.colors.primary.pass
     ? 30
     : score.colors.primary.deltaE <= PRIMARY_PASS_DELTA_E * 2
     ? 15
     : 0;
 
-  // Palette F1 — 25 points (continuous).
+  // Palette F1  25 points (continuous).
   const palettePoints = score.colors.palette.f1 * 25;
 
-  // Typography — 20 points (display + body, 10 each).
+  // Typography  20 points (display + body, 10 each).
   const typoPoints =
     (score.typography.display.pass ? 10 : 0) +
     (score.typography.body.pass ? 10 : 0);
 
-  // Spacing — 15 points (baseUnit + scaleRecall).
+  // Spacing  15 points (baseUnit + scaleRecall).
   const spacingPoints =
     (score.spacing.baseUnit.pass ? 7 : 0) + score.spacing.scaleRecall * 8;
 
-  // Coverage floor — 10 points just for producing extracted data.
+  // Coverage floor  10 points just for producing extracted data.
   const coveragePoints = score.colors.palette.extractedCount > 0 ? 10 : 0;
 
   const total = primaryPoints + palettePoints + typoPoints + spacingPoints + coveragePoints;
@@ -351,7 +340,7 @@ export function computeComposite(score: Omit<OverallScore, 'composite' | 'scored
  * role-namer applied) and the parsed gold tokens, returns the full score.
  *
  * Prefer this over scoreExtraction when the caller already has the data
- * in memory — it avoids temp-file round-tripping and is unit-testable
+ * in memory  it avoids temp-file round-tripping and is unit-testable
  * without filesystem stubs.
  */
 export function scoreTokens(

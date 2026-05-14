@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 // Lightweight regex highlighter for the DESIGN.md preview. Used by both the
 // server-rendered <SpecPreview> wrapper and the client-rendered <SpecTabs>
 // since the latter swaps content reactively. No runtime cost on the static
-// path — the result is just plain spans.
+// path  the result is just plain spans.
 //
 // Targets the two languages a DESIGN.md typically mixes: YAML in the
 // front-matter block, markdown below it. Plus a couple of inline tokens

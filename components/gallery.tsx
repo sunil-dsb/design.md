@@ -209,8 +209,8 @@ function GalleryCard({ entry }: { entry: GalleryEntry }) {
 
   if (entry.live) {
     // Append badge state to aria-label so screen readers hear "hot" / "new"
-    // — they otherwise wouldn't (aria-label overrides nested text).
-    const badgeSuffix = entry.badge ? ` — ${entry.badge}` : "";
+    //  they otherwise wouldn't (aria-label overrides nested text).
+    const badgeSuffix = entry.badge ? `  ${entry.badge}` : "";
     return (
       <a
         href={`#${entry.slug}`}
@@ -239,12 +239,12 @@ function GalleryCard({ entry }: { entry: GalleryEntry }) {
   // Coming-soon cards used to be `opacity-60` to read as muted, but stacking
   // that opacity on already-translucent text dropped labels below WCAG
   // contrast (effective ~0.24 on black for the label). We now drop the
-  // global opacity and instead dim just the swatch via a black overlay —
+  // global opacity and instead dim just the swatch via a black overlay
   // keeps the brand recognisable as "less active" while letting the meta
   // text stay fully readable.
   return (
     <article
-      aria-label={`${entry.name} — need sign`}
+      aria-label={`${entry.name}  need sign`}
       className="relative flex flex-1 flex-col overflow-hidden border border-white/10 bg-black"
     >
       <div className="relative">
@@ -271,8 +271,7 @@ function GalleryCard({ entry }: { entry: GalleryEntry }) {
 // inverse treatment (white bg, blue text) so it visually pops off the
 // blue bar. Order top→bottom: badge (optional) · views · installs.
 function StatsPanel({ entry }: { entry: GalleryEntry }) {
-  const hasData =
-    entry.live && entry.views != null && entry.installs != null;
+  const hasData = entry.live && entry.views != null && entry.installs != null;
 
   const ariaLabel = (() => {
     const parts: string[] = [`${entry.name} info`];
@@ -307,13 +306,13 @@ function StatsPanel({ entry }: { entry: GalleryEntry }) {
         </>
       ) : null}
       <StatCell
-        value={hasData ? formatCount(entry.views!) : "—"}
+        value={hasData ? formatCount(entry.views!) : ""}
         label="views"
         dim={!hasData}
       />
       <div className={divider} />
       <StatCell
-        value={hasData ? formatCount(entry.installs!) : "—"}
+        value={hasData ? formatCount(entry.installs!) : ""}
         label="installs"
         dim={!hasData}
       />
@@ -350,7 +349,7 @@ function StatCell({
   );
 }
 
-// Badge cell — a small white pill *inset* within the blue bar. Outer
+// Badge cell  a small white pill *inset* within the blue bar. Outer
 // container is transparent (the parent's blue shows through, framing the
 // pill on all sides); inner span is the actual white-on-blue badge,
 // sized to content. Reads as "an accent nested inside the bar" rather

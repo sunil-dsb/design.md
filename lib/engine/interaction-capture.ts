@@ -7,7 +7,7 @@ import type {
   ErrorStateInfo,
 } from './types';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Constants 
 
 const INTERACTIVE_SELECTOR = [
   'button', 'a', 'input', 'select', 'textarea',
@@ -29,7 +29,7 @@ const PAGE_TIMEOUT = 15_000;
 const MAX_ELEMENTS = 50;
 const MAX_TAB_PRESSES = 20;
 
-// ─── Element Discovery ──────────────────────────────────────────────────────
+// ─── Element Discovery 
 
 interface DiscoveredElement {
   index: number;
@@ -82,7 +82,7 @@ async function discoverElements(page: Page): Promise<DiscoveredElement[]> {
   );
 }
 
-// ─── Component Classification ────────────────────────────────────────────────
+// ─── Component Classification 
 
 function classifyComponent(tag: string, role: string): string {
   if (tag === 'button' || role === 'button') return 'button';
@@ -94,17 +94,7 @@ function classifyComponent(tag: string, role: string): string {
   return 'interactive';
 }
 
-// ─── Style Reading ───────────────────────────────────────────────────────────
-
-function buildSelector(el: DiscoveredElement): string {
-  const base = el.tag;
-  const cls = el.classes
-    .split(/\s+/)
-    .filter((c) => c.length > 0)
-    .map((c) => `.${CSS.escape(c)}`)
-    .join('');
-  return cls ? `${base}${cls}` : `${base}:nth-of-type(${el.index + 1})`;
-}
+// ─── Style Reading 
 
 async function readProperties(
   page: Page,
@@ -137,7 +127,7 @@ async function readProperties(
   ) as Promise<Record<CapturedProperty, string>>;
 }
 
-// ─── Diff Computation ────────────────────────────────────────────────────────
+// ─── Diff Computation 
 
 function computeDiff(
   defaultStyle: Record<string, string>,
@@ -156,7 +146,7 @@ function computeDiff(
   return hasDiff ? diff : null;
 }
 
-// ─── Transition Reading ──────────────────────────────────────────────────────
+// ─── Transition Reading 
 
 async function readTransition(
   page: Page,
@@ -176,7 +166,7 @@ async function readTransition(
   );
 }
 
-// ─── Disabled Elements ───────────────────────────────────────────────────────
+// ─── Disabled Elements 
 
 async function captureDisabledStyle(
   page: Page,
@@ -201,7 +191,7 @@ async function captureDisabledStyle(
   return readProperties(page, elementIndex);
 }
 
-// ─── Restore State ───────────────────────────────────────────────────────────
+// ─── Restore State 
 
 async function restoreState(page: Page): Promise<void> {
   await page.mouse.move(0, 0);
@@ -212,7 +202,7 @@ async function restoreState(page: Page): Promise<void> {
   await page.waitForTimeout(200);
 }
 
-// ─── Per-Element Capture ─────────────────────────────────────────────────────
+// ─── Per-Element Capture 
 
 async function captureElement(
   page: Page,
@@ -323,7 +313,7 @@ async function captureElement(
   };
 }
 
-// ─── Timeout Race Helper ─────────────────────────────────────────────────────
+// ─── Timeout Race Helper 
 
 function withTimeout<T>(
   promise: Promise<T>,
@@ -341,7 +331,7 @@ function withTimeout<T>(
   ]);
 }
 
-// ─── Loading State Detection ────────────────────────────────────────────────
+// ─── Loading State Detection 
 
 const LOADING_CLASS_PATTERNS = ['loading', 'spinner', 'skeleton', 'shimmer', 'placeholder'];
 const LOADING_STYLE_PROPS = [
@@ -444,7 +434,7 @@ async function detectLoadingStates(page: Page): Promise<LoadingStateInfo[]> {
   );
 }
 
-// ─── Empty State Detection ──────────────────────────────────────────────────
+// ─── Empty State Detection 
 
 const EMPTY_CLASS_PATTERNS = ['empty', 'no-data', 'no-results', 'zero-state', 'empty-state'];
 const EMPTY_TEXT_PATTERNS = ['no results', 'nothing here', 'get started', 'no items', 'no data'];
@@ -528,7 +518,7 @@ async function detectEmptyStates(page: Page): Promise<EmptyStateInfo[]> {
   );
 }
 
-// ─── Error State Detection ──────────────────────────────────────────────────
+// ─── Error State Detection 
 
 const ERROR_CLASS_PATTERNS = ['error', 'invalid', 'danger', 'alert'];
 const ERROR_STYLE_PROPS = [
@@ -631,7 +621,7 @@ async function detectErrorStates(page: Page): Promise<ErrorStateInfo[]> {
   );
 }
 
-// ─── Main Export ─────────────────────────────────────────────────────────────
+// ─── Main Export 
 
 export async function captureInteractions(page: Page): Promise<InteractionData> {
   const captures: InteractionCapture[] = [];

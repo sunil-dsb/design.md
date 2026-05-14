@@ -3,7 +3,7 @@
 // owns the flag parsing (--fast / --with-interaction / --max-pages /
 // --merge-with / etc.). We intercept --help here so the printed usage
 // reflects OUR CLI shape (`pnpm engine:extract`) rather than upstream's
-// `npx ts-node scripts/extract.ts ...` — the engine's printUsage stays
+// `npx ts-node scripts/extract.ts ...`  the engine's printUsage stays
 // byte-identical to upstream for mirror cleanliness (see MIRROR.md).
 import { extract, parseArgs } from '../lib/engine/extract';
 

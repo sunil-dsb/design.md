@@ -16,7 +16,7 @@ const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 const NOW = 1_700_000_000_000; // fixed timestamp, ~2023-11-14
 
-// ─── pruneStale ───────────────────────────────────────────────────────────
+//  pruneStale 
 
 describe('pruneStale', () => {
   it('drops timestamps older than 24h', () => {
@@ -56,7 +56,7 @@ describe('pruneStale', () => {
   });
 });
 
-// ─── evaluateRateLimit ────────────────────────────────────────────────────
+//  evaluateRateLimit 
 
 describe('evaluateRateLimit', () => {
   it('allows a first-time request and records the timestamp', () => {
@@ -101,7 +101,7 @@ describe('evaluateRateLimit', () => {
   });
 
   it('allows again after the oldest timestamp falls out of the window', () => {
-    // Oldest timestamp is RIGHT at 24h+1ms — past the window, gets pruned.
+    // Oldest timestamp is RIGHT at 24h+1ms  past the window, gets pruned.
     const state: RateLimitState = {
       '1.1.1.1': [NOW - DAY - 1, NOW - 3 * HOUR, NOW - 2 * HOUR, NOW - HOUR, NOW - 1000],
     };
@@ -155,7 +155,7 @@ describe('evaluateRateLimit', () => {
   });
 });
 
-// ─── readState / writeState (file I/O) ───────────────────────────────────
+//  readState / writeState (file I/O) 
 
 describe('readState + writeState', () => {
   let tmpFile: string;
@@ -208,7 +208,7 @@ describe('readState + writeState', () => {
   });
 });
 
-// ─── checkAndRecordRateLimit (end-to-end) ────────────────────────────────
+//  checkAndRecordRateLimit (end-to-end) 
 
 describe('checkAndRecordRateLimit (with file I/O)', () => {
   let tmpFile: string;
@@ -288,7 +288,7 @@ describe('checkAndRecordRateLimit (with file I/O)', () => {
         limit: 5,
       });
     }
-    // Same IP, with the right bypass key — should pass.
+    // Same IP, with the right bypass key  should pass.
     const r = checkAndRecordRateLimit('1.1.1.1', 'secret123', {
       stateFilePath: tmpFile,
       now: NOW + 10,
@@ -382,7 +382,7 @@ describe('checkAndRecordRateLimit (with file I/O)', () => {
   });
 });
 
-// ─── getClientIp ──────────────────────────────────────────────────────────
+//  getClientIp 
 
 describe('getClientIp', () => {
   function makeRequest(headers: Record<string, string>): Request {

@@ -1,7 +1,7 @@
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
+import { chromium, type Browser, type Page } from 'playwright';
 import type { CrawlResult, PageData } from './types';
 
-// ─── Options ─────────────────────────────────────────────────────────────────
+//  Options 
 
 export type WaitStrategy = 'networkidle' | 'css' | `selector:${string}`;
 
@@ -19,7 +19,7 @@ const DEFAULT_OPTIONS: CrawlOptions = {
   verbose: false,
 };
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+//  Constants 
 
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
@@ -70,7 +70,7 @@ const COOKIE_SELECTORS = [
   '[aria-label*="cookie"]', '[aria-label*="consent"]',
 ];
 
-// ─── Semaphore ───────────────────────────────────────────────────────────────
+//  Semaphore 
 
 class Semaphore {
   private queue: Array<() => void> = [];
@@ -98,7 +98,7 @@ class Semaphore {
   }
 }
 
-// ─── Utilities ───────────────────────────────────────────────────────────────
+//  Utilities 
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -139,7 +139,7 @@ function isResourceUrl(href: string): boolean {
   }
 }
 
-// ─── Cookie Dismissal ────────────────────────────────────────────────────────
+//  Cookie Dismissal 
 
 async function dismissCookieBanners(page: Page): Promise<void> {
   await page.evaluate((selectors: string[]) => {
@@ -169,7 +169,7 @@ async function dismissCookieBanners(page: Page): Promise<void> {
   }, COOKIE_SELECTORS);
 }
 
-// ─── Page Loading ────────────────────────────────────────────────────────────
+//  Page Loading 
 
 /** Wait until CSS variables and stylesheets stabilize (for SPA/CSS-in-JS) */
 async function waitForCSSStable(page: Page, timeoutMs = 10_000): Promise<void> {
@@ -254,7 +254,7 @@ async function loadPage(
   }
 }
 
-// ─── CAPTCHA Detection ───────────────────────────────────────────────────────
+//  CAPTCHA Detection 
 
 async function isCaptchaPage(page: Page): Promise<boolean> {
   return page.evaluate(() => {
@@ -265,7 +265,7 @@ async function isCaptchaPage(page: Page): Promise<boolean> {
   });
 }
 
-// ─── Link Discovery ─────────────────────────────────────────────────────────
+//  Link Discovery 
 
 interface DiscoveredLink {
   href: string;
@@ -274,7 +274,7 @@ interface DiscoveredLink {
 }
 
 async function discoverLinks(page: Page, domain: string): Promise<DiscoveredLink[]> {
-  const raw = await page.evaluate((targetDomain: string) => {
+  const raw = await page.evaluate(() => {
     const results: Array<{ href: string; isNav: boolean }> = [];
     const anchors = document.querySelectorAll('a[href]');
 
@@ -297,7 +297,7 @@ async function discoverLinks(page: Page, domain: string): Promise<DiscoveredLink
       ...r,
       isNav: r.isNav || navHrefs.has(r.href),
     }));
-  }, domain);
+  });
 
   const seen = new Set<string>();
   const links: DiscoveredLink[] = [];
@@ -411,7 +411,7 @@ function matchesMediumPath(path: string): boolean {
   );
 }
 
-// ─── Lazy-Load Scrolling ─────────────────────────────────────────────────────
+//  Lazy-Load Scrolling 
 
 async function scrollForLazyLoad(page: Page): Promise<void> {
   const viewportHeight = page.viewportSize()?.height ?? 900;
@@ -435,7 +435,7 @@ async function scrollForLazyLoad(page: Page): Promise<void> {
   await delay(300);
 }
 
-// ─── Popup Triggering ────────────────────────────────────────────────────────
+//  Popup Triggering 
 
 async function triggerDropdowns(
   page: Page,
@@ -563,7 +563,7 @@ async function triggerModals(
   return modals;
 }
 
-// ─── Multi-Viewport Screenshots ──────────────────────────────────────────────
+//  Multi-Viewport Screenshots 
 
 type ViewportLabel = '1920' | '1440' | '768' | '375' | '320';
 
@@ -596,7 +596,7 @@ async function captureScreenshots(
   return screenshots;
 }
 
-// ─── Single Page Processing ──────────────────────────────────────────────────
+//  Single Page Processing 
 
 async function processPage(
   browser: Browser,
@@ -699,7 +699,7 @@ async function processPage(
   }
 }
 
-// ─── Main Crawl Function ────────────────────────────────────────────────────
+//  Main Crawl Function 
 
 export async function crawlPages(
   urls: string[],
@@ -835,7 +835,7 @@ export async function crawlPages(
   return { pages, failedUrls, totalTime };
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+//  Helpers 
 
 function deduplicateLinks(links: DiscoveredLink[]): DiscoveredLink[] {
   const seen = new Map<string, DiscoveredLink>();

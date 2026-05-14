@@ -7,7 +7,7 @@ import { Navbar } from "@/components/navbar";
 import { SkipLink } from "@/components/skip-link";
 
 export const metadata: Metadata = {
-  title: "404 — not in the spec",
+  title: "404  not in the spec",
   description: "This route wasn't documented in the DESIGN.md.",
 };
 
@@ -42,7 +42,7 @@ export default function NotFound() {
           aria-hidden="true"
           width={165}
           height={123}
-          // Animated WebP — Next.js can't optimize animated sources, so
+          // Animated WebP  Next.js can't optimize animated sources, so
           // serve as-is. Preserves the looping animation.
           unoptimized
           className="pointer-events-none absolute bottom-8 right-4 hidden h-auto w-24 sm:right-10 sm:bottom-10 sm:block sm:w-32"

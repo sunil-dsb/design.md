@@ -1,4 +1,4 @@
-// shadcn theme emitter — Phase 4 Piece 3.
+// shadcn theme emitter  Phase 4 Piece 3.
 //
 // Emits a paste-ready `shadcn-theme.css` containing the 17-slot shadcn/ui
 // theme variables (background, foreground, card, popover, primary,
@@ -13,7 +13,7 @@
 //   1. ramps.brand is non-null     (otherwise no --primary)
 //   2. ramps.neutral is non-null   (otherwise no secondary/muted/border)
 //   3. Source uses Tailwind or shadcn (otherwise the theme is speculative
-//                                      — Material UI / Chakra sites have
+//                                       Material UI / Chakra sites have
 //                                      different design system assumptions)
 //
 // This is the wedge differentiator vs designlang (plan-v1.md §8 Weekend
@@ -23,7 +23,7 @@
 // entirely. We emit all 17 slots with lightness-band assignment + WCAG-AA
 // verified foregrounds.
 //
-// Pure function — same inputs → same output. Scoreboard-safe.
+// Pure function  same inputs → same output. Scoreboard-safe.
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -31,7 +31,7 @@ import type { DesignTokens, RadiusToken } from './types';
 import { assignColorRoles, type NamedColor } from './role-namer';
 import type { RegeneratedRamps, Ramp } from './ramp-regen';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
+//  Helpers 
 
 function isPermanent(t: { stability?: { layer?: string } }): boolean {
   const layer = t.stability?.layer;
@@ -94,7 +94,7 @@ export function contrastRatio(fgHex: string, bgHex: string): number {
  * Pick the foreground hex from a candidate list that gives the highest
  * contrast against `bgHex`. Returns the best candidate plus its ratio.
  *
- * Used for `--primary-foreground` and `--accent-foreground` — slots where
+ * Used for `--primary-foreground` and `--accent-foreground`  slots where
  * the choice between white and a dark neutral isn't deterministic from
  * luminance alone (a dark-but-saturated primary can flip the answer).
  */
@@ -123,7 +123,7 @@ function pxToRem(value: string): string {
 
 /**
  * Pick the most-used numeric radius (px) from the extracted tokens.
- * Skips pill / full radii (9999px, 50%, 100%) — those aren't `--radius`,
+ * Skips pill / full radii (9999px, 50%, 100%)  those aren't `--radius`,
  * they're `rounded-full` utilities. Returns the chosen px value, or null
  * if no numeric radius was extracted.
  */
@@ -143,7 +143,7 @@ function rampStop(ramp: Ramp, name: number): string | undefined {
   return ramp.stops.find((s) => s.name === name)?.hex;
 }
 
-// ─── Public types ────────────────────────────────────────────────────────
+//  Public types 
 
 export interface ShadcnSlot {
   name: string;   // CSS variable name without the leading "--"
@@ -174,7 +174,7 @@ export interface BuildOptions {
   date?: string;
 }
 
-// ─── Gates ───────────────────────────────────────────────────────────────
+//  Gates 
 
 interface GateContext {
   tokens: DesignTokens;
@@ -188,7 +188,7 @@ interface GateResult {
 
 function checkGates(ctx: GateContext): GateResult {
   // Three distinct failure modes deserve three distinct messages so users
-  // can act on them — "no primary" suggests rerunning the role-namer, but
+  // can act on them  "no primary" suggests rerunning the role-namer, but
   // "no ramps at all" means the upstream ramp regen stage didn't run.
   if (!ctx.ramps) {
     return {
@@ -208,7 +208,7 @@ function checkGates(ctx: GateContext): GateResult {
     return {
       pass: false,
       reason:
-        'No neutral colour ramp was regenerated. Half the shadcn slots (--secondary, --muted, --border, --input, --secondary-foreground, --muted-foreground) come from the neutral scale; without it the theme cannot be built. This branch is normally unreachable — ramp regen always emits a neutral — so seeing it likely means the regenerated-ramp.json file is corrupted.',
+        'No neutral colour ramp was regenerated. Half the shadcn slots (--secondary, --muted, --border, --input, --secondary-foreground, --muted-foreground) come from the neutral scale; without it the theme cannot be built. This branch is normally unreachable  ramp regen always emits a neutral  so seeing it likely means the regenerated-ramp.json file is corrupted.',
     };
   }
   const fw = ctx.tokens.meta?.framework;
@@ -220,7 +220,7 @@ function checkGates(ctx: GateContext): GateResult {
     return {
       pass: false,
       reason:
-        'The source site uses neither Tailwind nor shadcn/ui. A shadcn theme generated from values designed for a different framework (Material UI / Chakra / vanilla) is speculative — the design system assumptions don\'t carry over cleanly. Skipping to avoid emitting a misleading file. (The tailwind.css emitter still runs because Tailwind v4 themes are general; only the shadcn-specific slot mapping is omitted.)',
+        'The source site uses neither Tailwind nor shadcn/ui. A shadcn theme generated from values designed for a different framework (Material UI / Chakra / vanilla) is speculative  the design system assumptions don\'t carry over cleanly. Skipping to avoid emitting a misleading file. (The tailwind.css emitter still runs because Tailwind v4 themes are general; only the shadcn-specific slot mapping is omitted.)',
     };
   }
   return { pass: true };
@@ -233,7 +233,7 @@ function pickConfidence(tokens: DesignTokens): 'high' | 'medium' {
   return 'medium';
 }
 
-// ─── Slot computation ─────────────────────────────────────────────────────
+//  Slot computation 
 
 interface ResolvedColors {
   background: string;
@@ -322,7 +322,7 @@ function computeSlots(
   return [
     { name: 'background', value: resolved.background },
     { name: 'foreground', value: resolved.foreground },
-    // Surfaces — card + popover share the background colour by shadcn
+    // Surfaces  card + popover share the background colour by shadcn
     // convention; their foregrounds mirror --foreground.
     { name: 'card', value: resolved.background },
     { name: 'card-foreground', value: resolved.foreground },
@@ -331,7 +331,7 @@ function computeSlots(
     // Brand
     { name: 'primary', value: resolved.primary },
     { name: 'primary-foreground', value: resolved.primaryFg },
-    // Quiet variants — secondary + muted are conventionally near-neutral.
+    // Quiet variants  secondary + muted are conventionally near-neutral.
     { name: 'secondary', value: resolved.neutral100 },
     { name: 'secondary-foreground', value: resolved.neutral900 },
     { name: 'muted', value: resolved.neutral100 },
@@ -339,19 +339,19 @@ function computeSlots(
     // Accent (second brand colour or neutral fallback)
     { name: 'accent', value: resolved.accent },
     { name: 'accent-foreground', value: resolved.accentFg },
-    // Destructive — extracted error or sensible default
+    // Destructive  extracted error or sensible default
     { name: 'destructive', value: resolved.destructive },
     { name: 'destructive-foreground', value: resolved.destructiveFg },
     // Lines
     { name: 'border', value: resolved.border },
     { name: 'input', value: resolved.border },
     { name: 'ring', value: resolved.ring },
-    // Radius — already converted to rem upstream
+    // Radius  already converted to rem upstream
     { name: 'radius', value: radiusValue },
   ];
 }
 
-// ─── Renderers ───────────────────────────────────────────────────────────
+//  Renderers 
 
 function renderHeader(opts: BuildOptions, confidence: 'high' | 'medium', primaryHex: string, destructiveFallback: boolean): string {
   const date = opts.date ?? new Date().toISOString().slice(0, 10);
@@ -362,7 +362,7 @@ function renderHeader(opts: BuildOptions, confidence: 'high' | 'medium', primary
       : 'MEDIUM (source uses Tailwind without shadcn primitives)';
 
   const lines = [
-    `/* shadcn theme — ${siteName} (${opts.url})`,
+    `/* shadcn theme  ${siteName} (${opts.url})`,
     ` *`,
     ` * Generated:    ${date}`,
     ` * Confidence:   ${confidenceText}`,
@@ -400,7 +400,7 @@ function renderOmitReason(reason: string, opts: BuildOptions): string {
   const date = opts.date ?? new Date().toISOString().slice(0, 10);
   const siteName = deriveSiteName(opts.url);
   return [
-    `# shadcn theme not emitted — ${siteName}`,
+    `# shadcn theme not emitted  ${siteName}`,
     ``,
     `**Source:** ${opts.url}  `,
     `**Generated:** ${date}`,
@@ -411,11 +411,11 @@ function renderOmitReason(reason: string, opts: BuildOptions): string {
     ``,
     `## What you still got`,
     ``,
-    `- \`tokens.json\` — every extracted design token`,
-    `- \`tailwind.css\` (if emitted) — Tailwind v4 @theme block, not shadcn-specific`,
-    `- \`regenerated-ramp.json\` — the brand + neutral colour ramps`,
-    `- \`DESIGN.md\` — human-readable design system documentation`,
-    `- \`prompts/universal.md\` — paste-into-any-agent build prompt`,
+    `- \`tokens.json\`  every extracted design token`,
+    `- \`tailwind.css\` (if emitted)  Tailwind v4 @theme block, not shadcn-specific`,
+    `- \`regenerated-ramp.json\`  the brand + neutral colour ramps`,
+    `- \`DESIGN.md\`  human-readable design system documentation`,
+    `- \`prompts/universal.md\`  paste-into-any-agent build prompt`,
     ``,
     `If you genuinely want a shadcn theme for this brand anyway, the manual path is:`,
     ``,
@@ -426,11 +426,11 @@ function renderOmitReason(reason: string, opts: BuildOptions): string {
   ].join('\n');
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────
+//  Public API 
 
 /**
  * Build the shadcn theme CSS (or omission reason) from extracted tokens
- * and regenerated ramps. Pure function — no I/O.
+ * and regenerated ramps. Pure function  no I/O.
  *
  * Returns `{ css: string }` when all three gates pass, `{ omitReason }`
  * otherwise. Either field is non-null but not both.

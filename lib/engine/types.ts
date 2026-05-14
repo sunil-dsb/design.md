@@ -1,4 +1,4 @@
-// ─── Crawl Types ──────────────────────────────────────────────────────────────
+//  Crawl Types 
 
 export interface CrawlResult {
   pages: PageData[];
@@ -16,7 +16,7 @@ export interface PageData {
   errors: string[];
 }
 
-// ─── DOM Collector Types ──────────────────────────────────────────────────────
+//  DOM Collector Types 
 
 export interface DOMCollection {
   cssVariables: CSSVariable[];
@@ -120,7 +120,7 @@ export interface GradientInfo {
   rect: { x: number; y: number; width: number; height: number };
 }
 
-// ─── CSS Analyzer Types ───────────────────────────────────────────────────────
+//  CSS Analyzer Types 
 
 export interface CSSAnalysis {
   pseudoClassRules: PseudoClassRule[];
@@ -163,7 +163,7 @@ export interface AnimationInfo {
   duration: string;
 }
 
-// ─── Interaction Capture Types ────────────────────────────────────────────────
+//  Interaction Capture Types 
 
 export interface LoadingStateInfo {
   selector: string;
@@ -208,7 +208,7 @@ export interface InteractionCapture {
   transition: string | null;
 }
 
-// ─── Dark Mode Types ──────────────────────────────────────────────────────────
+//  Dark Mode Types 
 
 export interface DarkModeData {
   supported: boolean;
@@ -219,7 +219,7 @@ export interface DarkModeData {
   darkScreenshots: Record<string, Buffer> | null;
 }
 
-// ─── Framework Detection Types ────────────────────────────────────────────────
+//  Framework Detection Types 
 
 export interface FrameworkDetection {
   tailwind: { detected: boolean; matchCount: number; sampleClasses: string[]; jitDetected: boolean } | null;
@@ -227,7 +227,7 @@ export interface FrameworkDetection {
   designSystemUrl: string | null;
 }
 
-// ─── Icon System Types ────────────────────────────────────────────────────────
+//  Icon System Types 
 
 export interface IconSystemInfo {
   library: string | null;
@@ -245,7 +245,7 @@ export interface IconSystemInfo {
   };
 }
 
-// ─── Motion System Types ──────────────────────────────────────────────────────
+//  Motion System Types 
 
 export interface MotionSystem {
   durationScale: { label: string; value: string; frequency: number }[];
@@ -255,7 +255,7 @@ export interface MotionSystem {
   prefersReducedMotion: boolean;
 }
 
-// ─── A11y Types ───────────────────────────────────────────────────────────────
+//  A11y Types 
 
 export interface A11yTokens {
   focusIndicator: {
@@ -289,7 +289,7 @@ export interface A11yTokens {
   };
 }
 
-// ─── Design Boundary Types ────────────────────────────────────────────────────
+//  Design Boundary Types 
 
 export interface DesignBoundary {
   groups: {
@@ -311,7 +311,7 @@ export interface DesignBoundary {
   anomalies: { url: string; description: string }[];
 }
 
-// ─── Stability Classification ────────────────────────────────────────────────
+//  Stability Classification 
 
 export interface StabilityClassification {
   layer: 'infrastructure' | 'system' | 'campaign' | 'content';
@@ -319,7 +319,7 @@ export interface StabilityClassification {
   signals: string[];   // human-readable reasons for classification
 }
 
-// ─── Design Tokens (Final Output) ─────────────────────────────────────────────
+//  Design Tokens (Final Output) 
 
 export interface DesignTokens {
   meta: {
@@ -464,7 +464,7 @@ export interface ComponentVariant {
   sampleTexts: string[];
 }
 
-// ─── Extraction Report ────────────────────────────────────────────────────────
+//  Extraction Report 
 
 export interface ExtractionReport {
   startTime: string;
