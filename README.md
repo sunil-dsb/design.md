@@ -1,3 +1,15 @@
+---
+title: design.md
+emoji: 🎨
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+short_description: Paste any URL → get a DESIGN.md your AI agent can read.
+---
+
 <div align="center">
 
 <img src="./public/hero.webp" alt="design.md  extract design systems from any website" width="100%" />
