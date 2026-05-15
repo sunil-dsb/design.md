@@ -292,7 +292,22 @@ async function runProof(
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
   });
   const origPage = await origCtx.newPage();
-  await origPage.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+  // Tracker-heavy sites (IBM, Stripe, Salesforce, etc.) never reach
+  // `networkidle` because analytics / chat widgets / A/B-test SDKs poll
+  // continuously. Without a fallback, networkidle deadlocks until the 60s
+  // timeout and proof.html never gets generated. Match crawl.ts's pattern:
+  // try networkidle for best-fidelity screenshot, fall back to `load` on
+  // timeout.
+  try {
+    await origPage.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+  } catch (navErr: unknown) {
+    const msg = navErr instanceof Error ? navErr.message : String(navErr);
+    if (msg.toLowerCase().includes('timeout')) {
+      await origPage.goto(url, { waitUntil: 'load', timeout: 60000 });
+    } else {
+      throw navErr;
+    }
+  }
   await origPage.waitForTimeout(2000);
   const origScreenshot = await origPage.screenshot({ fullPage: false });
   const origB64 = origScreenshot.toString('base64');
@@ -362,7 +377,10 @@ async function runProof(
   console.log('  Capturing preview...');
   const prevCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const prevPage = await prevCtx.newPage();
-  await prevPage.goto(`file://${path.resolve(resolvedPreview)}`, { waitUntil: 'networkidle' });
+  // Local file:// — `load` is enough (no network to wait for); using
+  // networkidle here was just a copy-paste artifact and could theoretically
+  // hang if the preview HTML references blocked CDN fonts.
+  await prevPage.goto(`file://${path.resolve(resolvedPreview)}`, { waitUntil: 'load' });
   await prevPage.waitForTimeout(500);
   const prevScreenshot = await prevPage.screenshot({ fullPage: false });
   const prevB64 = prevScreenshot.toString('base64');

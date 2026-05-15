@@ -10,6 +10,7 @@ import {
 } from "react";
 import { ArrowIcon } from "@/icons/arrow";
 import { BubbleButton } from "@/components/bubble-button";
+import { StabilityChip } from "@/components/stability-chip";
 import type { Diagnostic } from "@/lib/engine/diagnostics";
 import { rolePriority, type ColorRole } from "@/lib/engine/role-namer";
 import type { ComponentNode } from "@/lib/engine/types";
@@ -1820,12 +1821,16 @@ function LiveComponentsSection({
                   ) : (
                     <li
                       key={`${v.name}-${idx}`}
-                      className="group relative flex flex-col border border-white/10 bg-white transition-colors hover:border-white/25"
+                      className="group relative flex flex-col border border-white/10 bg-white/[0.02] transition-colors hover:border-white/25"
                     >
-                      {/* White preview surface. The captured components
-                          mostly have their own backgrounds; for the rare
-                          pure-white variant, the card's own border keeps
-                          the silhouette visible. */}
+                      {/* Inner preview surface is white so captured
+                          components (which mostly assume a light page bg)
+                          look natural. The outer card stays on the dark
+                          translucent surface so the footer text (which
+                          uses `text-white` for the variant name) stays
+                          readable — earlier we accidentally made the
+                          outer container white too, which collapsed the
+                          footer to white-on-white invisibility. */}
                       <div className="flex min-h-32 flex-1 items-center justify-center bg-white p-8">
                         <LiveVariant type={g.type} variant={v} />
                       </div>
@@ -3175,57 +3180,9 @@ function SectionHeader({
   );
 }
 
-// 4-layer stability colour mapping. Tracks the classifier in cluster.ts:
-// infrastructure (most stable) → system → campaign → content (most volatile).
-// Picked from Tailwind palettes that read well on the near-black surface.
-const STABILITY_COLORS: Record<string, string> = {
-  infrastructure: "text-emerald-300",
-  system: "text-sky-300",
-  campaign: "text-amber-300",
-  content: "text-rose-300",
-};
-
-// Shared chip rendering. Used by colour, typography, radius, and shadow
-// cards so the visual + a11y treatment stays in sync. Returns null when
-// no layer is provided (token wasn't classified yet) so call sites can
-// drop it in unconditionally.
-function StabilityChip({
-  layer,
-  confidence,
-  signals,
-}: {
-  layer?: string;
-  confidence?: number;
-  signals?: string[];
-}) {
-  if (!layer) return null;
-  const tone = STABILITY_COLORS[layer] ?? "text-white/55";
-  const tooltip =
-    signals && signals.length > 0 ? signals.join(" · ") : undefined;
-  const confPct =
-    typeof confidence === "number" ? Math.round(confidence * 100) : null;
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-1 font-mono text-[10px] uppercase tracking-widest ${tone}`}
-      title={tooltip}
-    >
-      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
-      <span aria-hidden="true">{layer}</span>
-      {confPct !== null && (
-        <span aria-hidden="true" className="text-white/40">
-          {confPct}%
-        </span>
-      )}
-      <span className="sr-only">
-        stability {layer}
-        {confPct !== null ? `, confidence ${confPct}%` : ""}
-        {signals && signals.length > 0
-          ? `, signals: ${signals.join(", ")}`
-          : ""}
-      </span>
-    </span>
-  );
-}
+// StabilityChip + STABILITY_COLORS moved to components/stability-chip.tsx
+// (imported at top) so the brand-viewer route at /gallery/<brand> renders
+// identical chips without duplicating the implementation.
 
 // Long-tail color grid with progressive disclosure. The CollapsibleSection
 // wrapper folds the whole block; once expanded, we still only show one

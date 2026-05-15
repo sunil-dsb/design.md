@@ -214,7 +214,7 @@ function GalleryCard({ entry }: { entry: GalleryEntry }) {
     const badgeSuffix = entry.badge ? `  ${entry.badge}` : "";
     return (
       <a
-        href={`#${entry.slug}`}
+        href={`/gallery/${entry.slug}`}
         aria-label={`Open ${entry.name} DESIGN.md${badgeSuffix}`}
         className="group flex flex-1 flex-col overflow-hidden border border-white/10 bg-black transition hover:border-white/40 focus-visible:border-primary"
       >

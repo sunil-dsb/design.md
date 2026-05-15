@@ -133,13 +133,69 @@ What truly distinguishes Stripe is its shadow system. Rather than flat or single
 - Transition: `background-color 0.3s cubic-bezier(0.25, 1, 0.5, 1), color 0.3s cubic-bezier(0.25, 1, 0.5, 1)`
 - Use: Navigation menu items
 
+**Primary with Icon** — the canonical Stripe marketing CTA (`Start now ›`, `Request an invite ›`)
+- Base: same as Primary Purple (`#533afd` bg, white text, 14px sohne-var weight 600, 4px radius, asymmetric padding `11.5px 20px 14.5px 20px`)
+- Layout: `display: inline-flex; align-items: center; gap: 12px`
+- Icon: **chevron-right `›`** placed AFTER the label (NOT a solid arrow  Stripe uses a thin chevron, distinct from Carbon's ArrowRight)
+- Icon SVG: 14×14, `stroke: currentColor; stroke-width: 1.75; fill: none; stroke-linecap: round; stroke-linejoin: round`, path `M6 4l4 4-4 4` (viewBox `0 0 16 16`)
+- Use: top-of-page hero CTA, "Start now" / "Request an invite" / "Get started" patterns
+- Sample texts captured on stripe.com: "Start now", "Request an invite", "Get started"
+
+**Outlined** — solid-white-background secondary (`Contact sales`)
+- Background: `#ffffff` (true white, not the translucent `rgba(255,255,255,0.65)` used over hero gradients)
+- Text: `#533afd` (Primary Purple)
+- Border: `1px solid #b9b9f9` (Stripe Hairline)
+- Padding: `11.5px 20px 14.5px 20px` (matches Primary so paired CTAs align)
+- Radius: 4px
+- Font: 14px `sohne-var` weight 600
+- Use: secondary action paired beside Primary with Icon, e.g. `Start now ›  Contact sales`
+- Sample text captured: "Contact sales"
+
+**Outlined with Icon** — outlined with chevron (`Read the story ›`)
+- Base: same as Outlined (white bg, purple text, hairline border, 4px radius, asymmetric padding)
+- Layout + icon: same `inline-flex; gap: 12px` + the same Stripe chevron-right glyph
+- Icon colour: `#533afd` (inherits text colour, matches the border)
+- Use: editorial / story-card CTAs (`Read the story`, `Read the docs`, `Learn more`)
+- Sample texts captured: "Read the story", "Read the docs", "Learn more"
+
 ### Cards & Containers
-- Background: `#ffffff`
-- Border: `1px solid #e5edf5` (standard)
+
+**Base recipe (apply to any Stripe-style card)**
+- Background: `#ffffff` (Canvas)
+- Border: `1px solid #e5edf5` (Canvas Alt as hairline)
 - Radius: 4px (tight), 5px (standard), 6px (comfortable), 8px (featured)
 - Shadow (standard): `rgba(50,50,93,0.12) 0px 16px 32px 0px`
 - Shadow (ambient): `rgba(23,23,23,0.08) 0px 15px 35px 0px`
 - Shadow (subtle): `rgba(23,23,23,0.06) 0px 3px 6px 0px`
+- Padding: 24px (compact), 32px (standard), 48px (hero)
+- Title color: `#061b31` (Deep Navy)
+- Body color: `#50617a` (Muted slate)
+
+**Content card** — canonical headline + body + CTA link pattern
+- Container: base recipe with 24-32px padding
+- Eyebrow tag: 11px `sohne-var` weight 600, `letter-spacing: 0.12em`, `text-transform: uppercase`, color `#533afd` (Primary)
+- Title: 20px `sohne-var` weight 600, line-height 1.25, color `#061b31` (Ink/Deep Navy)
+- Body: 14px `sohne-var` weight 400, line-height 1.5, color `#50617a` (Muted)
+- Inline CTA link: 14px `sohne-var` weight 600, color `#533afd` (Primary), `text-decoration: underline`, `text-underline-offset: 3px`, `text-decoration-color: rgba(83,58,253,0.33)`
+- CTA glyph: `→` after the link text
+- Use: feature highlights, doc surfaces, product callouts
+
+**Feature card** — icon + title + description pattern
+- Container: base recipe with 24px padding
+- Accent tile: 40×40px square, radius matches card, background `<accent>1f` (12% alpha of the accent colour), foreground `<accent>` at full opacity
+  - For Stripe: tile background `rgba(255,97,24,0.12)` with Orange `#ff6118` icon
+  - Or Primary-tinted: `rgba(83,58,253,0.12)` with `#533afd` icon
+- Title: 18px `sohne-var` weight 600, line-height 1.3, color `#061b31`
+- Description: 14px `sohne-var` weight 400, line-height 1.5, color `#50617a`
+- Use: capability grids, product feature rows, three-up layouts
+
+**Marketing feature block** — flat-on-white pattern Stripe ships across stripe.com (the value-prop grids on Platforms, Atlas, Connect, etc.)
+- Container: **no border, no shadow** flat on the white page background. Padding 32px. No card surface differentiation; the icon tile is the visual anchor.
+- Icon tile: 48×48 square with `border-radius: 4px`, background `rgba(83, 58, 253, 0.08)` (Primary at 8% alpha), foreground `#533afd` for the line-art icon. Stroke 1.75 on the icon path. Icon examples: `trending-up`, `grid-plus`, `shield`, `bolt`  thin geometric line-art.
+- Title + body in ONE paragraph (Stripe convention): `<strong>Title.</strong>` (bold, ink-dark, **trailing period intentional**) followed by ` ` plus body text in muted slate `#50617a`. 16px `sohne-var` weight 400, line-height 1.5.
+- CTA: 16px `sohne-var` weight 600, color `#533afd` (Primary), inline-flex with a `›` chevron icon (`gap: 6px`). No underline. Examples: `Read the guide ›`, `View services ›`, `Learn more ›`.
+- Layout: vertical flex column, CTA pinned at the bottom via `margin-top: auto` so a grid of feature blocks aligns the CTA row across columns.
+- Use: 3-up / 4-up feature grids on landing pages, Platforms / Connect / Atlas value-prop sections.
 
 ### Links
 - Text: `#533afd`
@@ -190,6 +246,8 @@ What truly distinguishes Stripe is its shadow system. Rather than flat or single
 
 ## 6. Depth & Elevation
 
+### Captured "ambient" shadows (single-stop, from marketing surface)
+
 | Level | Treatment | Use |
 |-------|-----------|-----|
 | Flat (Level 0) | No shadow | Page background, inline text |
@@ -198,7 +256,20 @@ What truly distinguishes Stripe is its shadow system. Rather than flat or single
 | Elevated (Level 3) | `rgba(50,50,93,0.12) 0px 16px 32px 0px` | Featured cards, dropdowns, popovers |
 | Focus Ring | `2px solid #533afd` outline | Keyboard focus states |
 
-**Shadow Philosophy**: Stripe's shadow system is built on a principle of chromatic depth. Where most design systems use neutral gray or black shadows, Stripe's primary shadow color (`rgba(50,50,93,0.12)`) is a deep blue-gray that echoes the brand's navy palette. This creates shadows that do not just add depth -- they add brand atmosphere. The dual-system approach separates neutral ambient shadows (`rgba(23,23,23,...)`) for subtle lift from blue-tinted shadows (`rgba(50,50,93,...)`) for prominent elevation, creating a brand-colored depth hierarchy that distinguishes Stripe from every flat-shadow design system.
+### Canonical `--cardShadow` scale (multi-stop, from Stripe's published CSS variables)
+
+Stripe ships a 4-tier `--cardShadow*` scale that's used throughout Stripe Elements, Checkout, and Dashboard product surfaces. Each value is a **two-layer** shadow: an ambient blue-tinted layer (`rgba(50,50,93,0.25)`) layered over a directional black layer (`rgba(0,0,0,0.3)`). Together they read as soft-edge depth, not flat outlines.
+
+| Variable | Value | Use |
+|-|-|-|
+| `--cardShadowXSmall` | `0 2px 5px -1px rgba(50,50,93,0.25), 0 1px 3px -1px rgba(0,0,0,0.3)` | Tight lift  resting tiles, micro-cards |
+| `--cardShadowSmall`  | `0 6px 12px -2px rgba(50,50,93,0.25), 0 3px 7px -3px rgba(0,0,0,0.3)` | Standard product cards, list rows |
+| `--cardShadowMedium` | `0 13px 27px -5px rgba(50,50,93,0.25), 0 8px 16px -8px rgba(0,0,0,0.3)` | Hover-lifted cards, dropdowns, popovers |
+| `--cardShadowLarge`  | `0 30px 60px -12px rgba(50,50,93,0.25), 0 18px 36px -18px rgba(0,0,0,0.3)` | Modals, focused panels, marketing hero callouts |
+
+CSS-class wiring on stripe.com: `.Card--shadowXSmall` / `--shadowSmall` / `--shadowMedium` / `--shadowLarge` set `--cardShadow: var(--cardShadow*)` on the wrapping `.Card` element.
+
+**Shadow Philosophy**: Stripe's shadow system is built on a principle of chromatic depth. Where most design systems use neutral gray or black shadows, Stripe's primary shadow color (`rgba(50,50,93,0.25)`) is a deep blue-gray that echoes the brand's navy palette. This creates shadows that do not just add depth -- they add brand atmosphere. The dual-system approach separates neutral ambient shadows (`rgba(23,23,23,...)`) for subtle marketing-page lift from the multi-layer blue-tinted `--cardShadow*` scale for product-surface elevation, creating a brand-colored depth hierarchy that distinguishes Stripe from every flat-shadow design system.
 
 ## 6.5. Motion & Transitions
 

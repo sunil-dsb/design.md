@@ -1,0 +1,71 @@
+{
+  "$schema": "../types.ts (GoldTokens)",
+  "brand": "ibm",
+  "url": "https://www.ibm.com/",
+  "verifiedAt": "2026-05-15",
+  "verifiedBy": "Sourced from @carbon/colors v11 GitHub source (packages/colors/src/colors.ts) and the Carbon `white` theme (packages/themes/src/white.js). IBM publishes their full design system as the Carbon Design System, so every value below is authoritative spec rather than DOM observation.",
+  "sources": [
+    "github.com/carbon-design-system/carbon (packages/colors/src/colors.ts)",
+    "github.com/carbon-design-system/carbon (packages/themes/src/white.js)",
+    "carbondesignsystem.com (visual confirmation of token usage)",
+    "IBM Plex Sans on Google Fonts (typography)"
+  ],
+
+  "colors": {
+    "primary":  { "hex": "#0f62fe", "name": "IBM Blue 60" },
+    "accent":   { "hex": "#0043ce", "name": "IBM Blue 70" },
+    "semantic": {
+      "success": "#198038",
+      "warning": "#f1c21b",
+      "error":   "#da1e28",
+      "info":    "#0043ce"
+    },
+    "neutrals": [
+      { "name": "Background",     "hex": "#ffffff" },
+      { "name": "Layer 01",       "hex": "#f4f4f4" },
+      { "name": "Border Subtle",  "hex": "#e0e0e0" },
+      { "name": "Border Strong",  "hex": "#8d8d8d" },
+      { "name": "Text Secondary", "hex": "#525252" },
+      { "name": "Text Primary",   "hex": "#161616" }
+    ],
+    "paletteHexes": [
+      "#0f62fe",
+      "#0043ce",
+      "#002d9c",
+      "#001d6c",
+      "#4589ff",
+      "#78a9ff",
+      "#d0e2ff",
+      "#edf5ff",
+      "#198038",
+      "#f1c21b",
+      "#da1e28",
+      "#ffffff",
+      "#f4f4f4",
+      "#e0e0e0",
+      "#c6c6c6",
+      "#8d8d8d",
+      "#525252",
+      "#161616"
+    ]
+  },
+
+  "typography": {
+    "display": { "family": "IBM Plex Serif", "fallbacks": ["Georgia", "serif"] },
+    "body":    { "family": "IBM Plex Sans",  "fallbacks": ["Helvetica Neue", "Arial", "sans-serif"] },
+    "mono":    { "family": "IBM Plex Mono",  "fallbacks": ["Menlo", "Consolas", "monospace"] }
+  },
+
+  "spacing": {
+    "baseUnit": 8,
+    "scale": [2, 4, 8, 12, 16, 24, 32, 40, 48, 64, 80, 96, 160]
+  },
+
+  "radius": {
+    "scale": [0, 2, 4, 8]
+  },
+
+  "darkMode": {
+    "supported": true
+  }
+}
