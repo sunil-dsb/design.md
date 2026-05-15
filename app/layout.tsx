@@ -9,13 +9,22 @@ const pixelFont = localFont({
   display: "swap",
 });
 
+// metadataBase lets Next.js resolve relative OG / Twitter image URLs to absolute
+// ones (crawlers reject relative paths). Override via env per-environment so
+// preview deployments don't claim the production canonical.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://design.md";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "design.md design specs as markdown",
     template: "%s · design.md",
   },
   description:
     "A markdown-first format for shipping design. Write the source of truth once render it as a doc, a system, or a prompt.",
+  applicationName: "design.md",
+  category: "developer tools",
   keywords: [
     "design system",
     "markdown",
@@ -25,12 +34,23 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "design.md" }],
   creator: "design.md",
+  publisher: "design.md",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
+    url: "/",
     title: "design.md design specs as markdown",
     description:
       "A markdown-first format for shipping design. Write the source of truth once render it as a doc, a system, or a prompt.",
     siteName: "design.md",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
@@ -40,6 +60,13 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 

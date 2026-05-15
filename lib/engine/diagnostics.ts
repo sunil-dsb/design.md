@@ -54,37 +54,60 @@ export interface ComputeDiagnosticsInput {
   proof: ProofSummary | null;
   /** Pipeline-level warnings the API route collected (e.g. proof:error). */
   warnings: string[];
+  /**
+   * Which subset of rules to evaluate. Used by the API route to stream
+   * diagnostics as separate SSE events at two checkpoints:
+   *   - "early": rules computable right after extraction + weighting, before
+   *     Phase 3. Needs only tokens + report. Fires single-page-noise,
+   *     framework-low-confidence, dark-mode-empty-diff, low-color-count,
+   *     low-typography-levels, palette-all-grey, failed-page, engine-warning.
+   *   - "late": rules that depend on proof data, role-named tokens, or
+   *     accumulated pipeline warnings. Fires low-proof-coverage,
+   *     low-proof-samples, primary-is-grey, pipeline-warning.
+   *   - "all" (default): every rule. Use when you have full data and want
+   *     a one-shot list (e.g. the final result payload, or CLI scoring).
+   */
+  phase?: 'early' | 'late' | 'all';
 }
 
 export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[] {
   const diags: Diagnostic[] = [];
   const { tokens, report, proof, warnings } = input;
+  const phase = input.phase ?? 'all';
+  const runEarly = phase === 'early' || phase === 'all';
+  const runLate = phase === 'late' || phase === 'all';
 
-  //  1. Pipeline warnings (Phase 3 partial failures) 
+  //  1. Pipeline warnings (Phase 3 partial failures)  [LATE]
   // These are surfaced by the API route when a stage like proof.ts failed
-  // but the rest of the pipeline kept going.
-  for (let i = 0; i < (warnings ?? []).length; i++) {
-    diags.push({
-      id: `pipeline-warning-${i + 1}`,
-      severity: 'warning',
-      title: 'Phase 3 partial success',
-      message: warnings[i],
-    });
+  // but the rest of the pipeline kept going. They accrue during Phase 3,
+  // so an "early" pass (before Phase 3) cannot see them yet.
+  if (runLate) {
+    for (let i = 0; i < (warnings ?? []).length; i++) {
+      diags.push({
+        id: `pipeline-warning-${i + 1}`,
+        severity: 'warning',
+        title: 'Phase 3 partial success',
+        message: warnings[i],
+      });
+    }
   }
 
-  //  2. Engine-emitted warnings (from extract.ts) 
-  const engineWarnings = report?.warnings ?? [];
-  for (let i = 0; i < engineWarnings.length; i++) {
-    diags.push({
-      id: `engine-warning-${i + 1}`,
-      severity: 'warning',
-      title: 'Engine warning',
-      message: engineWarnings[i],
-    });
+  //  2. Engine-emitted warnings (from extract.ts)  [EARLY]
+  if (runEarly) {
+    const engineWarnings = report?.warnings ?? [];
+    for (let i = 0; i < engineWarnings.length; i++) {
+      diags.push({
+        id: `engine-warning-${i + 1}`,
+        severity: 'warning',
+        title: 'Engine warning',
+        message: engineWarnings[i],
+      });
+    }
   }
 
-  //  3. Low pixel-fidelity coverage 
+  //  3. Low pixel-fidelity coverage  [LATE]
   if (
+    runLate &&
     proof?.coverage !== null &&
     proof?.coverage !== undefined &&
     proof?.sampleSize !== null &&
@@ -104,11 +127,12 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  //  4. Low proof sample size 
+  //  4. Low proof sample size  [LATE]
   // proof.ts excludes <img>/<video>/<canvas>/<svg> and background-image
   // regions. On image-heavy homepages there's little non-image area left.
   // Coverage % is technically accurate but low-confidence at this scale.
   if (
+    runLate &&
     proof?.sampleSize !== null &&
     proof?.sampleSize !== undefined &&
     proof.sampleSize < 1000
@@ -123,7 +147,7 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  //  5. Single-page color noise 
+  //  5. Single-page color noise  [EARLY]
   // designBoundary.anomalies surfaces pages where most colors are unique.
   // That usually means frequency-dominance is including one-offs (campaign
   // banners, decorative gradients) alongside real system tokens.
@@ -132,29 +156,31 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
   // single-page-noise diagnostic is always `-1` regardless of what
   // earlier rules pushed. Other multi-fire rules (pipeline-warning,
   // engine-warning, failed-page) follow the same convention.
-  let noiseIdx = 0;
-  for (const anomaly of report?.designBoundary?.anomalies ?? []) {
-    const pct = anomaly.description?.match(/(\d+)\s*%/)?.[1];
-    const pctNum = pct ? parseInt(pct, 10) : 0;
-    if (pctNum >= 50) {
-      noiseIdx++;
-      diags.push({
-        id: `single-page-noise-${noiseIdx}`,
-        severity: 'warning',
-        title: 'Single-page color noise detected',
-        message: `${anomaly.url}: ${anomaly.description}. Frequency-dominance ranking may include one-off campaign or decorative colors in the primary candidates.`,
-        action:
-          'Manually verify the chosen primary brand color. Increasing --max-pages to 8+ dilutes single-page noise.',
-      });
+  if (runEarly) {
+    let noiseIdx = 0;
+    for (const anomaly of report?.designBoundary?.anomalies ?? []) {
+      const pct = anomaly.description?.match(/(\d+)\s*%/)?.[1];
+      const pctNum = pct ? parseInt(pct, 10) : 0;
+      if (pctNum >= 50) {
+        noiseIdx++;
+        diags.push({
+          id: `single-page-noise-${noiseIdx}`,
+          severity: 'warning',
+          title: 'Single-page color noise detected',
+          message: `${anomaly.url}: ${anomaly.description}. Frequency-dominance ranking may include one-off campaign or decorative colors in the primary candidates.`,
+          action:
+            'Manually verify the chosen primary brand color. Increasing --max-pages to 8+ dilutes single-page noise.',
+        });
+      }
     }
   }
 
-  //  6. Framework detection low confidence 
+  //  6. Framework detection low confidence  [EARLY]
   // When a UI framework name is returned but Tailwind detection is null,
   // it's often a heuristic false positive on coincidental class names.
   // (Real Tailwind + UI-framework sites usually report both.)
   const fw = report?.framework ?? tokens?.meta?.framework;
-  if (fw?.uiFramework && fw?.tailwind === null) {
+  if (runEarly && fw?.uiFramework && fw?.tailwind === null) {
     diags.push({
       id: 'framework-low-confidence',
       severity: 'warning',
@@ -166,13 +192,14 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  //  7. Dark mode detected but empty variable diff 
+  //  7. Dark mode detected but empty variable diff  [EARLY]
   // Site supports dark mode (toggle clicked, theme changed) but no CSS
   // variables differ between modes. Means the site uses JS-based theming
   // (className swap with hard-coded values), so DESIGN.md Section 2.5
   // will have nothing to populate.
   const dm = tokens?.darkMode;
   if (
+    runEarly &&
     dm?.supported &&
     (!dm?.variableDiff || dm.variableDiff.length === 0)
   ) {
@@ -187,9 +214,9 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  //  8. Low color count 
+  //  8. Low color count  [EARLY]
   const colorCount = tokens?.colorTokens?.length ?? 0;
-  if (colorCount > 0 && colorCount < 10) {
+  if (runEarly && colorCount > 0 && colorCount < 10) {
     diags.push({
       id: 'low-color-count',
       severity: 'warning',
@@ -201,9 +228,9 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  //  9. Low typography variety 
+  //  9. Low typography variety  [EARLY]
   const typoCount = tokens?.typographyLevels?.length ?? 0;
-  if (typoCount > 0 && typoCount < 3) {
+  if (runEarly && typoCount > 0 && typoCount < 3) {
     diags.push({
       id: 'low-typography-levels',
       severity: 'warning',
@@ -213,14 +240,20 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     });
   }
 
-  //  10. Primary color appears structural (low chroma) 
+  //  10. Primary color appears structural (low chroma)  [LATE]
   // Frequency-dominance failure: a high-frequency footer / border grey
   // beats the actual brand color in the role-namer's ranking. Detected
   // by checking the role-named "primary" token's HSL-approximated
   // saturation (cheap proxy for OKLCH chroma).
-  const primary = tokens?.colorTokens?.find(
-    (c) => (c as ColorToken & { role?: string | null }).role === 'primary',
-  );
+  //
+  // LATE because role-namer mutates tokens in-memory inside the API route
+  // AFTER Phase 3 finishes; at the early checkpoint no token has a `role`
+  // field yet.
+  const primary = runLate
+    ? tokens?.colorTokens?.find(
+        (c) => (c as ColorToken & { role?: string | null }).role === 'primary',
+      )
+    : undefined;
   if (primary) {
     const sat = approxHexSaturation(primary.hex);
     if (sat !== null && sat < 0.15) {
@@ -235,13 +268,13 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     }
   }
 
-  //  11. All extracted colors are low-chroma 
+  //  11. All extracted colors are low-chroma  [EARLY]
   // Stronger sanity check than primary-is-grey: if the ENTIRE palette is
   // achromatic the extraction probably failed (crawl missed brand pages,
   // CSS-in-JS didn't hydrate, or the site is genuinely greyscale  rare).
   // Threshold: require ≥10 colors before this fires, otherwise the
   // low-color-count rule already covers it.
-  if ((tokens?.colorTokens?.length ?? 0) >= 10) {
+  if (runEarly && (tokens?.colorTokens?.length ?? 0) >= 10) {
     const tested = tokens!.colorTokens!.slice(0, 30);
     const chromatic = tested.filter((c) => {
       const s = approxHexSaturation(c.hex);
@@ -260,8 +293,8 @@ export function computeDiagnostics(input: ComputeDiagnosticsInput): Diagnostic[]
     }
   }
 
-  //  12. Failed pages 
-  const failedPages = report?.failedPages ?? [];
+  //  12. Failed pages  [EARLY]
+  const failedPages = runEarly ? (report?.failedPages ?? []) : [];
   for (let i = 0; i < failedPages.length; i++) {
     const f = failedPages[i];
     diags.push({

@@ -71,9 +71,13 @@ COPY --from=builder /app/public ./public
 RUN mkdir -p /app/output && chmod 777 /app/output
 
 ENV NODE_ENV=production
-ENV PORT=7860
+# Cloud Run injects PORT=8080 at runtime and routes to it. We set a default
+# here so the same image also runs on hosts that don't inject one
+# (e.g. plain `docker run`). HuggingFace Spaces wants 7860 — if redeploying
+# there in the future, override with `docker run -e PORT=7860`.
+ENV PORT=8080
 ENV HOSTNAME=0.0.0.0
 
-EXPOSE 7860
+EXPOSE 8080
 
 CMD ["pnpm", "start"]

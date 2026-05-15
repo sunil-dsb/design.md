@@ -1,15 +1,3 @@
----
-title: design.md
-emoji: 🎨
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
-license: mit
-short_description: Paste any URL → get a DESIGN.md your AI agent can read.
----
-
 <div align="center">
 
 <img src="./public/hero.webp" alt="design.md  extract design systems from any website" width="100%" />
@@ -31,7 +19,7 @@ Built for Claude Code, Cursor, v0, Lovable, Replit, Windsurf, and GitHub Copilot
 
 <br />
 
-<a href="https://sunilnegidsb-design-md.hf.space"><img src="https://api.iconify.design/lucide/external-link.svg?color=%2322c55e" width="14" align="center" alt=""> &nbsp;<b>Live demo</b></a> &nbsp;·&nbsp;
+<a href="https://design-md-1047885385938.us-central1.run.app"><img src="https://api.iconify.design/lucide/external-link.svg?color=%2322c55e" width="14" align="center" alt=""> &nbsp;<b>Live demo</b></a> &nbsp;·&nbsp;
 <a href="./examples">Examples</a> &nbsp;·&nbsp;
 <a href="#roadmap">Roadmap</a> &nbsp;·&nbsp;
 <a href="https://github.com/sunil-dsb/design.md"><img src="https://api.iconify.design/lucide/star.svg?color=%23f59e0b" width="14" align="center" alt=""> &nbsp;Star us</a>
@@ -72,7 +60,7 @@ If your tool reads `AGENTS.md` or `CLAUDE.md`, it reads `DESIGN.md`. Plain markd
 
 ```bash
 # 1. Open the live tool
-https://sunilnegidsb-design-md.hf.space
+https://design-md-1047885385938.us-central1.run.app
 
 # 2. Paste any public URL
 stripe.com
@@ -291,7 +279,7 @@ This project extracts publicly observable design patterns for educational, resea
 
 <a href="https://github.com/sunil-dsb/design.md"><img src="https://api.iconify.design/lucide/star.svg?color=%23f59e0b" width="14" align="center" alt=""> &nbsp;<b>Star this repo</b></a>
 &nbsp;·&nbsp;
-<a href="https://sunilnegidsb-design-md.hf.space"><img src="https://api.iconify.design/lucide/external-link.svg?color=%2322c55e" width="14" align="center" alt=""> &nbsp;<b>Try the live demo</b></a>
+<a href="https://design-md-1047885385938.us-central1.run.app"><img src="https://api.iconify.design/lucide/external-link.svg?color=%2322c55e" width="14" align="center" alt=""> &nbsp;<b>Try the live demo</b></a>
 &nbsp;·&nbsp;
 <a href="https://stitch.withgoogle.com/docs/design-md/overview"><img src="https://api.iconify.design/lucide/book-open.svg?color=%237a73ff" width="14" align="center" alt=""> &nbsp;<b>Read the spec</b></a>
 

@@ -49,6 +49,85 @@ function inferPrimary(tokens: ColorToken[]): string {
   return tokens[0]?.hex ?? '#6b5ce7';
 }
 
+//  Button preview helpers
+//
+// The fork's interaction-capture step ([scripts/interaction-capture.ts])
+// records actual hover/focus/active style diffs per button cluster. When
+// data is present we emit a real `:hover` block using the captured values
+// (plan-v1.md §4 deliverable 2: "working hover states"). When it's not
+// (older extractions, sites that toggle styles via JS, button-cluster
+// gave up) we fall back to the inherited `opacity: 0.85` fade so the
+// preview never regresses.
+
+/** camelCase → kebab-case for CSS property names. getComputedStyle()
+ * surfaces properties like `backgroundColor`; CSS wants `background-color`. */
+function camelToKebab(s: string): string {
+  return s.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase());
+}
+
+/** Sanitise a variant name (e.g. "Primary", "Ghost", "CTA Large") into a
+ * safe CSS class suffix. */
+function variantSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'variant';
+}
+
+/** Render a `style` or `hoverChanges` object as CSS declarations.
+ * Drops empty values defensively. */
+function formatStyleDecls(style: Record<string, string> | null | undefined, indent: string = '    '): string {
+  if (!style) return '';
+  const lines: string[] = [];
+  for (const [key, value] of Object.entries(style)) {
+    if (value == null || value === '') continue;
+    lines.push(`${indent}${camelToKebab(key)}: ${value};`);
+  }
+  return lines.join('\n');
+}
+
+interface ButtonVariantPreview {
+  slug: string;
+  label: string;
+  baseDecls: string;
+  hoverDecls: string | null;
+  transition: string | null;
+}
+
+/** Extract real button variants (with captured hover diffs) from tokens.
+ * Returns null when the tokens.json lacks a `Button` component or its
+ * variants are empty — caller falls back to the static primary/secondary
+ * preview in that case. */
+function buildButtonVariants(tokens: DesignTokens, maxVariants: number = 3): ButtonVariantPreview[] | null {
+  const components = (tokens as DesignTokens & { components?: Array<{ type?: string; variants?: Array<Record<string, unknown>> }> }).components;
+  if (!Array.isArray(components)) return null;
+  const buttonGroup = components.find(
+    (c) => typeof c.type === 'string' && c.type.toLowerCase() === 'button',
+  );
+  if (!buttonGroup || !Array.isArray(buttonGroup.variants) || buttonGroup.variants.length === 0) {
+    return null;
+  }
+
+  // Sort by `count` desc so we render the most-used variants first; cap
+  // at `maxVariants` so a site with 8 button styles doesn't flood the
+  // preview row.
+  const sorted = [...buttonGroup.variants].sort(
+    (a, b) => ((b.count as number) ?? 0) - ((a.count as number) ?? 0),
+  );
+
+  return sorted.slice(0, maxVariants).map((v) => {
+    const name = (v.name as string) ?? 'Variant';
+    const style = (v.style as Record<string, string>) ?? {};
+    const hoverChanges = v.hoverChanges as Record<string, string> | null;
+    const transition = (v.transition as string) ?? null;
+    const hasHoverDiff = hoverChanges && Object.keys(hoverChanges).length > 0;
+    return {
+      slug: variantSlug(name),
+      label: name,
+      baseDecls: formatStyleDecls(style),
+      hoverDecls: hasHoverDiff ? formatStyleDecls(hoverChanges) : null,
+      transition,
+    };
+  });
+}
+
 function generatePreviewHtml(tokens: DesignTokens): string {
   const colors = topColors(tokens.colorTokens, 20);
   const typo = tokens.typographyLevels.slice(0, 8);
@@ -58,6 +137,7 @@ function generatePreviewHtml(tokens: DesignTokens): string {
   const bgColor = inferBackground(colors);
   const textColor = inferTextColor(colors);
   const primary = inferPrimary(colors);
+  const buttonVariants = buildButtonVariants(tokens);
 
   const fontFamily = typo[0]?.fontFamily ?? 'system-ui';
 
@@ -110,12 +190,20 @@ function generatePreviewHtml(tokens: DesignTokens): string {
     font-weight: 500;
     border: none;
     cursor: pointer;
-    transition: opacity 0.15s;
     font-family: inherit;
   }
+${buttonVariants
+  ? buttonVariants.map((v) => `  .btn--${v.slug} {
+${v.baseDecls}
+${v.transition ? `    transition: ${v.transition};` : '    transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms;'}
+  }
+  .btn--${v.slug}:hover {
+${v.hoverDecls ?? '    opacity: 0.85;'}
+  }`).join('\n')
+  : `  .btn { transition: opacity 0.15s; }
   .btn:hover { opacity: 0.85; }
   .btn--primary { background: ${primary}; color: #fff; }
-  .btn--secondary { background: transparent; color: ${textColor}; border: 1px solid ${textColor}30; }
+  .btn--secondary { background: transparent; color: ${textColor}; border: 1px solid ${textColor}30; }`}
 
   /* Shadow Showcase */
   .shadow-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; }
@@ -192,10 +280,12 @@ ${typo.map((t) => `<div class="typo-row">
 
 <!-- Components -->
 <section class="section">
-<h2>Buttons</h2>
+<h2>Buttons${buttonVariants ? ` <span style="font-size:0.7rem;font-weight:400;opacity:0.55;font-family:monospace;">${buttonVariants.length} captured variant${buttonVariants.length === 1 ? '' : 's'}${buttonVariants.some((v) => v.hoverDecls) ? ' · hover from live page' : ' · no hover diff captured'}</span>` : ''}</h2>
 <div class="btn-row">
-  <button class="btn btn--primary" style="border-radius:${radii[0]?.value ?? '6px'}">Primary Action</button>
-  <button class="btn btn--secondary" style="border-radius:${radii[0]?.value ?? '6px'}">Secondary</button>
+${buttonVariants
+  ? buttonVariants.map((v) => `  <button class="btn btn--${v.slug}">${escapeHtml(v.label)}</button>`).join('\n')
+  : `  <button class="btn btn--primary" style="border-radius:${radii[0]?.value ?? '6px'}">Primary Action</button>
+  <button class="btn btn--secondary" style="border-radius:${radii[0]?.value ?? '6px'}">Secondary</button>`}
 </div>
 </section>
 
@@ -203,7 +293,9 @@ ${typo.map((t) => `<div class="typo-row">
 <h2>Input</h2>
 <div class="input-demo">
   <input class="input" style="border-radius:${radii[0]?.value ?? '4px'}" placeholder="Email address" />
-  <button class="btn btn--primary" style="border-radius:${radii[0]?.value ?? '6px'}">Submit</button>
+${buttonVariants
+  ? `  <button class="btn btn--${buttonVariants[0].slug}">Submit</button>`
+  : `  <button class="btn btn--primary" style="border-radius:${radii[0]?.value ?? '6px'}">Submit</button>`}
 </div>
 </section>
 

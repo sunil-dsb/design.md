@@ -6,6 +6,10 @@ import { Navbar } from "@/components/navbar";
 import { SkipLink } from "@/components/skip-link";
 import { scoreTokens, goldPathFor, type OverallScore } from "../../eval/score";
 import { assignColorRoles, assignTypeRoles } from "@/lib/engine/role-namer";
+import {
+  validateDesignMd,
+  type ValidationResult,
+} from "@/lib/engine/validate";
 import type { DesignTokens } from "@/lib/engine/types";
 import type { GoldTokens } from "../../eval/gold/types";
 
@@ -27,6 +31,24 @@ export const dynamic = "force-dynamic";
 interface ScoreboardRow {
   brand: string;
   score: OverallScore | null;
+  /**
+   * Result of running validate.ts against the brand's generated DESIGN.md.
+   * Null when no DESIGN.md exists yet (extraction without an agent write
+   * step), or when validation threw. Plan §5b: the scoreboard's second
+   * canonical column alongside accuracy.
+   */
+  validation: ValidationResult | null;
+  /** Reason validation is null  surfaced in the row when explanatory. */
+  validationNote?: string;
+  /**
+   * proof.ts pixel-fidelity coverage (ΔE < 12, image regions excluded).
+   * Plan §5b lists this as one of the required accuracy sub-metrics. Null
+   * when proof-summary.json wasn't produced (proof step skipped or older
+   * extraction predating the summary write).
+   */
+  proofCoverage: number | null;
+  /** Reason proofCoverage is null  surfaced when explanatory. */
+  proofNote?: string;
   goldPath: string;
   tokensSource: string;
   error?: string;
@@ -39,6 +61,36 @@ function findTokensPath(brand: string, root: string): string | null {
     path.join(root, "output", `${brand}.com`, "tokens.json"),
     path.join(root, "examples", brand, "tokens.json"),
     path.join(root, "output", brand, "tokens.json"),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return null;
+}
+
+/** Mirror of findTokensPath  the DESIGN.md sits next to tokens.json in
+ * every directory the engine writes to. Returns null when the file hasn't
+ * been generated yet (extraction without the agent write step). */
+function findDesignMdPath(brand: string, root: string): string | null {
+  const candidates = [
+    path.join(root, "output", `${brand}.com`, "DESIGN.md"),
+    path.join(root, "examples", brand, "DESIGN.md"),
+    path.join(root, "output", brand, "DESIGN.md"),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return null;
+}
+
+/** proof.ts writes proof-summary.json (slim) alongside proof-data.json
+ * (gitignored, includes screenshots). The summary is what's safe to
+ * commit + read here for the scoreboard. */
+function findProofSummaryPath(brand: string, root: string): string | null {
+  const candidates = [
+    path.join(root, "output", `${brand}.com`, "proof-summary.json"),
+    path.join(root, "examples", brand, "proof-summary.json"),
+    path.join(root, "output", brand, "proof-summary.json"),
   ];
   for (const c of candidates) {
     if (fs.existsSync(c)) return c;
@@ -64,6 +116,8 @@ function readBrandRows(): ScoreboardRow[] {
       rows.push({
         brand,
         score: null,
+        validation: null,
+        proofCoverage: null,
         goldPath,
         tokensSource: "",
         error: `No tokens.json found for ${brand}.`,
@@ -86,9 +140,52 @@ function readBrandRows(): ScoreboardRow[] {
       }
       const gold = JSON.parse(fs.readFileSync(goldPath, "utf-8")) as GoldTokens;
       const score = scoreTokens(tokens, gold);
+
+      // DESIGN.md validation  the second column plan §5b required.
+      // Failure cases (missing file, parse error in validate.ts) degrade
+      // gracefully: row still renders with the accuracy column populated.
+      let validation: ValidationResult | null = null;
+      let validationNote: string | undefined;
+      const designMdPath = findDesignMdPath(brand, root);
+      if (designMdPath) {
+        try {
+          const mdContent = fs.readFileSync(designMdPath, "utf-8");
+          validation = validateDesignMd(mdContent, tokens);
+        } catch (err) {
+          validationNote = `validate failed: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      } else {
+        validationNote = "no DESIGN.md generated yet";
+      }
+
+      // proof.ts pixel-fidelity coverage  same graceful-degradation
+      // pattern. proof-summary.json is the slim companion to the
+      // (gitignored) proof-data.json that contains screenshots.
+      let proofCoverage: number | null = null;
+      let proofNote: string | undefined;
+      const proofSummaryPath = findProofSummaryPath(brand, root);
+      if (proofSummaryPath) {
+        try {
+          const summary = JSON.parse(fs.readFileSync(proofSummaryPath, "utf-8"));
+          if (typeof summary?.coverage === "number") {
+            proofCoverage = summary.coverage;
+          } else {
+            proofNote = "no coverage in proof-summary.json";
+          }
+        } catch (err) {
+          proofNote = `proof summary parse failed: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      } else {
+        proofNote = "no proof run yet";
+      }
+
       rows.push({
         brand,
         score,
+        validation,
+        validationNote,
+        proofCoverage,
+        proofNote,
         goldPath,
         tokensSource: path.relative(root, tokensPath),
       });
@@ -96,6 +193,8 @@ function readBrandRows(): ScoreboardRow[] {
       rows.push({
         brand,
         score: null,
+        validation: null,
+        proofCoverage: null,
         goldPath,
         tokensSource: path.relative(root, tokensPath),
         error: err instanceof Error ? err.message : String(err),
@@ -149,7 +248,7 @@ export default function ScoreboardPage() {
             </p>
           </header>
 
-          <div className="mt-10 grid grid-cols-1 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-3">
+          <div className="mt-10 grid grid-cols-1 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
             <Stat label="brands scored" value={String(scored.length)} />
             <Stat
               label="avg composite"
@@ -165,6 +264,35 @@ export default function ScoreboardPage() {
             <Stat
               label="primary matches"
               value={`${scored.filter((r) => r.score?.colors.primary.pass).length}/${scored.length}`}
+            />
+            {/* Validation tracks DESIGN.md (validate.ts schema check, score
+                 >= 80 = pass). Only counts brands that have a DESIGN.md;
+                 missing docs show as "n/a" in the denominator so the user
+                 doesn't see an artificially low ratio when the agent
+                 hasn't run yet. */}
+            <Stat
+              label="validation passing"
+              value={(() => {
+                const validated = scored.filter((r) => r.validation !== null);
+                if (validated.length === 0) return "n/a";
+                const passing = validated.filter(
+                  (r) => (r.validation?.score ?? 0) >= 80,
+                ).length;
+                return `${passing}/${validated.length}`;
+              })()}
+              accent={(() => {
+                const validated = scored.filter((r) => r.validation !== null);
+                if (validated.length === 0) return "neutral";
+                const passingPct =
+                  validated.filter(
+                    (r) => (r.validation?.score ?? 0) >= 80,
+                  ).length / validated.length;
+                return passingPct >= 0.8
+                  ? "good"
+                  : passingPct >= 0.5
+                    ? "warn"
+                    : "bad";
+              })()}
             />
           </div>
 
@@ -184,9 +312,24 @@ export default function ScoreboardPage() {
             </h2>
             <div className="mt-4 space-y-4 text-sm leading-7 text-white/70">
               <p>
-                Each row scores one (brand × extraction) pair across four
-                dimensions. The composite is a weighted total out of 100.
+                Each row scores one (brand × extraction) pair across two
+                independent dimensions:
+                <strong className="text-white"> accuracy</strong> (composite
+                out of 100, weighted across primary / palette / typography /
+                spacing / coverage), and
+                <strong className="text-white"> validation</strong> (does the
+                generated <code className="font-mono text-white/85">DESIGN.md</code>{" "}
+                pass <code className="font-mono text-white/85">validate.ts</code>?
+                Score &gt; = 80 = pass). Plan-v1.md §5b: the two columns measure
+                different things  high accuracy with low validation means
+                the engine extracted well but the agent prose drifted from
+                the schema; the reverse means a well-formed doc built on
+                weak data.
               </p>
+
+              <h3 className="mt-6 font-pixel text-[11px] uppercase tracking-widest text-white">
+                accuracy composite (100 pts)
+              </h3>
               <ul className="list-disc space-y-2 pl-6">
                 <li>
                   <strong className="text-white">Primary (30 pts).</strong>{" "}
@@ -218,13 +361,45 @@ export default function ScoreboardPage() {
                   but missed everything still earns the lowest credit.
                 </li>
               </ul>
+
+              <h3 className="mt-6 font-pixel text-[11px] uppercase tracking-widest text-white">
+                proof.ts pixel coverage
+              </h3>
+              <p>
+                Independent of palette F1: we screenshot the live page,
+                exclude image / video / SVG / canvas / background-image
+                regions, sample 2000 non-image pixels, and check each against
+                the extracted palette within ΔE &lt; 12. The cell shows the
+                hit rate. Warn threshold mirrors the engine{" "}
+                <code className="font-mono text-white/85">low-proof-coverage</code>{" "}
+                diagnostic (&lt; 70%). A brand with no proof run yet shows{" "}
+                <span className="font-mono text-white/85">n/a</span>.
+              </p>
+
+              <h3 className="mt-6 font-pixel text-[11px] uppercase tracking-widest text-white">
+                validation pass rate
+              </h3>
+              <p>
+                For every brand that has a generated{" "}
+                <code className="font-mono text-white/85">DESIGN.md</code>, we
+                run <code className="font-mono text-white/85">validate.ts</code>{" "}
+                from the engine: 14 required sections present, every hex
+                value cross-references a real token (no phantoms), 3-digit
+                hex normalised, role-name vocabulary respected, accessibility
+                wording checks. The result is a 0-100 score; cells show{" "}
+                <span className="font-mono text-white/85">passed · warn · fail</span>{" "}
+                counts. A brand with no DESIGN.md yet (extraction without an
+                agent write step) shows{" "}
+                <span className="font-mono text-white/85">n/a</span> rather
+                than counting as a failure.
+              </p>
               <p>
                 Scoring is <strong className="text-white">deterministic</strong>
                 : same gold + same extraction → same score. The functions live
                 at{" "}
                 <code className="font-mono text-white/85">eval/score.ts</code>{" "}
                 and are covered by{" "}
-                <code className="font-mono text-white/85">22 unit tests</code>.
+                <code className="font-mono text-white/85">26 unit tests</code>.
               </p>
               <p>
                 What this does <strong className="text-white">not</strong>{" "}
@@ -280,14 +455,16 @@ function Stat({
 
 function ScoreboardTable({ rows }: { rows: ScoreboardRow[] }) {
   return (
-    <section className="mt-10 overflow-hidden border border-white/15">
-      <header className="grid grid-cols-[10rem_5rem_1fr_1fr_1fr_1fr] gap-3 border-b border-white/10 bg-white/3 px-5 py-3 font-pixel text-[10px] uppercase tracking-widest text-white/55">
+    <section className="mt-10 overflow-x-auto border border-white/15">
+      <header className="grid min-w-5xl grid-cols-[10rem_5rem_1fr_1fr_1fr_1fr_1fr_1fr] gap-3 border-b border-white/10 bg-white/3 px-5 py-3 font-pixel text-[10px] uppercase tracking-widest text-white/55">
         <span>brand</span>
         <span className="text-right">composite</span>
         <span>primary (ΔE)</span>
         <span>palette F1</span>
         <span>typography</span>
         <span>spacing</span>
+        <span>proof %</span>
+        <span>validation</span>
       </header>
       <ul role="list" className="divide-y divide-white/10">
         {rows.map((r) => (
@@ -319,8 +496,32 @@ function ScoreboardRow({ row }: { row: ScoreboardRow }) {
         ? "text-amber-300"
         : "text-red-300";
 
+  // Validation column. Three states: null + note (DESIGN.md missing),
+  // null + error (validate.ts threw), or a real ValidationResult.
+  // Pass threshold mirrors bin/validate.ts exit-code rule (score >= 80).
+  const validation = row.validation;
+  const validationPrimary = validation
+    ? `${validation.score}/100`
+    : row.validationNote ?? "n/a";
+  const validationSecondary = validation
+    ? `${validation.passed.length} pass · ${validation.warnings.length} warn · ${validation.failures.length} fail`
+    : undefined;
+  const validationPass = validation ? validation.score >= 80 : false;
+
+  // proof.ts coverage column. Warn threshold mirrors the
+  // `low-proof-coverage` diagnostic in lib/engine/diagnostics.ts (< 0.7);
+  // anything >= 0.9 is a strong pass. n/a when proof-summary.json absent.
+  const proofCoverage = row.proofCoverage;
+  const proofPrimary =
+    proofCoverage !== null
+      ? `${(proofCoverage * 100).toFixed(1)}%`
+      : row.proofNote ?? "n/a";
+  const proofSecondary =
+    proofCoverage !== null ? "ΔE < 12 · images excluded" : undefined;
+  const proofPass = proofCoverage !== null && proofCoverage >= 0.7;
+
   return (
-    <li className="grid grid-cols-[10rem_5rem_1fr_1fr_1fr_1fr] items-center gap-3 px-5 py-4">
+    <li className="grid min-w-5xl grid-cols-[10rem_5rem_1fr_1fr_1fr_1fr_1fr_1fr] items-center gap-3 px-5 py-4">
       <span className="font-pixel text-sm uppercase tracking-wide text-white">
         {row.brand}
       </span>
@@ -355,6 +556,18 @@ function ScoreboardRow({ row }: { row: ScoreboardRow }) {
         secondary={`scale ${(s.spacing.scaleRecall * 100).toFixed(0)}%`}
         pass={s.spacing.baseUnit.pass && s.spacing.scaleRecall >= 0.7}
       />
+      <Cell
+        primary={proofPrimary}
+        secondary={proofSecondary}
+        pass={proofPass}
+        dim={proofCoverage === null}
+      />
+      <Cell
+        primary={validationPrimary}
+        secondary={validationSecondary}
+        pass={validationPass}
+        dim={validation === null}
+      />
     </li>
   );
 }
@@ -363,18 +576,24 @@ function Cell({
   primary,
   secondary,
   pass,
+  dim = false,
 }: {
   primary: string;
   secondary?: string;
   pass: boolean;
+  /** Renders the cell as "not applicable" rather than green/red  used
+   * when the column is intentionally null (e.g. DESIGN.md not generated
+   * yet) rather than a failed comparison. */
+  dim?: boolean;
 }) {
+  const primaryClass = dim
+    ? "text-white/40"
+    : pass
+      ? "text-white/85"
+      : "text-red-300/85";
   return (
     <div className="min-w-0">
-      <p
-        className={`truncate font-mono text-xs ${pass ? "text-white/85" : "text-red-300/85"}`}
-      >
-        {primary}
-      </p>
+      <p className={`truncate font-mono text-xs ${primaryClass}`}>{primary}</p>
       {secondary && (
         <p className="mt-0.5 truncate font-mono text-[10px] text-white/40">
           {secondary}

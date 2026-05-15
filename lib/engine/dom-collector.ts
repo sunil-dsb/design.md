@@ -126,10 +126,72 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       return variables;
     }
 
-    //  2. Element Computed Style Census 
+    //  2. Element Computed Style Census
+
+    // Just the immediate text children of an element — not the descendant
+    // aggregate that `Element.textContent` returns. Used by the tree
+    // renderer so we don't double-print text on every ancestor.
+    function getDirectText(el: Element): string {
+      let text = '';
+      for (const node of Array.from(el.childNodes)) {
+        if (node.nodeType === 3 /* TEXT_NODE */) {
+          text += node.textContent ?? '';
+        }
+      }
+      return text.trim().replace(/\s+/g, ' ');
+    }
+
+    // Card-shaped container check — matches cluster.ts's heuristic so any
+    // element flagged here is also what cluster.ts identifies as a Card.
+    // Kept here because (a) we already have getComputedStyle + rect, and
+    // (b) we need to know it before tagging the DOM for screenshots.
+    function isCardLike(el: Element, cs: CSSStyleDeclaration, rect: DOMRect): boolean {
+      const radius = parseFloat(cs.borderRadius) || 0;
+      const padding = parseFloat(cs.paddingTop) || 0;
+      const bg = cs.backgroundColor;
+      const hasBg = !!bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent';
+      const hasShadow = !!cs.boxShadow && cs.boxShadow !== 'none';
+      const hasBorder =
+        parseFloat(cs.borderTopWidth) > 0 && cs.borderStyle !== 'none';
+      return (
+        (hasBg || hasShadow || hasBorder) &&
+        radius > 0 &&
+        padding >= 12 &&
+        el.children.length >= 2 &&
+        rect.width >= 200 &&
+        rect.width <= 800
+      );
+    }
+
+    // Pricing-tier sub-heuristic — assumes the element is already card-like.
+    // Looks for price signals (`$`, `/mo`, "per month", etc) + a list + a
+    // CTA. Conservative on purpose: false positives clutter the UI more
+    // than false negatives.
+    function isPricingTierLike(el: Element): boolean {
+      const text = el.textContent ?? '';
+      const hasPriceSignal =
+        /\$\s*\d|\/\s*mo\b|per\s+month|per\s+year|\/\s*year\b|monthly|annually/i.test(
+          text,
+        );
+      const hasList = !!el.querySelector('ul, ol');
+      const hasCta = !!el.querySelector(
+        'button, a[role="button"], [type="button"], a[class*="btn"], a[class*="button"]',
+      );
+      return hasPriceSignal && hasList && hasCta;
+    }
 
     function extractElements(): ElementStyle[] {
       const allEls = document.querySelectorAll('*');
+
+      // Build a stable DFS-index map BEFORE any filtering. nodeId is the
+      // element's index in the live document order; parentNodeId refers
+      // to the same numbering. cluster.ts uses this map to reconstruct
+      // descendant trees from the otherwise-flat elements array.
+      const nodeIdMap = new Map<Element, number>();
+      for (let i = 0; i < allEls.length; i++) {
+        nodeIdMap.set(allEls[i], i);
+      }
+
       const candidates: { el: Element; zIndex: number; area: number; inViewport: boolean }[] = [];
 
       for (let i = 0; i < allEls.length; i++) {
@@ -170,8 +232,32 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       return selected.map(({ el }) => {
         const rect = el.getBoundingClientRect();
         const cs = getComputedStyle(el);
+        const nodeId = nodeIdMap.get(el) ?? -1;
+        const parentEl = el.parentElement;
+        const parentNodeId =
+          parentEl && nodeIdMap.has(parentEl) ? nodeIdMap.get(parentEl)! : -1;
+
+        // Card / pricing-tier candidates get tagged on the LIVE dom so a
+        // subsequent server-side Playwright pass can locate and screenshot
+        // them. The attribute lives on a unique key (`data-designmd-cap`)
+        // that's vanishingly unlikely to collide with the source's own
+        // styles. Pricing tiers are a sub-flag — same screenshot pipeline,
+        // separate variant grouping in cluster.ts.
+        const cardLike = isCardLike(el, cs, rect);
+        const pricingLike = cardLike && isPricingTierLike(el);
+        if (cardLike) {
+          el.setAttribute('data-designmd-cap', String(nodeId));
+          el.setAttribute(
+            'data-designmd-cap-role',
+            pricingLike ? 'pricing' : 'card',
+          );
+        }
 
         return {
+          nodeId,
+          parentNodeId,
+          directText: getDirectText(el).slice(0, 200),
+          isPricingTierCandidate: pricingLike || undefined,
           tag: el.tagName.toLowerCase(),
           className: (el.getAttribute('class') || '').trim(),
           role: el.getAttribute('role') || '',

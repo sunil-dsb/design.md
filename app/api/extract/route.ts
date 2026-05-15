@@ -7,7 +7,11 @@ import { generateReport } from "@/lib/engine/report-gen";
 import { generatePromptPack } from "@/lib/engine/prompt-pack";
 import { generateAndWriteDesignMd } from "@/lib/engine/design-md-emit";
 import { assignColorRoles, assignTypeRoles } from "@/lib/engine/role-namer";
-import { computeDiagnostics, type ProofSummary } from "@/lib/engine/diagnostics";
+import {
+  computeDiagnostics,
+  type Diagnostic,
+  type ProofSummary,
+} from "@/lib/engine/diagnostics";
 import { applyVisibilityWeighting, DEFAULT_VIEWPORT } from "@/lib/engine/visibility-weight";
 import { generateAndWriteRamps } from "@/lib/engine/ramp-regen";
 import { generateAndWriteTailwindCss } from "@/lib/engine/tailwind-emit";
@@ -242,6 +246,13 @@ export async function POST(req: Request) {
       };
 
       const warnings: string[] = [];
+      // Diagnostics surface as separate SSE events so the result panel
+      // can render them progressively (plan-v1.md §4 deliverable 4).
+      // `earlyDiagnostics` are computed right after extraction + visibility
+      // weighting; `lateDiagnostics` after Phase 3 (proof + role-namer).
+      // The two arrays merge into the canonical list shipped in the final
+      // `result` event for clients that prefer one-shot consumption.
+      let earlyDiagnostics: Diagnostic[] = [];
       // shadcn has two output states  emitted CSS, or an explanatory
       // omit-reason markdown when the gates fail. We track both so the
       // SPA can surface the right artifact URL.
@@ -319,6 +330,34 @@ export async function POST(req: Request) {
           // Strip failure is non-fatal — tokens.json may just be larger.
           warnings.push(
             `darkScreenshots strip skipped: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+
+        //  Early diagnostics checkpoint
+        // Stream rules that need only tokens + extraction-report. Phase 3
+        // hasn't run yet, so proof-dependent and role-named rules wait
+        // until the late checkpoint below.
+        //
+        // Best-effort: a parse failure here must not abort the pipeline.
+        // If we can't read either file, the late checkpoint still sees
+        // them via the canonical reads further down.
+        try {
+          const earlyTokens = JSON.parse(fs.readFileSync(tokensPath, "utf-8"));
+          const earlyReportPath = path.join(outputDir, "extraction-report.json");
+          const earlyReport = fs.existsSync(earlyReportPath)
+            ? JSON.parse(fs.readFileSync(earlyReportPath, "utf-8"))
+            : null;
+          earlyDiagnostics = computeDiagnostics({
+            tokens: earlyTokens,
+            report: earlyReport,
+            proof: null,
+            warnings: [],
+            phase: "early",
+          });
+          for (const d of earlyDiagnostics) sendEvent("diagnostic", d);
+        } catch (err) {
+          warnings.push(
+            `early diagnostics skipped: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
 
@@ -614,16 +653,23 @@ export async function POST(req: Request) {
           }
         }
 
-        //  Engine diagnostics 
-        // Pure function over (tokens, report, proof, warnings). Produces a
-        // flat list the SPA renders in the result panel. See
-        // lib/engine/diagnostics.ts for the rule set.
-        const diagnostics = computeDiagnostics({
+        //  Late diagnostics checkpoint
+        // Stream rules that needed Phase 3 outputs: proof coverage / sample
+        // size, the role-named "primary-is-grey" check, and any pipeline
+        // warnings accumulated during Phase 3 (e.g. proof:error). The
+        // earlier checkpoint already streamed tokens+report-only rules.
+        const lateDiagnostics = computeDiagnostics({
           tokens,
           report,
           proof: proofSummary,
           warnings,
+          phase: "late",
         });
+        for (const d of lateDiagnostics) sendEvent("diagnostic", d);
+
+        // Canonical merged list  ships in the final `result` event so any
+        // client that ignored the streamed events still gets the full set.
+        const diagnostics = [...earlyDiagnostics, ...lateDiagnostics];
 
         const outputBase = `/api/output/${encodeURIComponent(slug)}`;
         sendEvent("result", {

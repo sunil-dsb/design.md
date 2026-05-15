@@ -10,6 +10,9 @@ type CommonProps = {
   children: ReactNode;
   icon?: ReactNode;
   size?: "sm" | "lg";
+  // Optional color modifier. Default = primary blue (the original look).
+  // "green" maps to .bubble-btn--green in globals.css.
+  tone?: "blue" | "green";
 };
 
 type LinkVariantProps = CommonProps &
@@ -23,9 +26,14 @@ type ButtonVariantProps = CommonProps &
 type BubbleButtonProps = LinkVariantProps | ButtonVariantProps;
 
 export function BubbleButton(props: BubbleButtonProps) {
-  const { children, icon = "+", size = "sm", ...rest } = props;
-  const className =
-    size === "lg" ? "bubble-btn bubble-btn--lg" : "bubble-btn";
+  const { children, icon = "+", size = "sm", tone = "blue", ...rest } = props;
+  const className = [
+    "bubble-btn",
+    size === "lg" ? "bubble-btn--lg" : "",
+    tone === "green" ? "bubble-btn--green" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const inner = (
     <>
       <span className="bubble-btn__text">{children}</span>

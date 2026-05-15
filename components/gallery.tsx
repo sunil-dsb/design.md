@@ -1,7 +1,6 @@
 import Image from "next/image";
 import type { ComponentType, SVGProps } from "react";
 import {
-  SiCursor,
   SiGithub,
   SiLinear,
   SiRaycast,
@@ -44,8 +43,19 @@ const GALLERY: GalleryEntry[] = [
     swatch: "linear-gradient(135deg,#635bff,#7a73ff)",
     Logo: SiStripe,
     live: true,
-    views: 12_400,
-    installs: 2_100,
+    views: 487,
+    installs: 92,
+    badge: "hot",
+  },
+  {
+    slug: "ibm",
+    name: "IBM",
+    tagline: "Carbon design system",
+    swatch: "linear-gradient(135deg,#0f62fe,#002d9c)",
+    logoSrc: "/ibm.png",
+    live: true,
+    views: 412,
+    installs: 78,
     badge: "hot",
   },
   {
@@ -55,9 +65,8 @@ const GALLERY: GalleryEntry[] = [
     swatch: "linear-gradient(135deg,#5e6ad2,#8b93ff)",
     Logo: SiLinear,
     live: true,
-    views: 8_700,
-    installs: 1_420,
-    badge: "hot",
+    views: 356,
+    installs: 64,
   },
   {
     slug: "vercel",
@@ -66,8 +75,8 @@ const GALLERY: GalleryEntry[] = [
     swatch: "linear-gradient(135deg,#000000,#404040)",
     Logo: SiVercel,
     live: true,
-    views: 5_240,
-    installs: 940,
+    views: 248,
+    installs: 47,
   },
   {
     slug: "supabase",
@@ -76,17 +85,9 @@ const GALLERY: GalleryEntry[] = [
     swatch: "linear-gradient(135deg,#3ecf8e,#1f6f4d)",
     Logo: SiSupabase,
     live: true,
-    views: 3_120,
-    installs: 520,
+    views: 184,
+    installs: 32,
     badge: "new",
-  },
-  {
-    slug: "cursor",
-    name: "Cursor",
-    tagline: "AI code editor",
-    swatch: "linear-gradient(135deg,#0c0c0c,#3a3a3a)",
-    Logo: SiCursor,
-    live: false,
   },
   {
     slug: "raycast",
@@ -194,10 +195,10 @@ function GalleryCard({ entry }: { entry: GalleryEntry }) {
           <Image
             src={entry.logoSrc}
             alt=""
-            width={32}
-            height={32}
-            sizes="(min-width: 640px) 2rem, 1.5rem"
-            className="size-6 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)] sm:size-8"
+            width={48}
+            height={48}
+            sizes="(min-width: 640px) 3rem, 2.25rem"
+            className="size-9 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)] sm:size-12"
           />
         ) : null}
         <span className="font-pixel text-sm tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] lowercase">

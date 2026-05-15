@@ -12,6 +12,7 @@ import { ArrowIcon } from "@/icons/arrow";
 import { BubbleButton } from "@/components/bubble-button";
 import type { Diagnostic } from "@/lib/engine/diagnostics";
 import { rolePriority, type ColorRole } from "@/lib/engine/role-namer";
+import type { ComponentNode } from "@/lib/engine/types";
 
 //  Stage-tracking types
 // Mirrors the SSE protocol defined in app/api/extract/route.ts. Four stages
@@ -155,7 +156,7 @@ interface ExtractResponse {
     colorTokens?: Array<{
       hex: string;
       frequency: number;
-      stability?: { layer: string; confidence: number };
+      stability?: { layer: string; confidence: number; signals?: string[] };
       role?: string | null;
       roleLabel?: string | null;
     }>;
@@ -166,6 +167,7 @@ interface ExtractResponse {
       frequency: number;
       role?: string | null;
       roleLabel?: string | null;
+      stability?: { layer: string; confidence: number; signals?: string[] };
     }>;
     spacingSystem?: {
       baseUnit: number;
@@ -177,12 +179,14 @@ interface ExtractResponse {
       value: string;
       frequency: number;
       typicalElements?: string[];
+      stability?: { layer: string; confidence: number; signals?: string[] };
     }>;
     shadowTokens?: Array<{
       value: string;
       frequency: number;
       type?: string;
       typicalElements?: string[];
+      stability?: { layer: string; confidence: number; signals?: string[] };
     }>;
     motionSystem?: {
       durationScale?: Array<{
@@ -244,6 +248,12 @@ interface ExtractResponse {
         disabledStyle?: Record<string, string> | null;
         transition?: string | null;
         sampleTexts?: string[];
+        // Captured DOM tree for composed types (Card / PricingTier).
+        // Rendered as a copyable HTML+CSS code snippet, never as live DOM.
+        tree?: ComponentNode;
+        // Relative path to a Playwright screenshot of the representative
+        // element. Combined with `/api/output/<slug>` at render time.
+        screenshotUrl?: string;
       }>;
     }>;
     iconSystem?: {
@@ -309,6 +319,13 @@ export function ExtractClient() {
   const [stages, setStages] = useState<Record<StageKey, StageState>>(() =>
     structuredClone(INITIAL_STAGES),
   );
+  // Diagnostics streamed via SSE during the extraction (per plan-v1.md §4
+  // "separate SSE events"). Shown in the loading panel so the user sees
+  // engine concerns as they're detected; once `result` lands, ResultState
+  // renders the canonical merged list from result.diagnostics instead.
+  const [streamedDiagnostics, setStreamedDiagnostics] = useState<Diagnostic[]>(
+    [],
+  );
   // Allow aborting an in-flight stream if the user resubmits or navigates.
   const abortRef = useRef<AbortController | null>(null);
   // Ensures the on-mount auto-extraction only fires once per mount, even
@@ -333,6 +350,7 @@ export function ExtractClient() {
     setResult(null);
     setError(null);
     setStages(structuredClone(INITIAL_STAGES));
+    setStreamedDiagnostics([]);
 
     try {
       // Forward the page's `?key=` query param to the API route so the
@@ -403,6 +421,20 @@ export function ExtractClient() {
               message: ev.detail?.message ?? prev[parsed.key].message,
             },
           }));
+        } else if (
+          event === "diagnostic" &&
+          data &&
+          typeof data === "object"
+        ) {
+          // Streamed by the API route at two checkpoints (early after
+          // weighting, late after Phase 3). Dedup by id so a misbehaving
+          // server resending the same diagnostic doesn't double-render.
+          const d = data as Diagnostic;
+          if (typeof d.id === "string" && d.id.length > 0) {
+            setStreamedDiagnostics((prev) =>
+              prev.some((p) => p.id === d.id) ? prev : [...prev, d],
+            );
+          }
         } else if (event === "result" && data && typeof data === "object") {
           resultReceived = true;
           setResult(data as ExtractResponse);
@@ -522,7 +554,10 @@ export function ExtractClient() {
       ) : error ? (
         <ErrorState message={error} />
       ) : loading ? (
-        <LoadingState stages={stages} />
+        <LoadingState
+          stages={stages}
+          streamedDiagnostics={streamedDiagnostics}
+        />
       ) : null}
     </article>
   );
@@ -580,7 +615,13 @@ const STAGE_DESCRIPTIONS: Record<StageKey, string> = {
     "Final pass: writing the deterministic DESIGN.md with all canonical sections. This is the file you drop in your repo.",
 };
 
-function LoadingState({ stages }: { stages: Record<StageKey, StageState> }) {
+function LoadingState({
+  stages,
+  streamedDiagnostics,
+}: {
+  stages: Record<StageKey, StageState>;
+  streamedDiagnostics: Diagnostic[];
+}) {
   // Current stage drives the headline + body copy. Falls back to a generic
   // "starting" state before any stage report arrives.
   const runningKey = STAGE_ORDER.find((k) => stages[k].status === "running");
@@ -623,7 +664,56 @@ function LoadingState({ stages }: { stages: Record<StageKey, StageState> }) {
             <StageRow key={key} index={i + 1} state={stages[key]} />
           ))}
         </ul>
+
+        {streamedDiagnostics.length > 0 && (
+          <StreamingDiagnostics diagnostics={streamedDiagnostics} />
+        )}
       </div>
+    </section>
+  );
+}
+
+// In-flight diagnostics rendered below the stage list. Compact one-row-per
+// diagnostic strip: severity dot + title. Full details (message, action,
+// signals) land in the post-result `DiagnosticsPanel`; here we just signal
+// "these were flagged as the engine ran" so the user has early context.
+function StreamingDiagnostics({
+  diagnostics,
+}: {
+  diagnostics: Diagnostic[];
+}) {
+  const SEVERITY_TONE: Record<Diagnostic["severity"], string> = {
+    error: "text-red-300",
+    warning: "text-amber-300",
+    info: "text-sky-300",
+  };
+  return (
+    <section
+      aria-label="Engine diagnostics streaming in"
+      className="mt-6 border border-white/10"
+    >
+      <header className="border-b border-white/10 bg-white/3 px-4 py-2 font-pixel text-[10px] uppercase tracking-widest text-white/55">
+        diagnostics · {diagnostics.length}
+      </header>
+      <ul role="list" className="divide-y divide-white/5">
+        {diagnostics.map((d) => (
+          <li
+            key={d.id}
+            className="flex items-center gap-3 px-4 py-2.5 text-xs"
+          >
+            <span
+              aria-hidden="true"
+              className={`size-1.5 shrink-0 rounded-full bg-current ${SEVERITY_TONE[d.severity]}`}
+            />
+            <span className={`shrink-0 font-mono text-[10px] uppercase tracking-widest ${SEVERITY_TONE[d.severity]}`}>
+              {d.severity}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-white/80">
+              {d.title}
+            </span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -1025,6 +1115,8 @@ function ResultState({ result }: { result: ExtractResponse }) {
                 label={c.roleLabel!}
                 frequency={c.frequency}
                 layer={c.stability?.layer}
+                confidence={c.stability?.confidence}
+                signals={c.stability?.signals}
               />
             ))}
           </div>
@@ -1039,23 +1131,7 @@ function ResultState({ result }: { result: ExtractResponse }) {
           subtitle="Unlabelled colors below the role-naming threshold. Review for clustering accuracy."
           defaultOpen={false}
         >
-          <ul
-            role="list"
-            className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8"
-          >
-            {longTailColors.slice(0, 16).map((c, i) => (
-              <li key={`${c.hex}-${i}`} className="border border-white/10 p-2">
-                <div
-                  aria-hidden="true"
-                  className="aspect-square w-full"
-                  style={{ background: c.hex }}
-                />
-                <p className="mt-2 truncate font-mono text-[10px] text-white/70">
-                  {c.hex}
-                </p>
-              </li>
-            ))}
-          </ul>
+          <LongTailColors colors={longTailColors.slice(0, 32)} />
         </CollapsibleSection>
       )}
 
@@ -1067,14 +1143,7 @@ function ResultState({ result }: { result: ExtractResponse }) {
           label="typography"
           count={typography.length}
         >
-          <ul
-            role="list"
-            className="divide-y divide-white/10 border border-white/15"
-          >
-            {typography.slice(0, 16).map((t, i) => (
-              <TypographyRow key={`${t.fontFamily}-${i}`} index={i + 1} t={t} />
-            ))}
-          </ul>
+          <TypographyList typography={typography.slice(0, 16)} />
         </SectionHeader>
       )}
 
@@ -1087,7 +1156,10 @@ function ResultState({ result }: { result: ExtractResponse }) {
       <RadiusSection radiusTokens={tokens.radiusTokens} />
       <ShadowsSection shadowTokens={tokens.shadowTokens} />
       <MotionSection motionSystem={tokens.motionSystem} />
-      <LiveComponentsSection components={tokens.components} />
+      <LiveComponentsSection
+        components={tokens.components}
+        baseUrl={deriveOutputBaseUrl(artifacts)}
+      />
       <AccessibilitySection a11yTokens={tokens.a11yTokens} />
       <ResponsiveSection breakpoints={tokens.breakpoints} />
       <IconographySection iconSystem={tokens.iconSystem} />
@@ -1168,6 +1240,19 @@ function CopyValue({ value, label }: { value: string; label?: string }) {
       {copied ? "copied ✓" : "copy"}
     </button>
   );
+}
+
+// Engine writes component screenshots to `output/<slug>/components/<file>.png`
+// and emits `screenshotUrl` as the relative path (`components/<file>.png`).
+// We need the `/api/output/<slug>` prefix to load them — derive that from
+// `artifacts.tokensJsonUrl`, which always has the form `${base}/tokens.json`.
+// Empty string when artifacts haven't materialised yet (the renderer treats
+// that as "no screenshot available" and falls back to the code-only view).
+function deriveOutputBaseUrl(
+  artifacts?: ExtractResponse["artifacts"],
+): string {
+  if (!artifacts?.tokensJsonUrl) return "";
+  return artifacts.tokensJsonUrl.replace(/\/tokens\.json$/, "");
 }
 
 //  Reusable section header for the new native sections
@@ -1333,7 +1418,7 @@ function RadiusSection({
               className="size-16 shrink-0 border border-white/25 bg-white/8"
               style={{ borderRadius: r.value }}
             />
-            <div className="text-center">
+            <div className="flex flex-col items-center text-center">
               <p className="font-pixel text-base tracking-tight text-white">
                 {r.value}
               </p>
@@ -1343,6 +1428,15 @@ function RadiusSection({
               <p className="mt-2 font-pixel text-[10px] uppercase tracking-widest text-white/55">
                 {r.frequency}× used
               </p>
+              {r.stability?.layer && (
+                <div className="mt-2">
+                  <StabilityChip
+                    layer={r.stability.layer}
+                    confidence={r.stability.confidence}
+                    signals={r.stability.signals}
+                  />
+                </div>
+              )}
             </div>
           </li>
         ))}
@@ -1380,12 +1474,24 @@ function ShadowsSection({
             </div>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-2 font-pixel text-[10px] uppercase tracking-widest text-white">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-pixel text-[10px] uppercase tracking-widest text-white">
                   <span>{s.type ?? "shadow"}</span>
                   <span aria-hidden="true" className="text-white/35">
                     ·
                   </span>
                   <span className="text-primary">{s.frequency}× used</span>
+                  {s.stability?.layer && (
+                    <>
+                      <span aria-hidden="true" className="text-white/35">
+                        ·
+                      </span>
+                      <StabilityChip
+                        layer={s.stability.layer}
+                        confidence={s.stability.confidence}
+                        signals={s.stability.signals}
+                      />
+                    </>
+                  )}
                 </p>
                 <code className="mt-2 block break-all font-mono text-[11px] text-white/70">
                   {s.value}
@@ -1638,66 +1744,330 @@ function parseEasing(value: string): [number, number, number, number] {
 // extracted hoverChanges via React state.
 function LiveComponentsSection({
   components,
+  baseUrl,
 }: {
   components?: ExtractResponse["tokens"]["components"];
+  baseUrl: string;
 }) {
-  if (!components || components.length === 0) return null;
+  // Drop Footer + Navigation — they're full-page layout regions whose
+  // captured outer-chrome render isn't useful on its own (without the
+  // page's full layout context, they look like empty containers). The
+  // engine still extracts them into tokens.json for downstream consumers
+  // (DESIGN.md, prompt-pack); we just don't surface them in the UI.
+  const SKIP_TYPES = new Set(["footer", "navigation"]);
+  const filtered = (components ?? []).filter(
+    (g) => !SKIP_TYPES.has(g.type.toLowerCase()),
+  );
+  if (filtered.length === 0) return null;
   return (
     <section>
       <PanelHeader
         label="components (live)"
-        count={components.reduce((n, g) => n + g.variants.length, 0)}
-        subtitle="Real components rendered with the captured CSS. Hover to see hover-state changes. Layout-heavy components (cards, footer, hero, nav) may render incomplete  the engine only captures visual props, not internal structure."
+        count={filtered.reduce((n, g) => n + g.variants.length, 0)}
+        subtitle="Buttons / badges / inputs render with the captured CSS. Cards and pricing tiers show pixel-perfect screenshots of the source element (toggle to see the captured HTML+CSS structure)."
       />
-      <div className="space-y-6">
-        {components.map((g) => (
-          <div key={g.type} className="overflow-hidden border border-white/10">
-            <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/3 px-4 py-2.5">
-              <h3 className="font-pixel text-xs uppercase tracking-widest text-white">
-                {g.type}
-              </h3>
-              <span
-                aria-hidden="true"
-                className="font-pixel text-[10px] uppercase tracking-widest text-white/60"
-              >
-                {g.variants.length}{" "}
-                {g.variants.length === 1 ? "variant" : "variants"}
-              </span>
-            </header>
-            <ul
-              role="list"
-              className="flex flex-wrap items-center gap-4 p-6"
-              style={{
-                // Checkerboard backdrop so components in any colour
-                // (including pure black or pure white) stay visible against
-                // the preview surface.
-                backgroundImage:
-                  "linear-gradient(45deg, rgba(255,255,255,0.06) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.06) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.06) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.06) 75%)",
-                backgroundSize: "16px 16px",
-                backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px",
-                backgroundColor: "#1a1a1a",
-              }}
-            >
-              {g.variants.slice(0, 6).map((v) => (
-                <li
-                  key={v.name}
-                  className="flex flex-col items-start gap-2 border border-white/15 bg-black/40 p-4 backdrop-blur-sm"
+      <div className="space-y-10">
+        {filtered.map((g) => {
+          // Engine emits capitalized types (Button / Badge / Card / Hero /
+          // Input / Navigation / Link / Footer / PricingTier). Wide layout
+          // types get a 1-up grid so the sample has room to breathe;
+          // chip-sized components tile in a 2/3-up grid.
+          const typeKey = g.type.toLowerCase();
+          const isComposed = typeKey === "card" || typeKey === "pricingtier";
+          const isWide =
+            isComposed ||
+            typeKey === "hero" ||
+            typeKey === "navigation" ||
+            typeKey === "footer" ||
+            typeKey === "input" ||
+            typeKey === "textarea" ||
+            typeKey === "form";
+          const gridCols = isWide
+            ? "grid-cols-1"
+            : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+          // Humanize PricingTier → "Pricing Tier" in the section header.
+          const displayType = g.type.replace(/([a-z])([A-Z])/g, "$1 $2");
+
+          return (
+            <div key={g.type}>
+              <header className="mb-3 flex items-baseline justify-between gap-3">
+                <h3 className="font-pixel text-xs uppercase tracking-widest text-white">
+                  {displayType}
+                </h3>
+                <span
+                  aria-hidden="true"
+                  className="font-pixel text-[10px] uppercase tracking-widest text-white/55"
                 >
-                  <LiveVariant type={g.type} variant={v} />
-                  <span className="font-pixel text-[9px] uppercase tracking-widest text-white/70">
-                    {v.name}
-                    {v.count > 1 && (
-                      <span className="ml-1.5 text-primary">{v.count}×</span>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+                  {g.variants.length}{" "}
+                  {g.variants.length === 1 ? "variant" : "variants"}
+                </span>
+              </header>
+
+              <ul role="list" className={`grid gap-3 ${gridCols}`}>
+                {g.variants.slice(0, 6).map((v, idx) =>
+                  isComposed ? (
+                    <ComposedVariantCard
+                      // Index-suffixed key: the engine can emit two variants
+                      // that share the same `name` (button-cluster sometimes
+                      // produces "Ghost sm" twice after size-based splitting),
+                      // and React would warn / behave unpredictably with a
+                      // duplicate key. The index makes the key stable within
+                      // the rendered slice.
+                      key={`${v.name}-${idx}`}
+                      variant={v}
+                      baseUrl={baseUrl}
+                    />
+                  ) : (
+                    <li
+                      key={`${v.name}-${idx}`}
+                      className="group relative flex flex-col border border-white/10 bg-white transition-colors hover:border-white/25"
+                    >
+                      {/* White preview surface. The captured components
+                          mostly have their own backgrounds; for the rare
+                          pure-white variant, the card's own border keeps
+                          the silhouette visible. */}
+                      <div className="flex min-h-32 flex-1 items-center justify-center bg-white p-8">
+                        <LiveVariant type={g.type} variant={v} />
+                      </div>
+                      <footer className="flex items-center justify-between gap-2 border-t border-white/10 px-4 py-3">
+                        <p className="truncate font-pixel text-[10px] uppercase tracking-widest text-white">
+                          {v.name}
+                        </p>
+                        {v.count > 1 && (
+                          <span
+                            aria-hidden="true"
+                            className="shrink-0 font-pixel text-[10px] uppercase tracking-widest text-white/55"
+                          >
+                            {v.count}×
+                          </span>
+                        )}
+                      </footer>
+                    </li>
+                  ),
+                )}
+              </ul>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
+}
+
+// Variant card for composed types (Card / PricingTier). Tab toggle between
+// the captured source screenshot (pixel-perfect) and the captured DOM tree
+// rendered as a copyable HTML+CSS snippet. When the engine couldn't
+// capture either (older fixtures, screenshot pass failure), the card
+// degrades gracefully to whichever view is available, then to a "no
+// preview" plaque so the variant still surfaces in the section.
+function ComposedVariantCard({
+  variant,
+  baseUrl,
+}: {
+  variant: NonNullable<
+    ExtractResponse["tokens"]["components"]
+  >[number]["variants"][number];
+  baseUrl: string;
+}) {
+  const hasScreenshot = !!variant.screenshotUrl && !!baseUrl;
+  const hasTree = !!variant.tree;
+  const [tab, setTab] = useState<"preview" | "code">(
+    hasScreenshot ? "preview" : "code",
+  );
+  const [copied, setCopied] = useState(false);
+
+  const snippet = hasTree ? stringifyComponentTree(variant.tree!) : "";
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard requires secure context — fall back to the visible snippet.
+    }
+  }
+
+  const screenshotSrc = hasScreenshot
+    ? `${baseUrl}/${variant.screenshotUrl}`
+    : null;
+
+  return (
+    <li className="group relative flex flex-col border border-white/10 bg-white/[0.02] transition-colors hover:border-white/25">
+      {/* Tab strip — only renders both tabs if both views are available. */}
+      {(hasScreenshot || hasTree) && (
+        <div
+          role="tablist"
+          aria-label={`${variant.name} preview mode`}
+          className="flex items-stretch border-b border-white/10 bg-black/30"
+        >
+          {hasScreenshot && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "preview"}
+              onClick={() => setTab("preview")}
+              className={`px-4 py-2 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
+                tab === "preview"
+                  ? "bg-white text-black"
+                  : "text-white/55 hover:text-white"
+              }`}
+            >
+              source
+            </button>
+          )}
+          {hasTree && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "code"}
+              onClick={() => setTab("code")}
+              className={`px-4 py-2 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
+                tab === "code"
+                  ? "bg-white text-black"
+                  : "text-white/55 hover:text-white"
+              }`}
+            >
+              code
+            </button>
+          )}
+          <span className="flex-1" aria-hidden="true" />
+          {tab === "code" && hasTree && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              aria-label={copied ? "Snippet copied" : "Copy snippet"}
+              className={`px-4 py-2 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
+                copied ? "text-primary" : "text-white/55 hover:text-white"
+              }`}
+            >
+              {copied ? "copied ✓" : "copy"}
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="relative flex min-h-48 flex-1 flex-col">
+        {tab === "preview" && screenshotSrc && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={screenshotSrc}
+            alt={`${variant.name} source render`}
+            className="block w-full max-h-[640px] object-contain bg-white"
+            loading="lazy"
+          />
+        )}
+        {tab === "code" && hasTree && (
+          <pre className="overflow-x-auto bg-black px-4 py-4 font-mono text-[11px] leading-relaxed text-white/85">
+            <code>{snippet}</code>
+          </pre>
+        )}
+        {!hasScreenshot && !hasTree && (
+          <div className="flex flex-1 items-center justify-center bg-white p-8">
+            <p className="font-pixel text-[10px] uppercase tracking-widest text-white/45">
+              no preview captured
+            </p>
+          </div>
+        )}
+      </div>
+
+      <footer className="flex items-center justify-between gap-2 border-t border-white/10 px-4 py-3">
+        <p className="truncate font-pixel text-[10px] uppercase tracking-widest text-white">
+          {variant.name}
+        </p>
+        {variant.count > 1 && (
+          <span
+            aria-hidden="true"
+            className="shrink-0 font-pixel text-[10px] uppercase tracking-widest text-white/55"
+          >
+            {variant.count}×
+          </span>
+        )}
+      </footer>
+    </li>
+  );
+}
+
+// HTML void elements (self-closing). The stringifier emits `<img />` for
+// these and `<div>...</div>` for everything else.
+const TREE_VOID_TAGS = new Set([
+  "br",
+  "hr",
+  "img",
+  "input",
+  "meta",
+  "link",
+  "source",
+  "area",
+  "embed",
+  "track",
+  "wbr",
+  "col",
+]);
+
+// Convert ComponentNode (engine-emitted tree) to a readable HTML+CSS
+// string. Used for the "code" tab of composed variant cards. Never
+// executed as DOM — rendered inside a <pre> as text. Safe by construction.
+function stringifyComponentTree(
+  node: ComponentNode,
+  indent = 0,
+): string {
+  const pad = "  ".repeat(indent);
+  const tag = /^[a-z][a-z0-9-]*$/.test(node.tag) ? node.tag : "div";
+
+  const attrParts: string[] = [];
+  for (const [k, v] of Object.entries(node.attrs ?? {})) {
+    // Drop dangerous attr values up front: anything that could resolve
+    // to JS execution context if a downstream consumer rendered this as
+    // real HTML. We don't, but defense in depth.
+    if (/^javascript:/i.test(v)) continue;
+    if (/^on/i.test(k)) continue;
+    attrParts.push(`${escapeAttr(k)}="${escapeAttr(v)}"`);
+  }
+
+  const styleStr = Object.entries(node.style ?? {})
+    .map(([k, v]) => `${camelToKebab(k)}: ${v}`)
+    .join("; ");
+  if (styleStr) attrParts.push(`style="${escapeAttr(styleStr)}"`);
+
+  const open = attrParts.length
+    ? `<${tag} ${attrParts.join(" ")}>`
+    : `<${tag}>`;
+
+  if (TREE_VOID_TAGS.has(tag)) {
+    return `${pad}${open.replace(/>$/, " />")}`;
+  }
+
+  const text = (node.text ?? "").trim();
+  const kids = node.children ?? [];
+
+  if (kids.length === 0 && !text) return `${pad}${open}</${tag}>`;
+  if (kids.length === 0)
+    return `${pad}${open}${escapeText(text)}</${tag}>`;
+
+  const lines: string[] = [`${pad}${open}`];
+  if (text) lines.push(`${pad}  ${escapeText(text)}`);
+  for (const child of kids) {
+    lines.push(stringifyComponentTree(child, indent + 1));
+  }
+  lines.push(`${pad}</${tag}>`);
+  return lines.join("\n");
+}
+
+function camelToKebab(s: string): string {
+  return s.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
+}
+
+function escapeAttr(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function escapeText(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 // Style fields we copy onto the rendered element. Visual-only  we
@@ -2231,40 +2601,48 @@ function Downloads({
   artifacts: NonNullable<ExtractResponse["artifacts"]>;
   outputDir: string;
 }) {
-  const items: Array<{ label: string; url: string }> = [
-    { label: "tokens.json", url: artifacts.tokensJsonUrl },
-  ];
-  if (artifacts.regeneratedRampUrl) {
-    items.push({
-      label: "regenerated-ramp.json",
-      url: artifacts.regeneratedRampUrl,
-    });
-  }
+  // Curated list — only the 5 artifacts a user actually drops into a
+  // project. Skipped: regenerated-ramp.json (internal), preview/proof.html
+  // (debug aids), prompts/universal.md (rolled into DESIGN.md now), and
+  // shadcn-omit-reason.md (only meaningful when shadcn-theme.css is
+  // skipped, which we surface via the absence of the shadcn entry).
+  const items: Array<{ label: string; url: string }> = [];
+  items.push({ label: "tokens.json", url: artifacts.tokensJsonUrl });
   if (artifacts.tailwindCssUrl) {
     items.push({ label: "tailwind.css", url: artifacts.tailwindCssUrl });
   }
   if (artifacts.shadcnThemeUrl) {
     items.push({ label: "shadcn-theme.css", url: artifacts.shadcnThemeUrl });
-  } else if (artifacts.shadcnOmitReasonUrl) {
-    items.push({
-      label: "shadcn-omit-reason.md",
-      url: artifacts.shadcnOmitReasonUrl,
-    });
-  }
-  if (artifacts.previewHtmlUrl) {
-    items.push({ label: "preview.html", url: artifacts.previewHtmlUrl });
-  }
-  if (artifacts.proofHtmlUrl) {
-    items.push({ label: "proof.html", url: artifacts.proofHtmlUrl });
   }
   if (artifacts.reportHtmlUrl) {
     items.push({ label: "report.html", url: artifacts.reportHtmlUrl });
   }
-  if (artifacts.promptPackUrl) {
-    items.push({ label: "prompts/universal.md", url: artifacts.promptPackUrl });
-  }
   if (artifacts.designMdUrl) {
     items.push({ label: "DESIGN.md", url: artifacts.designMdUrl });
+  }
+
+  // "Download all" — sequentially trigger a <a download> click per file.
+  // Browsers gate multi-download per user gesture (Chrome shows a one-time
+  // permission prompt the first time); after that they flow straight to
+  // disk. A server-side ZIP would be polished but requires a new API
+  // endpoint; this is the smallest change that delivers the feature.
+  function handleDownloadAll() {
+    for (const [i, it] of items.entries()) {
+      // Small stagger so each <a> click fires its own download dialog
+      // instead of getting batch-suppressed. 80ms is below the human
+      // perception threshold but comfortably above the browser's race
+      // window for batching downloads.
+      setTimeout(() => {
+        const a = document.createElement("a");
+        a.href = it.url;
+        a.download = it.label;
+        a.target = "_blank";
+        a.rel = "noopener";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }, i * 80);
+    }
   }
 
   return (
@@ -2282,11 +2660,20 @@ function Downloads({
           {items.length}
         </span>
       </div>
-      {/* Render each artifact as the project's canonical BubbleButton CTA 
-          same style as the navbar / hero / gallery buttons  so the
-          Downloads block reads as primary actions instead of table cells.
-          Flex-wrap lets long filenames flow naturally onto a second row. */}
       <ul role="list" className="flex flex-wrap gap-3">
+        <li>
+          {/* Primary CTA — fires every download in `items` in one click.
+              Omitting `href` makes BubbleButton render as <button>. Green
+              tone visually distinguishes it from the per-file blue CTAs. */}
+          <BubbleButton
+            onClick={handleDownloadAll}
+            icon="↓"
+            tone="green"
+            aria-label={`Download all ${items.length} files`}
+          >
+            download all
+          </BubbleButton>
+        </li>
         {items.map((it) => (
           <li key={it.label}>
             <BubbleButton
@@ -2548,69 +2935,205 @@ function CollapsibleSection({
 // extracted style  same font-family, size, weight as captured. Browsers
 // fall back gracefully when the font isn't installed locally; the metadata
 // row below still announces the exact tokens.
-function TypographyRow({
-  index,
+// Pangram: hits every letter of the alphabet, so the sample shows the user
+// the font's full character set in one short string. Used when the token has
+// no roleLabel to seed a more meaningful preview.
+const TYPE_PANGRAM = "The quick brown fox jumps over the lazy dog";
+
+function TypographyCard({
   t,
 }: {
-  index: number;
   t: NonNullable<ExtractResponse["tokens"]["typographyLevels"]>[number];
 }) {
-  const previewLabel = t.roleLabel
-    ? t.roleLabel.charAt(0).toUpperCase() + t.roleLabel.slice(1)
-    : "Aa Bb Cc";
-  // Cap visual size so a 96px display headline doesn't make one row
-  // dominate the section. Token-truth stays in the metadata line.
+  // For display-tier tokens (h1-style, large headlines), use a short word so
+  // the sample doesn't wrap awkwardly inside the card. For body tokens, use
+  // the pangram so the user can judge rhythm + character coverage.
+  const role = (t.roleLabel ?? "").toLowerCase();
+  const isDisplay =
+    role.includes("display") ||
+    role.includes("h1") ||
+    role.includes("hero") ||
+    role.includes("title");
+  const previewText = isDisplay
+    ? "The quick brown fox"
+    : role.includes("h2") || role.includes("heading")
+      ? "The quick brown fox jumps"
+      : TYPE_PANGRAM;
+
+  // Compact preview cap — was 4rem, reduced to 2.5rem so the section
+  // doesn't dominate the page when there are 8+ tiers. Big-enough to read
+  // the font's character at a glance, small-enough that 3 cards fit above
+  // the fold on a typical 1080px viewport.
   const previewStyle = {
     fontFamily: t.fontFamily,
-    fontSize: `min(${t.fontSize}, 3rem)`,
+    fontSize: `min(${t.fontSize}, 2.5rem)`,
     fontWeight: t.fontWeight,
-    lineHeight: 1.1,
+    lineHeight: 1.15,
+    letterSpacing: "-0.01em",
   } as const;
+
+  // Strip CSS quotes from font-family stacks so the footer shows
+  // "Geist Sans, sans-serif" not '"Geist Sans", sans-serif'.
+  const familyDisplay = t.fontFamily.replace(/"/g, "").replace(/'/g, "");
+
   return (
-    <li className="flex items-center gap-5 px-5 py-5">
-      <span
-        aria-hidden="true"
-        className="w-6 shrink-0 font-pixel text-[10px] uppercase tracking-widest text-primary"
-      >
-        {String(index).padStart(2, "0")}
-      </span>
-      <div className="min-w-0 flex-1">
+    <li className="group relative flex flex-col border border-white/10 bg-white/[0.02] transition-colors hover:border-white/25 hover:bg-white/[0.04]">
+      <div className="flex min-h-24 flex-1 items-center px-6 py-6 sm:px-8 sm:py-7">
         <p
           aria-hidden="true"
           style={previewStyle}
-          className="truncate text-white"
+          className="line-clamp-2 break-words text-white"
         >
-          {previewLabel}
-        </p>
-        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="font-pixel text-[10px] uppercase tracking-widest text-white">
-            {t.roleLabel ?? ""}
-          </span>
-          <span aria-hidden="true" className="font-mono text-xs text-white/35">
-            ·
-          </span>
-          <span className="font-mono text-xs text-white/80">{t.fontSize}</span>
-          <span aria-hidden="true" className="font-mono text-xs text-white/35">
-            ·
-          </span>
-          <span className="font-mono text-xs text-white/80">
-            w{t.fontWeight}
-          </span>
-          <span aria-hidden="true" className="font-mono text-xs text-white/35">
-            ·
-          </span>
-          <span className="truncate font-mono text-xs text-white/60">
-            {t.fontFamily}
-          </span>
+          {previewText}
         </p>
       </div>
-      <span
-        aria-hidden="true"
-        className="shrink-0 font-pixel text-[10px] uppercase tracking-widest text-primary"
-      >
-        {t.frequency}×
-      </span>
+
+      <footer className="flex items-center justify-between gap-4 border-t border-white/10 px-5 py-2.5">
+        <p className="flex min-w-0 items-center gap-2.5 font-mono text-[11px] text-white/55">
+          {t.roleLabel && (
+            <span className="font-pixel text-[10px] uppercase tracking-widest text-white">
+              {t.roleLabel}
+            </span>
+          )}
+          <span className="truncate">{familyDisplay}</span>
+          <span aria-hidden="true" className="text-white/25">·</span>
+          <span className="shrink-0 text-white/75">{t.fontSize}</span>
+          <span aria-hidden="true" className="text-white/25">·</span>
+          {/* Weight as bare number (was "w600") — the "w" prefix added
+              cognitive load. Now just "600". */}
+          <span className="shrink-0 text-white/75">{t.fontWeight}</span>
+        </p>
+        {/* Underlined text-link copy affordance — quieter than the
+            button style elsewhere; matches the inline tone of the
+            metadata row. */}
+        <CopyInlineLink
+          value={familyDisplay}
+          label={`font family ${t.fontFamily}`}
+        />
+      </footer>
     </li>
+  );
+}
+
+// Inline copy affordance — same behavior as CopyValue but rendered as an
+// underlined text link instead of a chip-shaped button. Used inside the
+// typography card footer where the chip style felt too heavy next to the
+// quiet metadata row.
+function CopyInlineLink({
+  value,
+  label,
+}: {
+  value: string;
+  label?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard requires secure context — fall back to the visible value.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label={`Copy ${label ?? value} to clipboard`}
+      className={`shrink-0 font-pixel text-[10px] uppercase tracking-widest underline-offset-4 transition-colors hover:underline ${
+        copied ? "text-primary" : "text-white/55 hover:text-white"
+      }`}
+    >
+      {copied ? "copied ✓" : "copy"}
+    </button>
+  );
+}
+
+// Generic-family names that aren't on Google Fonts — skipped when we build
+// the Google Fonts CSS link. Web-safe stacks (Arial, Helvetica, Times, etc.)
+// are also implicitly skipped since the request just 404s for unknown
+// families and the browser falls back.
+const GENERIC_FONT_FAMILIES =
+  /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-(serif|sans-serif|monospace|rounded)|emoji|math|inherit|initial|unset|revert)$/i;
+
+// Build a single Google Fonts CSS URL for every family+weight pair in the
+// captured typography. Families that aren't on Google return 404 for that
+// segment but the rest still load — the browser handles partial failures
+// transparently.
+function buildGoogleFontsHref(
+  typography: NonNullable<ExtractResponse["tokens"]["typographyLevels"]>,
+): string | null {
+  const byFamily = new Map<string, Set<number>>();
+  for (const t of typography) {
+    const primary =
+      t.fontFamily.split(",")[0]?.trim().replace(/^['"]|['"]$/g, "") ?? "";
+    if (!primary) continue;
+    if (GENERIC_FONT_FAMILIES.test(primary)) continue;
+    const weight = Number(t.fontWeight);
+    if (!Number.isFinite(weight)) continue;
+    if (!byFamily.has(primary)) byFamily.set(primary, new Set());
+    byFamily.get(primary)!.add(weight);
+  }
+  if (byFamily.size === 0) return null;
+  const params = Array.from(byFamily.entries()).map(([family, weights]) => {
+    const ws = Array.from(weights).sort((a, b) => a - b).join(";");
+    return `family=${encodeURIComponent(family)}:wght@${ws}`;
+  });
+  return `https://fonts.googleapis.com/css2?${params.join("&")}&display=swap`;
+}
+
+// Typography list with progressive disclosure. Shows the top 3 tiers
+// (almost always the ones that matter) and tucks the rest behind a
+// "show all" toggle. Also injects a single Google Fonts stylesheet so
+// the previews render in the actual captured font when it's hosted on
+// Google Fonts; falls back to the browser default otherwise.
+function TypographyList({
+  typography,
+}: {
+  typography: NonNullable<ExtractResponse["tokens"]["typographyLevels"]>;
+}) {
+  const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => {
+    const href = buildGoogleFontsHref(typography);
+    if (!href) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
+    return () => {
+      try {
+        document.head.removeChild(link);
+      } catch {
+        // Element may have already been removed (e.g. fast remount).
+      }
+    };
+  }, [typography]);
+
+  const TOP_VISIBLE = 3;
+  const visible = showAll ? typography : typography.slice(0, TOP_VISIBLE);
+  const remaining = typography.length - TOP_VISIBLE;
+
+  return (
+    <>
+      <ul role="list" className="grid grid-cols-1 gap-3">
+        {visible.map((t, i) => (
+          <TypographyCard key={`${t.fontFamily}-${i}`} t={t} />
+        ))}
+      </ul>
+      {!showAll && remaining > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className="mt-3 inline-flex items-center gap-2 border border-white/15 bg-white/[0.02] px-4 py-2 font-pixel text-[10px] uppercase tracking-widest text-white/70 transition-colors hover:border-white/30 hover:text-white"
+        >
+          show {remaining} more {remaining === 1 ? "tier" : "tiers"}
+        </button>
+      )}
+    </>
   );
 }
 
@@ -2652,51 +3175,158 @@ function SectionHeader({
   );
 }
 
+// 4-layer stability colour mapping. Tracks the classifier in cluster.ts:
+// infrastructure (most stable) → system → campaign → content (most volatile).
+// Picked from Tailwind palettes that read well on the near-black surface.
+const STABILITY_COLORS: Record<string, string> = {
+  infrastructure: "text-emerald-300",
+  system: "text-sky-300",
+  campaign: "text-amber-300",
+  content: "text-rose-300",
+};
+
+// Shared chip rendering. Used by colour, typography, radius, and shadow
+// cards so the visual + a11y treatment stays in sync. Returns null when
+// no layer is provided (token wasn't classified yet) so call sites can
+// drop it in unconditionally.
+function StabilityChip({
+  layer,
+  confidence,
+  signals,
+}: {
+  layer?: string;
+  confidence?: number;
+  signals?: string[];
+}) {
+  if (!layer) return null;
+  const tone = STABILITY_COLORS[layer] ?? "text-white/55";
+  const tooltip =
+    signals && signals.length > 0 ? signals.join(" · ") : undefined;
+  const confPct =
+    typeof confidence === "number" ? Math.round(confidence * 100) : null;
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1 font-mono text-[10px] uppercase tracking-widest ${tone}`}
+      title={tooltip}
+    >
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+      <span aria-hidden="true">{layer}</span>
+      {confPct !== null && (
+        <span aria-hidden="true" className="text-white/40">
+          {confPct}%
+        </span>
+      )}
+      <span className="sr-only">
+        stability {layer}
+        {confPct !== null ? `, confidence ${confPct}%` : ""}
+        {signals && signals.length > 0
+          ? `, signals: ${signals.join(", ")}`
+          : ""}
+      </span>
+    </span>
+  );
+}
+
+// Long-tail color grid with progressive disclosure. The CollapsibleSection
+// wrapper folds the whole block; once expanded, we still only show one
+// row's worth of swatches by default and tuck the rest behind a "view all"
+// button. Keeps the section from dominating when a site has dozens of
+// unnamed minor colors (gradient stops, hover tints, etc.).
+function LongTailColors({
+  colors,
+}: {
+  colors: NonNullable<ExtractResponse["tokens"]["colorTokens"]>;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  // 8 fills exactly one row at md+; on smaller viewports it wraps into 2
+  // rows, but the resulting block is still compact (~120px tall).
+  const TOP_VISIBLE = 8;
+  const visible = showAll ? colors : colors.slice(0, TOP_VISIBLE);
+  const remaining = colors.length - TOP_VISIBLE;
+
+  return (
+    <>
+      <ul
+        role="list"
+        className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8"
+      >
+        {visible.map((c, i) => (
+          <li key={`${c.hex}-${i}`} className="border border-white/10 p-2">
+            <div
+              aria-hidden="true"
+              className="aspect-square w-full"
+              style={{ background: c.hex }}
+            />
+            <p className="mt-2 truncate font-mono text-[10px] text-white/70">
+              {c.hex}
+            </p>
+          </li>
+        ))}
+      </ul>
+      {!showAll && remaining > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className="mt-3 inline-flex items-center gap-2 border border-white/15 bg-white/[0.02] px-4 py-2 font-pixel text-[10px] uppercase tracking-widest text-white/70 transition-colors hover:border-white/30 hover:text-white"
+        >
+          view all {remaining} more
+        </button>
+      )}
+    </>
+  );
+}
+
 function ColorCell({
   hex,
   label,
   frequency,
   layer,
+  confidence,
+  signals,
 }: {
   hex: string;
   label: string;
   frequency: number;
   layer?: string;
+  confidence?: number;
+  signals?: string[];
 }) {
+  // Old card layout (label + hex + stability chip + copy) — the user prefers
+  // this density over the 2-line minimal version. The "439× used" frequency
+  // stays as a corner badge on the swatch (the new pattern they liked) rather
+  // than competing with the label/hex inside the footer.
   return (
-    <div className="group relative flex flex-col bg-black transition-colors hover:bg-white/2">
+    <div className="group relative flex flex-col bg-black transition-colors hover:bg-white/[0.02]">
       <div
         className="relative aspect-4/3 w-full overflow-hidden"
         style={{ background: hex }}
       >
         <div
           aria-hidden="true"
-          className="absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06),inset_0_-1px_24px_rgba(0,0,0,0.18)]"
+          className="absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),inset_0_-1px_30px_rgba(0,0,0,0.22)]"
         />
+        <span
+          aria-hidden="true"
+          className="absolute right-2 top-2 bg-black/55 px-1.5 py-0.5 font-pixel text-[9px] uppercase tracking-widest text-white/85 backdrop-blur-sm"
+        >
+          {frequency}×
+        </span>
+        <span className="sr-only">used {frequency} times</span>
       </div>
 
       <div className="flex flex-col gap-2 border-t border-white/10 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate font-pixel text-sm tracking-wide text-white">
-            {label}
-          </p>
-          <span className="shrink-0 font-pixel text-[10px] uppercase tracking-widest text-primary">
-            <span aria-hidden="true">{frequency}×</span>
-            <span className="sr-only">used {frequency} times</span>
-          </span>
-        </div>
+        <p className="truncate font-pixel text-sm tracking-wide text-white">
+          {label}
+        </p>
         <div className="flex items-center justify-between gap-2">
           <code className="truncate font-mono text-[11px] text-white/70">
             {hex}
           </code>
-          {layer && (
-            <span
-              aria-hidden="true"
-              className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-white/55"
-            >
-              {layer}
-            </span>
-          )}
+          <StabilityChip
+            layer={layer}
+            confidence={confidence}
+            signals={signals}
+          />
         </div>
         <CopyValue value={hex} label={`color ${label} hex`} />
       </div>

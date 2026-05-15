@@ -2,6 +2,10 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { crawlPages, type WaitStrategy } from './crawl';
 import { collectDOM } from './dom-collector';
+import {
+  captureComponentScreenshots,
+  type ComponentScreenshots,
+} from './component-screenshots';
 import { analyzeCSS } from './css-analyzer';
 import { captureInteractions } from './interaction-capture';
 import { detectDarkMode } from './dark-mode-detect';
@@ -169,6 +173,12 @@ interface PageExtraction {
   dom: DOMCollection;
   css?: CSSAnalysis;
   interactions?: InteractionData;
+  // Per-element screenshots for Card / PricingTier candidates, captured
+  // while the Playwright page was still open. Keyed by ElementStyle.nodeId
+  // so cluster.ts can match a variant's representative to its PNG. Empty
+  // record when the page had no card-shaped elements (or the capture pass
+  // failed entirely — failures are best-effort, not fatal).
+  componentScreenshots?: ComponentScreenshots;
 }
 
 // NOTE: return type widened from upstream's `Promise<void>` to
@@ -243,12 +253,26 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
 
     try {
       log(options.verbose, `  Extracting: ${pageData.url}`);
-      await page.goto(pageData.url, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.goto(pageData.url, { waitUntil: 'load', timeout: 30000 });
       await page.waitForTimeout(1000);
 
-      // DOM collection
+      // DOM collection — also tags card-shaped elements with
+      // `data-designmd-cap` attributes on the live DOM for the screenshot
+      // pass below.
       const dom = await collectDOM(page);
       totalElements += dom.elements.length;
+
+      // Component screenshot pass — must run BEFORE css analysis /
+      // interaction capture, because both passes do more DOM work that
+      // could detach elements or scroll the page in ways that invalidate
+      // the cards' visible state. Best-effort: failures are swallowed
+      // inside the function and result in an empty map.
+      const componentScreenshots = await captureComponentScreenshots(
+        page,
+        options.output,
+        pageExtractions.length,
+        { verbose: options.verbose },
+      );
 
       // CSS analysis
       let css: CSSAnalysis | undefined;
@@ -268,7 +292,13 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
         }
       }
 
-      pageExtractions.push({ url: pageData.url, dom, css, interactions });
+      pageExtractions.push({
+        url: pageData.url,
+        dom,
+        css,
+        interactions,
+        componentScreenshots,
+      });
     } catch (err) {
       console.log(`    WARN: Extraction failed for ${pageData.url}: ${err}`);
     } finally {
@@ -304,7 +334,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
       });
       const page = await context.newPage();
       try {
-        await page.goto(candidate.url, { waitUntil: 'networkidle', timeout: 30000 });
+        await page.goto(candidate.url, { waitUntil: 'load', timeout: 30000 });
         await page.waitForTimeout(1000);
         darkModeData = await detectDarkMode(page, candidate.css!);
 
@@ -347,7 +377,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
     });
     const page = await context.newPage();
     try {
-      await page.goto(options.urls[0], { waitUntil: 'networkidle', timeout: 30000 });
+      await page.goto(options.urls[0], { waitUntil: 'load', timeout: 30000 });
       frameworkData = await detectFramework(page);
       const parts: string[] = [];
       if (frameworkData.tailwind?.detected) parts.push('Tailwind CSS');

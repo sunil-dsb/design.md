@@ -4,6 +4,7 @@ import type {
   CSSVariable,
   ColorToken,
   ComponentGroup,
+  ComponentNode,
   ComponentVariant,
   DesignTokens,
   DOMCollection,
@@ -17,14 +18,140 @@ import type {
   StabilityClassification,
   TypographyLevel,
 } from './types';
+import type { ComponentScreenshots } from './component-screenshots';
 
-//  Input Interface 
+//  Input Interface
 
 interface PageExtraction {
   url: string;
   dom: DOMCollection;
   css?: CSSAnalysis;
   interactions?: InteractionData;
+  // Per-element screenshots captured by extract.ts while the source page
+  // was still open. Keyed by ElementStyle.nodeId; cluster.ts looks up a
+  // variant's representative element here when emitting Card / PricingTier
+  // ComponentVariant records.
+  componentScreenshots?: ComponentScreenshots;
+}
+
+//  Tree Builder for Composed Components
+
+const MAX_TREE_DEPTH = 8;
+
+// Tags we never want to recurse into (or render). Script/style would leak
+// executable content into the snippet; metadata + media-internals don't
+// render meaningfully out of their original context.
+const TREE_SKIP_TAGS = new Set([
+  'script',
+  'style',
+  'link',
+  'meta',
+  'noscript',
+  'template',
+  'head',
+  'title',
+  'iframe',
+  'object',
+  'embed',
+]);
+
+// Style fields copied onto each node in the tree. Mirrors the renderer's
+// SAFE_STYLE_PROPS list — these are the visual fields a code-snippet
+// consumer needs to recreate the component. Layout fields (position,
+// width, height, transform, z-index) are intentionally excluded because
+// they don't survive replantation and would mislead the consumer.
+const TREE_STYLE_FIELDS = [
+  'backgroundColor',
+  'color',
+  'borderRadius',
+  'borderTopWidth',
+  'borderRightWidth',
+  'borderBottomWidth',
+  'borderLeftWidth',
+  'borderStyle',
+  'borderTopColor',
+  'borderRightColor',
+  'borderBottomColor',
+  'borderLeftColor',
+  'paddingTop',
+  'paddingRight',
+  'paddingBottom',
+  'paddingLeft',
+  'marginTop',
+  'marginRight',
+  'marginBottom',
+  'marginLeft',
+  'gap',
+  'fontFamily',
+  'fontSize',
+  'fontWeight',
+  'lineHeight',
+  'letterSpacing',
+  'textTransform',
+  'boxShadow',
+  'opacity',
+  'display',
+  'flexDirection',
+  'justifyContent',
+  'alignItems',
+  'gridTemplateColumns',
+] as const;
+
+function styleSnapshot(el: ElementStyle): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const key of TREE_STYLE_FIELDS) {
+    const v = el[key];
+    if (typeof v === 'string' && v && v !== 'none' && v !== 'normal' && v !== 'auto') {
+      out[key] = v;
+    }
+  }
+  return out;
+}
+
+function attrSnapshot(el: ElementStyle): Record<string, string> {
+  const attrs: Record<string, string> = {};
+  // ElementStyle only carries a handful of attribute-like fields. We
+  // expose the ones the renderer needs to render a code snippet that's
+  // useful to a developer: href for <a>, type for <input>. Other attrs
+  // (src, alt) aren't captured today — fine for v1; consumer fills them
+  // in when replanting.
+  if (el.tag === 'a' && el.href) attrs.href = el.href;
+  if ((el.tag === 'input' || el.tag === 'button') && el.type) attrs.type = el.type;
+  if (el.ariaLabel) attrs['aria-label'] = el.ariaLabel;
+  return attrs;
+}
+
+/**
+ * Build a depth-capped tree rooted at `root` using a pre-computed children
+ * map. Drops descendants whose tag is in TREE_SKIP_TAGS so the snippet
+ * never contains executable content. Returns the tree shape declared in
+ * `ComponentNode`.
+ */
+function buildComponentTree(
+  root: ElementStyle,
+  childrenByParentId: Map<number, ElementStyle[]>,
+  depth: number = 0,
+): ComponentNode {
+  const node: ComponentNode = {
+    tag: root.tag || 'div',
+    // Use directText at every depth: parents typically don't have direct
+    // text (their text lives in children), so this naturally renders the
+    // right thing for headings/paragraphs vs containers.
+    text: root.directText ?? '',
+    attrs: attrSnapshot(root),
+    style: styleSnapshot(root),
+    children: [],
+  };
+
+  if (depth >= MAX_TREE_DEPTH) return node;
+  if (typeof root.nodeId !== 'number') return node;
+
+  const childEls = childrenByParentId.get(root.nodeId) ?? [];
+  for (const child of childEls) {
+    if (TREE_SKIP_TAGS.has(child.tag)) continue;
+    node.children.push(buildComponentTree(child, childrenByParentId, depth + 1));
+  }
+  return node;
 }
 
 //  Named Color Map 
@@ -1107,11 +1234,16 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     type: string;
     element: ElementStyle;
     pageUrl: string;
+    // The crawler can revisit the same URL (input URL + rediscovered
+    // links → duplicate entries with `pageUrl` equal but separate DOM
+    // walks). nodeIds reset per visit, so URL alone is not enough to look
+    // up the right page's screenshots / parent map. pageIndex is unique.
+    pageIndex: number;
   }
 
   const identified: IdentifiedComponent[] = [];
 
-  for (const page of pages) {
+  for (const [pageIndex, page] of pages.entries()) {
     const pageHeight = Math.max(
       ...page.dom.elements.map((el) => el.rect.y + el.rect.height),
       1000,
@@ -1137,13 +1269,13 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
         el.role === 'button' ||
         (el.tag === 'a' && hasBg && radiusPx > 0 && padding >= 4)
       ) {
-        identified.push({ type: 'Button', element: el, pageUrl: page.url });
+        identified.push({ type: 'Button', element: el, pageUrl: page.url, pageIndex });
         continue;
       }
 
       // Input
       if (el.tag === 'input' || el.tag === 'textarea' || el.tag === 'select') {
-        identified.push({ type: 'Input', element: el, pageUrl: page.url });
+        identified.push({ type: 'Input', element: el, pageUrl: page.url, pageIndex });
         continue;
       }
 
@@ -1153,20 +1285,34 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
         (el.position === 'sticky' || el.position === 'fixed') &&
           (el.tag === 'header' || el.rect.y < 10)
       ) {
-        identified.push({ type: 'Navigation', element: el, pageUrl: page.url });
+        identified.push({ type: 'Navigation', element: el, pageUrl: page.url, pageIndex });
         continue;
       }
 
       // Badge
       if (radiusPx >= 100 && el.rect.height < 30 && hasBg) {
-        identified.push({ type: 'Badge', element: el, pageUrl: page.url });
+        identified.push({ type: 'Badge', element: el, pageUrl: page.url, pageIndex });
         continue;
       }
 
       // Hero
       const fontSize = parsePxValue(el.fontSize) ?? 0;
       if (el.rect.y < 100 && fontSize >= 32 && el.rect.height > 300) {
-        identified.push({ type: 'Hero', element: el, pageUrl: page.url });
+        identified.push({ type: 'Hero', element: el, pageUrl: page.url, pageIndex });
+        continue;
+      }
+
+      // PricingTier — must be checked BEFORE Card, because every pricing
+      // tier is also card-shaped and we want it in its own group. The
+      // flag is set by dom-collector when the element has card chrome
+      // + a price signal + a list + a CTA descendant.
+      if (el.isPricingTierCandidate) {
+        identified.push({
+          type: 'PricingTier',
+          element: el,
+          pageUrl: page.url,
+          pageIndex,
+        });
         continue;
       }
 
@@ -1179,13 +1325,13 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
         el.rect.width >= 200 &&
         el.rect.width <= 800
       ) {
-        identified.push({ type: 'Card', element: el, pageUrl: page.url });
+        identified.push({ type: 'Card', element: el, pageUrl: page.url, pageIndex });
         continue;
       }
 
       // Link
       if (el.tag === 'a' && !hasBg) {
-        identified.push({ type: 'Link', element: el, pageUrl: page.url });
+        identified.push({ type: 'Link', element: el, pageUrl: page.url, pageIndex });
         continue;
       }
 
@@ -1194,7 +1340,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
         el.tag === 'footer' ||
         (el.rect.y > pageHeight * 0.8 && el.childrenCount >= 3 && el.tag === 'div')
       ) {
-        identified.push({ type: 'Footer', element: el, pageUrl: page.url });
+        identified.push({ type: 'Footer', element: el, pageUrl: page.url, pageIndex });
       }
     }
   }
@@ -1226,8 +1372,22 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     return 'Primary';
   }
 
-  // Group by component type, then by variant
-  const componentTypeGroups = new Map<string, Map<string, { count: number; elements: ElementStyle[]; pageUrls: string[] }>>();
+  // Group by component type, then by variant. `pageIndexes` mirrors
+  // `pageUrls` order: pageIndexes[0] is the page where elements[0] was
+  // first seen — the lookup key for the composed-component screenshot
+  // and parent-map indexes.
+  const componentTypeGroups = new Map<
+    string,
+    Map<
+      string,
+      {
+        count: number;
+        elements: ElementStyle[];
+        pageUrls: string[];
+        pageIndexes: number[];
+      }
+    >
+  >();
 
   for (const comp of identified) {
     if (!componentTypeGroups.has(comp.type)) {
@@ -1239,13 +1399,17 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     const existing = variants.get(variantName);
     if (existing) {
       existing.count++;
-      if (existing.elements.length < 3) existing.elements.push(comp.element);
+      if (existing.elements.length < 3) {
+        existing.elements.push(comp.element);
+        existing.pageIndexes.push(comp.pageIndex);
+      }
       if (!existing.pageUrls.includes(comp.pageUrl)) existing.pageUrls.push(comp.pageUrl);
     } else {
       variants.set(variantName, {
         count: 1,
         elements: [comp.element],
         pageUrls: [comp.pageUrl],
+        pageIndexes: [comp.pageIndex],
       });
     }
   }
@@ -1270,6 +1434,32 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       }
     }
     return undefined;
+  }
+
+  // Per-page indexes used by the composed-component pass below. Keyed by
+  // PAGE INDEX (not URL): the crawler can revisit the same URL twice (input
+  // URL + rediscovered link → two entries with identical `pe.url`), and
+  // nodeIds reset per visit. A URL-keyed map silently drops the first
+  // visit's data via Map overwrite; pageIndex is unique by construction.
+  const COMPOSED_TYPES = new Set(['Card', 'PricingTier']);
+  const parentMapsByPageIndex = new Map<number, Map<number, ElementStyle[]>>();
+  const screenshotsByPageIndex = new Map<number, ComponentScreenshots>();
+  for (const [pageIndex, pe] of pages.entries()) {
+    const childrenMap = new Map<number, ElementStyle[]>();
+    for (const el of pe.dom.elements) {
+      if (
+        typeof el.parentNodeId === 'number' &&
+        el.parentNodeId >= 0
+      ) {
+        const siblings = childrenMap.get(el.parentNodeId) ?? [];
+        siblings.push(el);
+        childrenMap.set(el.parentNodeId, siblings);
+      }
+    }
+    parentMapsByPageIndex.set(pageIndex, childrenMap);
+    if (pe.componentScreenshots) {
+      screenshotsByPageIndex.set(pageIndex, pe.componentScreenshots);
+    }
   }
 
   const components: ComponentGroup[] = [];
@@ -1310,6 +1500,28 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
         ? name
         : `Variant-${variantCounter++}`;
 
+      // Composed-component augmentation: build the descendant tree and
+      // attach the source-page screenshot URL. `pageIndexes[0]` is the
+      // page where `elements[0]` was first seen — using pageIndex (not
+      // URL) avoids the duplicate-URL collision where Map.set would
+      // overwrite one visit's screenshots with another's. Both lookups
+      // are best-effort — if either fails the variant still ships,
+      // just without the rich preview.
+      let tree: ComponentNode | undefined;
+      let screenshotUrl: string | undefined;
+      if (COMPOSED_TYPES.has(type)) {
+        const pageIndex = data.pageIndexes[0];
+        const childrenMap = parentMapsByPageIndex.get(pageIndex);
+        if (childrenMap) {
+          tree = buildComponentTree(representative, childrenMap);
+        }
+        if (typeof representative.nodeId === 'number') {
+          const pageShots = screenshotsByPageIndex.get(pageIndex);
+          const info = pageShots?.[representative.nodeId];
+          if (info) screenshotUrl = info.url;
+        }
+      }
+
       variantList.push({
         name: displayName,
         count: data.count,
@@ -1321,6 +1533,8 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
         disabledStyle: interaction?.disabledStyle ?? null,
         transition: interaction?.transition ?? (representative.transition || null),
         sampleTexts,
+        ...(tree ? { tree } : {}),
+        ...(screenshotUrl ? { screenshotUrl } : {}),
       });
     }
 

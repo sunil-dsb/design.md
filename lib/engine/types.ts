@@ -41,6 +41,26 @@ export interface CSSVariable {
 }
 
 export interface ElementStyle {
+  // DFS index assigned during DOM collection. Stable within a single
+  // extraction run; lets cluster.ts reconstruct parent/child relationships
+  // from the otherwise-flat element list. Optional to keep older fixtures
+  // (and any in-flight extractions mid-deploy) deserializing cleanly.
+  nodeId?: number;
+  // Parent's nodeId, or -1 when the parent is <body> / not in the captured
+  // set. Same optionality reasoning as nodeId.
+  parentNodeId?: number;
+  // Element's own (immediate) text content — text nodes that are direct
+  // children only, excluding text inside descendants. textContent (below)
+  // is the descendant-aggregate string the engine has always returned;
+  // directText is the new field used by the tree-renderer so we don't
+  // duplicate text on every ancestor.
+  directText?: string;
+  // Set by dom-collector when the element matches the pricing-tier
+  // heuristic (card-shaped + price signal + list + CTA). cluster.ts uses
+  // this BEFORE the Card check to route the element into a separate
+  // PricingTier group, so the user sees pricing cards as their own
+  // section rather than mixed in with feature cards.
+  isPricingTierCandidate?: boolean;
   tag: string;
   className: string;
   role: string;
@@ -462,6 +482,54 @@ export interface ComponentVariant {
   disabledStyle: Record<string, string> | null;
   transition: string | null;
   sampleTexts: string[];
+  // Inner DOM composition of the representative element, when applicable.
+  // Populated only for "composed" component types (Card, PricingTier) where
+  // rendering the outer container's styles alone would lose the visual
+  // identity. Leaf types (Button, Badge, Link, Input) leave this undefined —
+  // their captured outer style + sample text is already 100% of their
+  // visual content. Hero / Navigation / Footer are intentionally skipped
+  // because their fidelity tanks too far (full-page layout context loss).
+  //
+  // Tree depth is capped engine-side to keep tokens.json payload bounded.
+  // The renderer treats this as a code-snippet view, never as live HTML.
+  // See [[component-tree-render]] for the renderer contract.
+  tree?: ComponentNode;
+  // Path (under output/<slug>/) of a pixel-perfect screenshot of the
+  // representative element, captured by Playwright while the source page
+  // was still open. Frontend reaches it via /api/output/<slug>/<this>.
+  // Same population rule as `tree` — composed types only.
+  screenshotUrl?: string;
+}
+
+// A serialized snapshot of an element + its descendants. Designed for
+// faithful re-rendering on the client; deliberately drops any field that
+// would compromise security (event handlers, scripts) or fidelity (layout
+// fields like absolute position that wouldn't survive replantation).
+//
+// Mirrored from the live DOM by the engine's component-tree extractor.
+export interface ComponentNode {
+  // HTML tag name, lowercased. Renderer enforces an allowlist — unknown or
+  // unsafe tags (`script`, `style`, `iframe`, `object`, `embed`) fall back
+  // to a plain `<div>` so we can never execute captured markup.
+  tag: string;
+
+  // Visible text content of this node only (children's text is on the
+  // children themselves). Empty string when the node is a pure container.
+  text: string;
+
+  // Attribute allowlist applied at capture time. Includes things the
+  // renderer needs to faithfully reproduce the element (src/alt for img,
+  // href for a, type for input). Excludes anything executable (on* handlers,
+  // javascript: URLs are sanitized to "#").
+  attrs: Record<string, string>;
+
+  // Computed-style snapshot, same shape as ComponentVariant.style. Engine
+  // captures the same SAFE_STYLE_PROPS set the renderer already accepts.
+  style: Record<string, string>;
+
+  // Ordered children. Engine caps the tree at MAX_TREE_DEPTH (default 8)
+  // to keep payload sane; nodes past the cap are dropped silently.
+  children: ComponentNode[];
 }
 
 //  Extraction Report 

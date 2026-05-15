@@ -62,7 +62,7 @@ export async function SpecPreview() {
               spec preview
             </span>
           </div>
-          <span className="shrink-0 font-pixel text-xs tracking-widest text-primary uppercase">
+          <span className="shrink-0 font-pixel text-xs tracking-widest text-white uppercase">
             {EXAMPLE_LABEL}
           </span>
         </figcaption>

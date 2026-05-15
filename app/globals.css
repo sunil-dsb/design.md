@@ -157,6 +157,13 @@ select {
   height: 2.5rem;
 }
 
+/* Green tone — used for the Downloads-all CTA where we want it to stand out
+   from the regular per-file blue downloads. Same chrome, different fill. */
+.bubble-btn--green .bubble-btn__text,
+.bubble-btn--green .bubble-btn__icon {
+  background-color: #1aa040;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bubble-btn,
   .bubble-btn__icon {
@@ -356,38 +363,46 @@ select {
   }
 }
 
-/* Hero diagonal light beams (static) */
-.hero-beam {
-  position: absolute;
-  top: -40%;
-  width: 32%;
-  height: 180%;
+/* Hero equalizer bars.
+   Each bar is a vertical primary-blue gradient anchored to the bottom of
+   the hero. The richer 5-stop gradient gives the bars a bright "tip" of
+   warm-white-blue at the top, fading through primary blue down to a
+   transparent base — premium feel without compositing cost.
+   `pulseBar` alternates opacity + a small scaleY for breathing motion;
+   the cubic-bezier easing curve gives the motion a softer in/out than
+   `ease-in-out` (less bouncy, more cinematic). The WAVE across the row
+   comes from per-bar `animation-delay` + slightly-varied `animation-duration`
+   values applied inline in HeroInteractive. */
+.hero-grad-bar {
   background: linear-gradient(
-    to bottom,
-    rgba(0, 57, 255, 0.55) 0%,
-    rgba(0, 57, 255, 0.15) 40%,
-    transparent 75%
+    to top,
+    rgba(0, 57, 255, 0.65) 0%,
+    rgba(0, 57, 255, 0.4) 25%,
+    rgba(80, 130, 255, 0.25) 55%,
+    rgba(120, 160, 255, 0.1) 80%,
+    transparent 100%
   );
-  filter: blur(70px);
-  pointer-events: none;
+  filter: drop-shadow(0 -4px 8px rgba(0, 57, 255, 0.25));
+  animation: pulseBar 9.5s cubic-bezier(0.45, 0, 0.55, 1) 0s infinite alternate;
+  will-change: opacity, transform;
 }
 
-.hero-beam--1 {
-  left: -10%;
-  transform: rotate(18deg);
-  opacity: 0.7;
+@keyframes pulseBar {
+  from {
+    opacity: 0.3;
+    transform: scaleY(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1.05);
+  }
 }
 
-.hero-beam--2 {
-  left: 38%;
-  transform: rotate(-12deg);
-  opacity: 0.8;
-}
-
-.hero-beam--3 {
-  left: 72%;
-  transform: rotate(20deg);
-  opacity: 0.7;
+@media (prefers-reduced-motion: reduce) {
+  .hero-grad-bar {
+    animation: none;
+    opacity: 0.55;
+  }
 }
 
 /* Animated mesh-gradient scene (Footer background) */

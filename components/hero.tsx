@@ -20,13 +20,18 @@ import { HeroInteractive } from "./hero-interactive";
 
 type Brand = {
   name: string;
-  Logo: ComponentType<SVGProps<SVGSVGElement>>;
+  // One of these is required. Logo wins when both are set. Simple Icons
+  // doesn't ship every brand (IBM was removed for trademark reasons), so
+  // logoSrc covers the long tail with a local public/ asset.
+  Logo?: ComponentType<SVGProps<SVGSVGElement>>;
+  logoSrc?: string;
 };
 
 // Row 1: brands we extract design systems from. Each pill carries a logo
 // for visual recognition (the same Simple Icons used by the gallery).
 const BRANDS: Brand[] = [
   { name: "stripe", Logo: SiStripe },
+  { name: "ibm", logoSrc: "/ibm.png" },
   { name: "linear", Logo: SiLinear },
   { name: "vercel", Logo: SiVercel },
   { name: "supabase", Logo: SiSupabase },
@@ -213,11 +218,21 @@ export function Hero() {
                 aria-hidden={copy > 0 ? "true" : undefined}
                 className="hero-marquee__item"
               >
-                <b.Logo
-                  aria-hidden="true"
-                  focusable="false"
-                  className="size-3 shrink-0"
-                />
+                {b.Logo ? (
+                  <b.Logo
+                    aria-hidden="true"
+                    focusable="false"
+                    className="size-3 shrink-0"
+                  />
+                ) : b.logoSrc ? (
+                  <Image
+                    src={b.logoSrc}
+                    alt=""
+                    width={12}
+                    height={12}
+                    className="size-3 shrink-0 object-contain"
+                  />
+                ) : null}
                 {b.name}
               </li>
             )),

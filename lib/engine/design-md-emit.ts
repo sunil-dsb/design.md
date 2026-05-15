@@ -322,10 +322,10 @@ function emitSection2Colors(tokens: DesignTokens): string {
     out.push('| Hex | Frequency | Used as | CSS Variable |');
     out.push('|-----|-----------|---------|--------------|');
     for (const c of campaign) {
-      const usage = usageSuffix(c).replace(/^\(|\)$/g, '') || '';
+      const usage = usageSuffix(c).replace(/^\(|\)$/g, '') || '—';
       const cssVar = c.cssVariableNames && c.cssVariableNames.length > 0
         ? `\`${c.cssVariableNames[0]}\``
-        : '';
+        : '—';
       out.push(`| \`${c.hex}\` | ${c.frequency} | ${usage} | ${cssVar} |`);
     }
     out.push('');
@@ -419,7 +419,7 @@ function emitSection3Typography(tokens: DesignTokens): string {
     const family = (l.fontFamily || '').split(',')[0].trim().replace(/^["']|["']$/g, '');
     const tags = (l.typicalTags || []).slice(0, 4).join(', ');
     const features = l.fontFeatureSettings && l.fontFeatureSettings !== 'normal'
-      ? `\`${l.fontFeatureSettings}\`` : '';
+      ? `\`${l.fontFeatureSettings}\`` : '—';
     out.push(
       `| ${role} | \`${family}\` | \`${l.fontSize}\` | \`${l.fontWeight}\` | \`${l.lineHeight}\` | \`${l.letterSpacing}\` | ${features} | ${l.frequency} | ${tags} |`,
     );
@@ -509,7 +509,7 @@ function emitSection5Layout(tokens: DesignTokens): string {
     if (layout.commonColumnCounts && layout.commonColumnCounts.length > 0) {
       out.push(`- **Common column counts:** ${layout.commonColumnCounts.join(', ')}`);
     }
-    out.push(`- **Content alignment:** ${layout.contentAlignment ?? ''}`);
+    out.push(`- **Content alignment:** ${layout.contentAlignment ?? '—'}`);
     if (layout.maxContentWidth) {
       out.push(`- **Max content width:** \`${layout.maxContentWidth}\``);
     }
@@ -522,7 +522,7 @@ function emitSection5Layout(tokens: DesignTokens): string {
     out.push('| Value | Frequency | Typical Elements |');
     out.push('|-------|-----------|------------------|');
     for (const r of radii) {
-      const els = (r.typicalElements || []).slice(0, 4).join(', ') || '';
+      const els = (r.typicalElements || []).slice(0, 4).join(', ') || '—';
       out.push(`| \`${r.value}\` | ${r.frequency} | ${els} |`);
     }
     out.push('');
@@ -546,7 +546,7 @@ function emitSection6Depth(tokens: DesignTokens): string {
   out.push('| Type | Value | Frequency | Typical Elements |');
   out.push('|------|-------|-----------|------------------|');
   for (const s of shadows) {
-    const els = (s.typicalElements || []).slice(0, 4).join(', ') || '';
+    const els = (s.typicalElements || []).slice(0, 4).join(', ') || '—';
     out.push(`| ${s.type} | \`${s.value}\` | ${s.frequency} | ${els} |`);
   }
   out.push('');

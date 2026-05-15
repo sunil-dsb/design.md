@@ -384,7 +384,10 @@ async function runProof(
   const pct = (result.coverage * 100).toFixed(1);
   console.log(`  Coverage: ${pct}% (${result.matched}/${result.totalSampled} pixels within ΔE < 12)`);
 
-  // 4. Save proof data for report-gen to embed
+  // 4. Save proof data for report-gen to embed. proof-data.json includes
+  // the base64 screenshots so report-gen.ts can rebuild the side-by-side
+  // without rerunning Playwright. That file is gitignored because the
+  // screenshots push it past commit-friendly sizes (~1-5 MB per brand).
   const proofData = {
     sourceUrl: url,
     coverage: result.coverage,
@@ -397,6 +400,25 @@ async function runProof(
   };
   fs.writeFileSync(path.join(outputDir, 'proof-data.json'), JSON.stringify(proofData));
   console.log(`  Saved proof-data.json`);
+
+  // 4b. proof-summary.json  the slim, committable companion. Strips the
+  // ~95% of proof-data.json that is base64 screenshot bytes, leaving just
+  // the numbers the scoreboard + diagnostics module consult. Safe to
+  // check into examples/<brand>/ so the public scoreboard reflects real
+  // pipeline output instead of `n/a` placeholders.
+  const proofSummary = {
+    sourceUrl: url,
+    coverage: result.coverage,
+    totalSampled: result.totalSampled,
+    matched: result.matched,
+    unmatchedColors: result.unmatchedColors,
+    excludedRegions: imageRects.length,
+  };
+  fs.writeFileSync(
+    path.join(outputDir, 'proof-summary.json'),
+    JSON.stringify(proofSummary, null, 2),
+  );
+  console.log(`  Saved proof-summary.json`);
 
   // 5. Generate standalone proof report (kept for backwards compat)
   const html = buildProofHtml(url, origB64, prevB64, result, tokens);
