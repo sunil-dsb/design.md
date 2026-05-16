@@ -10,7 +10,7 @@ import {
 } from "react";
 import { ArrowIcon } from "@/icons/arrow";
 import { BubbleButton } from "@/components/bubble-button";
-import { StabilityChip } from "@/components/stability-chip";
+import { StabilityChip, StabilityLegend } from "@/components/stability-chip";
 import type { Diagnostic } from "@/lib/engine/diagnostics";
 import { rolePriority, type ColorRole } from "@/lib/engine/role-namer";
 import type { ComponentNode } from "@/lib/engine/types";
@@ -1108,6 +1108,15 @@ function ResultState({ result }: { result: ExtractResponse }) {
           label="named colors"
           count={namedColors.length}
         >
+          {/* Discoverable legend for the stability chips that appear on
+              every colour / typography / radius / shadow card below. Native
+              <details> — collapsed by default, no client JS, keyboard-
+              accessible. Placed at the top of the first chip-bearing
+              section so users see "what do these labels mean?" before they
+              encounter the chips themselves. */}
+          <div className="mb-4">
+            <StabilityLegend />
+          </div>
           <div className="grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-3 md:grid-cols-4">
             {namedColors.map((c, i) => (
               <ColorCell
@@ -2182,6 +2191,93 @@ function escapeText(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+//  WCAG contrast helpers (client-side, no engine import)
+//
+// Used by the Accessibility section to suggest a foreground colour that
+// MEETS WCAG AA on a failing contrast pair. Implemented inline rather than
+// imported from lib/engine/cluster.ts because pulling that module into the
+// client bundle would drag in playwright + culori for ~30 lines of math we
+// can reproduce in pure JS.
+
+function hexToRgbLocal(hex: string): { r: number; g: number; b: number } | null {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return null;
+  return {
+    r: parseInt(m[1].slice(0, 2), 16),
+    g: parseInt(m[1].slice(2, 4), 16),
+    b: parseInt(m[1].slice(4, 6), 16),
+  };
+}
+
+function rgbToHexLocal(rgb: { r: number; g: number; b: number }): string {
+  const h = (n: number) =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, "0");
+  return `#${h(rgb.r)}${h(rgb.g)}${h(rgb.b)}`;
+}
+
+function relativeLuminanceLocal(rgb: {
+  r: number;
+  g: number;
+  b: number;
+}): number {
+  const lin = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * lin(rgb.r) + 0.7152 * lin(rgb.g) + 0.0722 * lin(rgb.b);
+}
+
+function contrastRatioLocal(
+  fg: { r: number; g: number; b: number },
+  bg: { r: number; g: number; b: number },
+): number {
+  const lF = relativeLuminanceLocal(fg);
+  const lB = relativeLuminanceLocal(bg);
+  const light = Math.max(lF, lB);
+  const dark = Math.min(lF, lB);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+/**
+ * Suggest a foreground hex that meets `targetRatio` against `bg` by blending
+ * the original `fg` toward black (if bg is light) or white (if bg is dark).
+ * Returns null on unparseable input. Falls back to pure black/white when no
+ * blend achieves the target — that's a sign the bg itself is at an extreme
+ * luminance and there's no in-family solution.
+ *
+ * The suggestion is intentionally minimal-blend (smallest step that hits) so
+ * the colour stays as close to the original hue as the WCAG ratio allows.
+ */
+function suggestBetterForeground(
+  fgHex: string,
+  bgHex: string,
+  targetRatio: number = 4.5,
+): string | null {
+  const fg = hexToRgbLocal(fgHex);
+  const bg = hexToRgbLocal(bgHex);
+  if (!fg || !bg) return null;
+
+  // Already passes — nothing to suggest.
+  if (contrastRatioLocal(fg, bg) >= targetRatio) return null;
+
+  const bgLum = relativeLuminanceLocal(bg);
+  const target = bgLum > 0.5 ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 };
+
+  for (let t = 0.05; t <= 1.0; t += 0.05) {
+    const adj = {
+      r: fg.r * (1 - t) + target.r * t,
+      g: fg.g * (1 - t) + target.g * t,
+      b: fg.b * (1 - t) + target.b * t,
+    };
+    if (contrastRatioLocal(adj, bg) >= targetRatio) {
+      return rgbToHexLocal(adj);
+    }
+  }
+  return rgbToHexLocal(target);
+}
+
 // Style fields we copy onto the rendered element. Visual-only  we
 // deliberately exclude layout / positioning fields (width/height/position/
 // transform) so the preview can flow inside our grid.
@@ -2309,6 +2405,33 @@ function AccessibilitySection({
         subtitle="WCAG 2.2 AA: text must hit 4.5:1 contrast against its background (3:1 for large text). Anything failing is flagged below in red."
       />
 
+      {pairs.length > 0 && (
+        <div
+          className={`mb-4 flex items-baseline gap-4 border px-4 py-3 ${
+            failing.length === 0
+              ? "border-emerald-500/25 bg-emerald-500/5"
+              : "border-white/10 bg-white/3"
+          }`}
+          aria-label={`${passing.length} of ${pairs.length} contrast pairs pass WCAG AA`}
+        >
+          <div
+            className={`font-pixel text-2xl ${
+              failing.length === 0 ? "text-emerald-300" : "text-white"
+            }`}
+          >
+            {passing.length} / {pairs.length}
+          </div>
+          <div>
+            <p className="font-pixel text-[10px] uppercase tracking-widest text-white">
+              pairs pass WCAG AA
+            </p>
+            <p className="mt-0.5 font-mono text-[11px] text-white/55">
+              4.5:1 needed for normal text · 3:1 for large text
+            </p>
+          </div>
+        </div>
+      )}
+
       {failing.length > 0 && (
         <p
           role="alert"
@@ -2377,6 +2500,36 @@ function AccessibilitySection({
                 <span className="truncate">text {p.foreground}</span>
                 <span className="truncate">bg {p.background}</span>
               </div>
+              {!p.meetsAA &&
+                (() => {
+                  const suggested = suggestBetterForeground(
+                    p.foreground,
+                    p.background,
+                    4.5,
+                  );
+                  if (
+                    !suggested ||
+                    suggested.toLowerCase() === p.foreground.toLowerCase()
+                  ) {
+                    return null;
+                  }
+                  return (
+                    <div className="mt-1 flex items-center gap-2 border-t border-white/10 pt-2 font-mono text-[10px] text-white/65">
+                      <span className="font-pixel text-[9px] uppercase tracking-widest text-emerald-300">
+                        try
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="inline-block size-3 border border-white/20"
+                        style={{ background: suggested }}
+                      />
+                      <span className="text-white">{suggested}</span>
+                      <span className="ml-auto text-white/45">
+                        meets 4.5:1
+                      </span>
+                    </div>
+                  );
+                })()}
             </li>
           ))}
         </ul>
@@ -2604,10 +2757,19 @@ function ProofPreviewSection({ proofHtmlUrl }: { proofHtmlUrl: string }) {
         }
       />
       <div className="overflow-hidden border border-white/15 bg-white/3">
+        {/* h-[820px] uses arbitrary-value syntax so the height is a literal
+            CSS rule, not a spacing-derived utility. The previous `h-205`
+            relied on Tailwind v4's JIT generating
+            `height: calc(var(--spacing) * 205)` from the integer suffix;
+            that path proved unreliable in production builds — the class
+            sometimes failed to make it into the emitted CSS and the iframe
+            collapsed to the browser default of 150 px, which clipped
+            proof.html down to its empty top sliver. Arbitrary values are
+            always emitted because Tailwind treats them as literal CSS. */}
         <iframe
           src={proofHtmlUrl}
           title="Pixel-fidelity proof"
-          className="h-205 w-full border-0 bg-white"
+          className="h-[820px] w-full border-0 bg-white"
           sandbox="allow-scripts allow-same-origin"
         />
       </div>

@@ -64,12 +64,27 @@ export async function captureComponentScreenshots(
   let captured = 0;
   let skipped = 0;
   try {
-    const locator = page.locator('[data-designmd-cap]');
-    const count = await locator.count();
-    const ceiling = Math.min(count, hardCap);
+    // Gather every tagged element, read its `data-designmd-cap-area`
+    // hint (set by dom-collector), then sort by area descending so the
+    // most-visible cards are captured BEFORE we hit the hardCap. Without
+    // this, locator.nth(i) iterates in DOM walk order — a site with 40+
+    // card-shaped elements would lose the hero card (which often sits
+    // mid-page after a row of feature cards) to the cap, while cluster.ts
+    // picks it as the top-by-visibility representative downstream and
+    // ends up with no matching screenshot. The two passes need to agree.
+    const allLocators = await page.locator('[data-designmd-cap]').all();
+    const withArea = await Promise.all(
+      allLocators.map(async (loc) => {
+        const a = await loc.getAttribute('data-designmd-cap-area');
+        const area = a ? parseFloat(a) : 0;
+        return { loc, area: Number.isFinite(area) ? area : 0 };
+      }),
+    );
+    withArea.sort((a, b) => b.area - a.area);
+    const taken = withArea.slice(0, hardCap);
 
-    for (let i = 0; i < ceiling; i++) {
-      const el = locator.nth(i);
+    for (let i = 0; i < taken.length; i++) {
+      const el = taken[i].loc;
       try {
         const nodeIdAttr = await el.getAttribute('data-designmd-cap');
         const roleAttr = await el.getAttribute('data-designmd-cap-role');
@@ -132,6 +147,7 @@ export async function captureComponentScreenshots(
         for (const el of Array.from(tagged)) {
           el.removeAttribute('data-designmd-cap');
           el.removeAttribute('data-designmd-cap-role');
+          el.removeAttribute('data-designmd-cap-area');
         }
       })
       .catch(() => undefined);

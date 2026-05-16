@@ -251,6 +251,17 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
             'data-designmd-cap-role',
             pricingLike ? 'pricing' : 'card',
           );
+          // Area is used by component-screenshots to capture the visually-
+          // prominent cards FIRST. Without this hint, the screenshot pass
+          // iterates in DOM walk order and gets capped at 30 — a site with
+          // 40+ cards could miss the hero card that cluster.ts later picks
+          // as the top-by-visibility representative, leaving the variant
+          // with no screenshotUrl. Sorting by area before capping keeps
+          // the visible representatives covered.
+          el.setAttribute(
+            'data-designmd-cap-area',
+            String(Math.round(rect.width * rect.height)),
+          );
         }
 
         return {

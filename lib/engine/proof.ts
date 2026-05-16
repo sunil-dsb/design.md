@@ -394,15 +394,42 @@ async function runProof(
   }
 
   console.log('  Capturing preview...');
+  // Wrap the preview-capture block in a try/catch with explicit error
+  // logging + explicit timeouts. Without this, a hang or throw here
+  // silently aborts proof.ts: route.ts catches the rejection and emits
+  // an SSE `proof:error` event, but the server-side console sees nothing
+  // — proof.html simply never appears on disk and the SPA's
+  // ProofPreviewSection renders nothing (`artifacts.proofHtmlUrl` is
+  // null when `fs.existsSync(proofHtmlPath)` fails).
+  //
+  // Explicit timeouts (15 s) replace Playwright's default 30 s so we
+  // fail visibly faster on pages that can't render preview.html (font
+  // resolution stalls, file:// URL malformed on Windows, Chromium
+  // rejected the data: image inside, etc.).
   const prevCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const prevPage = await prevCtx.newPage();
-  // Local file:// — `load` is enough (no network to wait for); using
-  // networkidle here was just a copy-paste artifact and could theoretically
-  // hang if the preview HTML references blocked CDN fonts.
-  await prevPage.goto(`file://${path.resolve(resolvedPreview)}`, { waitUntil: 'load' });
-  await prevPage.waitForTimeout(500);
-  const prevScreenshot = await prevPage.screenshot({ fullPage: false });
-  const prevB64 = prevScreenshot.toString('base64');
+  let prevB64: string;
+  try {
+    const prevPage = await prevCtx.newPage();
+    // Local file:// — `load` is enough (no network to wait for); using
+    // networkidle here was just a copy-paste artifact and could theoretically
+    // hang if the preview HTML references blocked CDN fonts.
+    await prevPage.goto(`file://${path.resolve(resolvedPreview)}`, {
+      waitUntil: 'load',
+      timeout: 15000,
+    });
+    await prevPage.waitForTimeout(500);
+    const prevScreenshot = await prevPage.screenshot({
+      fullPage: false,
+      timeout: 15000,
+    });
+    prevB64 = prevScreenshot.toString('base64');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`  Preview capture failed: ${msg}`);
+    await prevCtx.close().catch(() => undefined);
+    await browser.close().catch(() => undefined);
+    throw new Error(`Preview capture failed: ${msg}`);
+  }
   await prevCtx.close();
   await browser.close();
 
