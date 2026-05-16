@@ -39,7 +39,12 @@ import type {
   ExtractionReport,
   TypographyLevel,
 } from './types';
-import { rolePriority, type ColorRole } from './role-namer';
+import {
+  assignColorRoles,
+  assignTypeRoles,
+  rolePriority,
+  type ColorRole,
+} from './role-namer';
 
 //  Public API 
 
@@ -59,6 +64,36 @@ export function generateDesignMd(
   report: ExtractionReport | null,
   opts: GenerateOptions,
 ): string {
+  // Apply role-namer in-memory so the section emitters below see colorTokens
+  // and typographyLevels with `role` / `roleLabel` attached. Without this,
+  // `describeColor()` falls back to its "Crimson Tone / Warm Tone / Mid
+  // Neutral" heuristic and `deriveTypoRole()` falls back to tag-based
+  // guessing — which is what landed in DESIGN.md until this fix.
+  //
+  // Why we have to do it here: the API route invokes design-md-emit inside
+  // its Promise.all (concurrent with prompts / proof / report / tailwind /
+  // shadcn) BEFORE its own assignColorRoles pass at the response layer.
+  // tokens.json on disk has no `role` / `roleLabel` fields when this
+  // function reads it (MIRROR.md Part 2.7: role-namer never mutates
+  // tokens.json on disk). prompt-pack / shadcn-emit / ramp-regen all
+  // already call role-namer internally for the same reason — this brings
+  // design-md-emit in line with that pattern.
+  //
+  // The caller's tokens object is NOT mutated: we rebind the local `tokens`
+  // parameter to a shallow copy with role-tagged arrays. Tokens that
+  // role-namer can't classify still get `role: null` / `roleLabel: null`,
+  // in which case describeColor's structural fallback fires as before —
+  // which is the right answer for the long tail.
+  tokens = {
+    ...tokens,
+    colorTokens: Array.isArray(tokens.colorTokens)
+      ? assignColorRoles(tokens.colorTokens)
+      : [],
+    typographyLevels: Array.isArray(tokens.typographyLevels)
+      ? assignTypeRoles(tokens.typographyLevels)
+      : [],
+  };
+
   const date = new Date().toISOString().slice(0, 10);
   const siteName = opts.siteName ?? deriveSiteName(opts.url);
   const framework = report?.framework;

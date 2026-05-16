@@ -1879,9 +1879,17 @@ function ComposedVariantCard({
   const [tab, setTab] = useState<"preview" | "code">(
     hasScreenshot ? "preview" : "code",
   );
+  // HTML is the default format because the captured tree is closer to
+  // generic markup than to any specific framework. JSX is the toggle for
+  // users dropping the snippet into a React / Next.js codebase.
+  const [format, setFormat] = useState<"html" | "jsx">("html");
   const [copied, setCopied] = useState(false);
 
-  const snippet = hasTree ? stringifyComponentTree(variant.tree!) : "";
+  const snippet = hasTree
+    ? format === "jsx"
+      ? stringifyComponentTreeJsx(variant.tree!)
+      : stringifyComponentTree(variant.tree!)
+    : "";
 
   async function handleCopy() {
     try {
@@ -1938,16 +1946,45 @@ function ComposedVariantCard({
           )}
           <span className="flex-1" aria-hidden="true" />
           {tab === "code" && hasTree && (
-            <button
-              type="button"
-              onClick={handleCopy}
-              aria-label={copied ? "Snippet copied" : "Copy snippet"}
-              className={`px-4 py-2 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
-                copied ? "text-primary" : "text-white/55 hover:text-white"
-              }`}
-            >
-              {copied ? "copied ✓" : "copy"}
-            </button>
+            <>
+              {/* Format toggle — visible only on the code tab. Resets `copied`
+                  via re-render so the user gets fresh feedback when they
+                  switch format and copy again. */}
+              <button
+                type="button"
+                aria-pressed={format === "html"}
+                onClick={() => setFormat("html")}
+                className={`px-3 py-2 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
+                  format === "html"
+                    ? "text-white"
+                    : "text-white/45 hover:text-white"
+                }`}
+              >
+                html
+              </button>
+              <button
+                type="button"
+                aria-pressed={format === "jsx"}
+                onClick={() => setFormat("jsx")}
+                className={`px-3 py-2 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
+                  format === "jsx"
+                    ? "text-white"
+                    : "text-white/45 hover:text-white"
+                }`}
+              >
+                jsx
+              </button>
+              <button
+                type="button"
+                onClick={handleCopy}
+                aria-label={copied ? "Snippet copied" : "Copy snippet"}
+                className={`px-4 py-2 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
+                  copied ? "text-primary" : "text-white/55 hover:text-white"
+                }`}
+              >
+                {copied ? "copied ✓" : "copy"}
+              </button>
+            </>
           )}
         </div>
       )}
@@ -2061,6 +2098,76 @@ function stringifyComponentTree(
 
 function camelToKebab(s: string): string {
   return s.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
+}
+
+// JSX-flavour variant of stringifyComponentTree. Same captured tree, but:
+//   - `style` becomes an inline object literal (`style={{ camelCase: "..." }}`).
+//     The engine captures style keys in camelCase already (via
+//     CSSStyleDeclaration property names in cluster.ts), so no transform.
+//   - Text that contains `{`, `}`, `<`, or `>` is wrapped in
+//     `{JSON.stringify(text)}` so the consumer can paste straight into a
+//     `.tsx` file without JSX parse errors.
+//   - `class` would map to `className` if the engine ever started capturing
+//     it. Today only href / type / aria-label are captured, all of which
+//     are valid JSX attribute names as-is.
+//
+// Same safety posture as the HTML stringifier: void tags self-close, on*
+// attrs and javascript: URLs are dropped before emission.
+function stringifyComponentTreeJsx(
+  node: ComponentNode,
+  indent = 0,
+): string {
+  const pad = "  ".repeat(indent);
+  const tag = /^[a-z][a-z0-9-]*$/.test(node.tag) ? node.tag : "div";
+
+  const attrParts: string[] = [];
+  for (const [k, v] of Object.entries(node.attrs ?? {})) {
+    if (/^javascript:/i.test(v)) continue;
+    if (/^on/i.test(k)) continue;
+    const jsxKey = k === "class" ? "className" : k;
+    attrParts.push(`${escapeAttr(jsxKey)}="${escapeAttr(v)}"`);
+  }
+
+  const styleEntries = Object.entries(node.style ?? {});
+  if (styleEntries.length > 0) {
+    const inner = styleEntries
+      .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+      .join(", ");
+    attrParts.push(`style={{ ${inner} }}`);
+  }
+
+  const open = attrParts.length
+    ? `<${tag} ${attrParts.join(" ")}>`
+    : `<${tag}>`;
+
+  if (TREE_VOID_TAGS.has(tag)) {
+    return `${pad}${open.replace(/>$/, " />")}`;
+  }
+
+  const text = (node.text ?? "").trim();
+  const kids = node.children ?? [];
+
+  if (kids.length === 0 && !text) return `${pad}${open}</${tag}>`;
+  if (kids.length === 0)
+    return `${pad}${open}${escapeJsxText(text)}</${tag}>`;
+
+  const lines: string[] = [`${pad}${open}`];
+  if (text) lines.push(`${pad}  ${escapeJsxText(text)}`);
+  for (const child of kids) {
+    lines.push(stringifyComponentTreeJsx(child, indent + 1));
+  }
+  lines.push(`${pad}</${tag}>`);
+  return lines.join("\n");
+}
+
+// JSX text escaping. `{`, `}`, `<`, `>` are all JSX-significant — easiest
+// to round-trip them through a JS string literal when present. Plain text
+// (the common case) emits unchanged so the snippet stays readable.
+function escapeJsxText(s: string): string {
+  if (/[{}<>]/.test(s)) {
+    return `{${JSON.stringify(s)}}`;
+  }
+  return s;
 }
 
 function escapeAttr(s: string): string {

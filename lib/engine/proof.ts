@@ -1,33 +1,45 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { chromium } from 'playwright';
+// @ts-expect-error culori has no bundled declarations in this setup
+import * as culori from 'culori';
 import type { DesignTokens } from './types';
 
-//  Color Math 
+//  Color Math
 
 interface RGB { r: number; g: number; b: number }
 
+// Pre-build culori's RGB→OKLCH converter once. `converter('oklch')` allocates
+// a closure on each call, and proof samples up to 2000 pixels per run.
+const toOklch = (culori as { converter: (m: string) => (rgb: unknown) => unknown }).converter('oklch');
+
+/**
+ * Convert sRGB (0..255) to OKLCH via culori — the same path cluster.ts uses
+ * for clustering. Earlier versions used a hand-rolled approximation that
+ * cube-rooted relative luminance for L and capped chroma at ~0.4 (HSL-style
+ * (max - min) × 0.4). The result was a space ~2.4× more compressed than
+ * real OKLCH, so proof's "ΔE<12 OKLCH" coverage was measured in a different
+ * metric than the extractor's clustering. Sharing the converter makes the
+ * threshold mean the same thing in both modules.
+ *
+ * Returns { l: 0, c: 0, h: 0 } when culori can't parse (defensive — RGB
+ * triples are always valid).
+ */
 function rgbToOklch(c: RGB): { l: number; c: number; h: number } {
-  // Simplified sRGB → OKLCH (good enough for scoring)
-  const r = c.r / 255, g = c.g / 255, b = c.b / 255;
-  const lr = r <= 0.04045 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
-  const lg = g <= 0.04045 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
-  const lb = b <= 0.04045 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
-  // Approximate lightness via luminance
-  const lum = 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
-  const l = Math.cbrt(lum);
-  // Approximate chroma and hue from raw RGB difference
-  const maxC = Math.max(lr, lg, lb);
-  const minC = Math.min(lr, lg, lb);
-  const chroma = (maxC - minC) * 0.4;
-  let hue = 0;
-  if (maxC - minC > 0.001) {
-    if (maxC === lr) hue = 60 * (((lg - lb) / (maxC - minC)) % 6);
-    else if (maxC === lg) hue = 60 * ((lb - lr) / (maxC - minC) + 2);
-    else hue = 60 * ((lr - lg) / (maxC - minC) + 4);
-    if (hue < 0) hue += 360;
-  }
-  return { l, c: chroma, h: hue };
+  const ok = toOklch({
+    mode: 'rgb' as const,
+    r: c.r / 255,
+    g: c.g / 255,
+    b: c.b / 255,
+  }) as { l?: number; c?: number; h?: number } | null;
+  if (!ok) return { l: 0, c: 0, h: 0 };
+  return {
+    l: ok.l ?? 0,
+    c: ok.c ?? 0,
+    // culori returns NaN/undefined for pure greys (hue is mathematically
+    // meaningless when chroma is 0). Coalesce to 0 so deltaE stays finite.
+    h: Number.isFinite(ok.h) ? (ok.h as number) : 0,
+  };
 }
 
 function deltaE(a: { l: number; c: number; h: number }, b: { l: number; c: number; h: number }): number {
@@ -312,14 +324,21 @@ async function runProof(
   const origScreenshot = await origPage.screenshot({ fullPage: false });
   const origB64 = origScreenshot.toString('base64');
 
-  // Collect <img>, <video>, <svg>, background-image bounding rects to exclude from sampling
+  // Collect raster-media bounding rects to exclude from sampling
   console.log('  Collecting image regions to exclude...');
   const imageRects: { x: number; y: number; w: number; h: number }[] = await origPage.evaluate(() => {
     const rects: { x: number; y: number; w: number; h: number }[] = [];
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    // Exclude <img>, <video>, <picture>, <canvas>, <svg> elements
-    const mediaEls = document.querySelectorAll('img, video, picture, canvas, svg');
+    // Exclude raster-image regions: <img>, <video>, <picture>, <canvas>.
+    // Inline <svg> is deliberately INCLUDED in sampling — modern sites use
+    // SVG for icons, decorative dividers, and chrome with currentColor or
+    // hex fills. Those pixels are CSS-rendered palette colors and should
+    // count toward coverage. External SVG (logos as <img src="...svg">) is
+    // still excluded via the <img> rule. Inline SVG that itself contains
+    // raster <image> children is rare and produces a small per-site noise
+    // floor — accept that as the cost of correctly measuring icon colors.
+    const mediaEls = document.querySelectorAll('img, video, picture, canvas');
     for (const el of mediaEls) {
       const r = el.getBoundingClientRect();
       if (r.width > 10 && r.height > 10 && r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw) {

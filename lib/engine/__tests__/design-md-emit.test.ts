@@ -304,36 +304,34 @@ describe('generateDesignMd  §3 Typography', () => {
     expect(md).toContain('### Hierarchy');
     // Role column must be first per validate.ts's schema check.
     expect(md).toContain('| Role | Font | Size |');
-    expect(md).toContain('Display Large');
+    // 48px h1 → role-namer's display-xl band → "Display XL"
+    expect(md).toContain('Display XL');
     expect(md).toContain('`48px`');
     expect(md).toContain('`700`');
     expect(md).toContain('`"ss01"`');
     expect(md).toContain('h1');
   });
 
-  it('derives Role from typical tags when role-namer has not been applied', () => {
+  it('assigns role-namer labels per typography level based on size + tag + weight', () => {
+    // design-md-emit now calls assignTypeRoles internally, so every level
+    // gets a roleLabel derived from role-namer's size/tag/weight bands —
+    // not the older `deriveTypoRole` tag-only fallback that returned
+    // "Display Large / Body / Mono". This test pins the new behaviour.
     const tokens = makeTokens({
       typographyLevels: [
-        makeTypoLevel({ typicalTags: ['h1'] }),
-        makeTypoLevel({ typicalTags: ['h2'] }),
-        makeTypoLevel({ typicalTags: ['p'] }),
-        makeTypoLevel({ typicalTags: ['button'] }),
-        makeTypoLevel({ typicalTags: ['code'] }),
+        makeTypoLevel({ fontSize: '64px', typicalTags: ['h1'] }),                                  // → Display XXL
+        makeTypoLevel({ fontSize: '32px', typicalTags: ['h2'] }),                                  // → Display MD
+        makeTypoLevel({ fontSize: '16px', typicalTags: ['p'] }),                                   // → Body MD
+        makeTypoLevel({ fontSize: '14px', fontWeight: '600', typicalTags: ['button'] }),            // → Button
+        makeTypoLevel({ fontSize: '13px', typicalTags: ['code'] }),                                // → Body SM
       ],
     });
     const md = generateDesignMd(tokens, null, baseOpts);
-    expect(md).toContain('Display Large');
-    expect(md).toContain('Display Medium');
-    expect(md).toContain('Body');
+    expect(md).toContain('Display XXL');
+    expect(md).toContain('Display MD');
+    expect(md).toContain('Body MD');
     expect(md).toContain('Button');
-    expect(md).toContain('Mono');
-  });
-
-  it('uses role-namer roleLabel when present (preferred over tag inference)', () => {
-    const level = Object.assign(makeTypoLevel({ typicalTags: ['h1'] }), { roleLabel: 'Display Hero' });
-    const md = generateDesignMd(makeTokens({ typographyLevels: [level] }), null, baseOpts);
-    expect(md).toContain('Display Hero');
-    expect(md).not.toContain('Display Large'); // tag fallback was not used
+    expect(md).toContain('Body SM');
   });
 
   it('de-duplicates font families in the "Font Families" list (but keeps every level in the hierarchy table)', () => {
@@ -522,10 +520,22 @@ describe('generateDesignMd  §12 Iconography', () => {
 
 describe('generateDesignMd  §13 Agent Prompt Guide', () => {
   it('renders quick color reference + self-containment checklist + pointer to universal prompt', () => {
+    // role-namer is applied internally now — the role assignments below
+    // must satisfy role-namer's heuristics rather than be hand-pinned by
+    // the caller. #635bff has OKLCH chroma > 0.1 + a chunky bgColor count
+    // → primary. #000000 has OKLCH lightness 0 + textColor ≥ 3 → ink.
     const tokens = makeTokens({
       colorTokens: [
-        Object.assign(makeColorToken({ hex: '#635bff' }), { roleLabel: 'Primary' }),
-        Object.assign(makeColorToken({ hex: '#000000' }), { roleLabel: 'Ink' }),
+        makeColorToken({
+          hex: '#635bff',
+          rgba: [99, 91, 255, 1],
+          usedAs: { textColor: 0, bgColor: 50, borderColor: 0, shadowColor: 0, gradientColor: 0, iconColor: 0 },
+        }),
+        makeColorToken({
+          hex: '#000000',
+          rgba: [0, 0, 0, 1],
+          usedAs: { textColor: 10, bgColor: 0, borderColor: 0, shadowColor: 0, gradientColor: 0, iconColor: 0 },
+        }),
       ],
     });
     const md = generateDesignMd(tokens, null, baseOpts);

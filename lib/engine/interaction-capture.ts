@@ -621,7 +621,82 @@ async function detectErrorStates(page: Page): Promise<ErrorStateInfo[]> {
   );
 }
 
-// ─── Main Export 
+// ─── Navigation Blocker
+
+/**
+ * Install in-page handlers that neutralise navigation while the per-element
+ * capture loop runs. The capture's focus + active steps simulate mousedown
+ * + click on every interactive element; on real sites that means anchors
+ * follow their href, framework click handlers call history.pushState, and
+ * forms submit. Once the page navigates the original execution context is
+ * destroyed and every subsequent `page.evaluate` throws — which is exactly
+ * the cascade observed on Webflow / Next.js / SPA sites (see the
+ * "Execution context was destroyed" failure tail in textla.com extraction
+ * logs).
+ *
+ * What this blocks:
+ *   - click / auxclick / submit (capture-phase, stopImmediatePropagation so
+ *     framework handlers downstream of us never fire)
+ *   - history.pushState / replaceState (SPA-router-style navigation)
+ *   - beforeunload (so the page can't prompt and stall the eval)
+ *
+ * What this DOES NOT break:
+ *   - mousedown → :active CSS pseudo (browser-native, before click event)
+ *   - mousedown → focus on focusable elements (browser-native, before click)
+ *   - Tab navigation + focus-visible CSS pseudo (no click involved)
+ *   - mouse.move → :hover CSS pseudo (no click involved)
+ *
+ * So the capture still produces the four pseudo-class diffs we want, and
+ * navigation can no longer destroy the execution context mid-loop. Idempotent
+ * — safe to call repeatedly on the same page; bail-flag stored on window.
+ *
+ * Best-effort: page.evaluate may itself throw on a page that's already mid-
+ * navigation when this runs (rare; discoverElements would also have failed
+ * in that case). Caller swallows the rejection — running without the
+ * blocker is no worse than today.
+ */
+async function blockNavigation(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as unknown as { __designmdNavBlocked?: boolean };
+    if (w.__designmdNavBlocked) return;
+    w.__designmdNavBlocked = true;
+
+    const block = (e: Event) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    };
+    document.addEventListener('click', block, true);
+    document.addEventListener('auxclick', block, true);
+    document.addEventListener('submit', block, true);
+
+    // Neutralise SPA-router navigation. Replace the methods with no-ops
+    // for the duration of capture — the capture loop never relies on URL
+    // changes, only on pseudo-class style differences.
+    try {
+      history.pushState = function () {
+        /* blocked during interaction capture */
+      };
+      history.replaceState = function () {
+        /* blocked during interaction capture */
+      };
+    } catch {
+      /* some browsers may throw on reassigning these; ignore */
+    }
+
+    window.addEventListener(
+      'beforeunload',
+      (e) => {
+        e.preventDefault();
+        // Setting returnValue is the historical way to suppress the prompt
+        // in some engines; modern Chromium ignores it but it's harmless.
+        (e as BeforeUnloadEvent).returnValue = '';
+      },
+      true,
+    );
+  });
+}
+
+// ─── Main Export
 
 export async function captureInteractions(page: Page): Promise<InteractionData> {
   const captures: InteractionCapture[] = [];
@@ -634,6 +709,16 @@ export async function captureInteractions(page: Page): Promise<InteractionData> 
     console.error('[interaction-capture] Failed to discover elements:', err);
     return { captures };
   }
+
+  // Install the navigation blocker before the per-element loop. Without
+  // this, the first anchor click in the focus / active steps navigates
+  // the page and every subsequent page.evaluate throws "Execution context
+  // was destroyed" — which silently empties hoverChanges / focusChanges /
+  // activeChanges for every remaining element on the page. Best-effort:
+  // if installation fails the loop still runs (just as flaky as before).
+  await blockNavigation(page).catch(() => {
+    /* run without blocker if install fails */
+  });
 
   for (const el of elements) {
     if (Date.now() - pageStart > PAGE_TIMEOUT) {

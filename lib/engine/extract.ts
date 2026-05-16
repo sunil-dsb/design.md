@@ -220,8 +220,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
   }
 
   if (crawlResult.pages.length === 0) {
-    console.error('\n  ERROR: No pages successfully crawled. Exiting.');
-    process.exit(1);
+    throw new Error('No pages successfully crawled.');
   }
 
   // Save screenshots

@@ -425,7 +425,70 @@ export function parsePxValue(val: string): number | null {
   return num;
 }
 
-//  Usage Context Type 
+//  Element Visual Score (representative selection)
+
+/**
+ * Cheap visual-prominence score used to pick a representative element from a
+ * cluster of same-variant components (Card / Hero / Footer / Link / Badge /
+ * Input / PricingTier / Navigation). Higher score = more visually prominent.
+ *
+ * Formula: sqrt(area) × foldBoost. sqrt because a 2× wider element is ~2×
+ * as visually prominent, not 4×. foldBoost: 2 above-the-fold, 1 below.
+ *
+ * Viewport height hardcoded to 900 to match extract.ts's per-page newContext
+ * call (`{ width: 1440, height: 900 }`). DOM rects this function consumes
+ * were captured at that viewport, so 900 is the right fold boundary.
+ *
+ * visibility-weight.ts has a richer formula with semantic + interactive
+ * boosts. Those signals are valuable for color-token weighting but largely
+ * noise for component-representative picking (a Hero isn't a heading; a
+ * Card isn't interactive). The simpler formula here is the right tool and
+ * keeps cluster.ts free of the cross-module dep on the visibility-weight
+ * ADD layer (which would also create a circular import — that module
+ * already imports `parseColor` + `deltaE` from here).
+ *
+ * Buttons are unaffected: button-cluster.ts replaces components[type ===
+ * 'Button'] downstream with its own OKLCH-ΔE clustering + visibility-picked
+ * representative. The improved pick here still runs for Button, but its
+ * output is overwritten later.
+ */
+function elementVisualScore(el: ElementStyle): number {
+  const area = el.rect.width * el.rect.height;
+  if (area <= 0) return 0;
+  const foldBoost = el.rect.y < 900 ? 2 : 1;
+  return Math.sqrt(area) * foldBoost;
+}
+
+/**
+ * Strict visibility gate. Mirrors the early-exit in
+ * visibility-weight.ts:computeElementWeight so raw frequency counts and
+ * visibility-weighted scores see the same set of elements.
+ *
+ * Excluded:
+ *   - display: none            — not in the render tree at all
+ *   - opacity: 0               — rendered but contributes no visible pixels
+ *   - width or height ≤ 0      — degenerate rect, paints nothing
+ *
+ * NOT excluded: visibility: hidden. Those elements reserve layout space
+ * and may be revealed by JS (open/close panels, dropdowns); their CSS is
+ * still part of the design system. Revisit if low-quality sites are seen
+ * leaking hidden colors into the palette.
+ *
+ * Applied today to the COLOR-COLLECTION loop only — frequency counts
+ * are the field most contaminated by hidden-element pollution because
+ * role-namer's fallback path and 4-layer stability classification both
+ * consume them. Typography / spacing / shadow / radius / component
+ * extraction don't apply this gate yet (separate accuracy item).
+ */
+function isElementVisible(el: ElementStyle): boolean {
+  if (el.display === 'none') return false;
+  const opacity = parseFloat(el.opacity || '1');
+  if (Number.isFinite(opacity) && opacity === 0) return false;
+  if (el.rect.width <= 0 || el.rect.height <= 0) return false;
+  return true;
+}
+
+//  Usage Context Type
 
 type UsageContext = 'textColor' | 'bgColor' | 'borderColor' | 'shadowColor' | 'gradientColor' | 'iconColor';
 
@@ -711,6 +774,16 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
 
     // Element colors
     for (const el of dom.elements) {
+      // Skip elements that aren't rendering pixels (display:none,
+      // opacity:0, degenerate rect). Their colors are still defined in
+      // the CSS but they contribute nothing to the visible UI — counting
+      // them inflates frequency for hidden modals / dropdowns / off-screen
+      // a11y helpers, which poisons role-namer's fallback prominence
+      // signal and the 4-layer stability classifier. See isElementVisible
+      // for the exact gate; matches visibility-weight.ts so the two
+      // passes agree on what "in the system" means.
+      if (!isElementVisible(el)) continue;
+
       addColor(el.color, 'textColor', url);
       addColor(el.backgroundColor, 'bgColor', url);
       addColor(el.borderTopColor, 'borderColor', url);
@@ -1211,22 +1284,11 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
 
   const radiusTokens: RadiusToken[] = Array.from(radiusFreq.values())
     .sort((a, b) => b.frequency - a.frequency)
-    .map((r) => {
-      // Annotate special values
-      let value = r.value;
-      const px = parsePxValue(value);
-      if (px !== null && px >= 9999) {
-        value = `${value} /* pill */`;
-      }
-      if (value === '50%') {
-        value = `${value} /* circle */`;
-      }
-      return {
-        value: r.value,
-        frequency: r.frequency,
-        typicalElements: r.elements,
-      };
-    });
+    .map((r) => ({
+      value: r.value,
+      frequency: r.frequency,
+      typicalElements: r.elements,
+    }));
 
   //  7. Component Identification 
 
@@ -1347,7 +1409,27 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
 
   //  Variant Detection 
 
-  function classifyVariant(el: ElementStyle): string {
+  // Names the type-aware classifier may emit. Used by the per-type variant-
+  // counter rewrite below to decide which returns are "real" labels and
+  // which need a Variant-N fallback. Anything not in this set falls back.
+  const RECOGNIZED_VARIANT_NAMES = new Set([
+    // Button surface treatment
+    'Primary', 'Secondary', 'Ghost', 'Destructive',
+    // Card / PricingTier surface treatment
+    'Outlined', 'Elevated', 'Filled', 'Featured',
+    // Badge semantic hue
+    'Success', 'Warning', 'Error', 'Info', 'Brand', 'Neutral',
+    // Single-instance types (Hero / Footer / Navigation / Input / Link)
+    'Default',
+  ]);
+
+  /**
+   * Button surface treatment: Primary / Secondary / Ghost / Destructive by
+   * background luminance + text contrast. button-cluster.ts replaces this
+   * downstream with OKLCH-ΔE clustering on (bg, text, border); we keep the
+   * simple classifier here for non-SPA CLI runs that don't run button-cluster.
+   */
+  function classifyButtonVariant(el: ElementStyle): string {
     const bg = parseColor(el.backgroundColor);
     const text = parseColor(el.color);
 
@@ -1372,6 +1454,92 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     return 'Primary';
   }
 
+  /**
+   * Surface-treatment variants for Card / PricingTier — types where multiple
+   * visual variants are meaningful on real sites (feature vs pricing vs
+   * testimonial cards; default vs featured tiers).
+   *
+   *   - Featured: chromatic bg (saturated, mid-luminance). Sites typically
+   *               paint a featured tier or highlighted card with brand hue.
+   *   - Outlined: border-only, no fill.
+   *   - Elevated: solid bg + box-shadow (raised surface).
+   *   - Filled:   solid bg, no shadow.
+   *   - Default:  no distinguishing surface treatment.
+   *
+   * Checked BEFORE Outlined so a chromatic card with a border still scores
+   * as "Featured" rather than collapsing into "Outlined".
+   */
+  function classifySurfaceVariant(el: ElementStyle): string {
+    const bg = parseColor(el.backgroundColor);
+    const hasBg = bg !== null && bg.a > 0.5;
+    const hasBorder =
+      parseFloat(el.borderTopWidth) > 0 && el.borderStyle !== 'none';
+    const hasShadow = !!el.boxShadow && el.boxShadow !== 'none';
+
+    if (hasBg && bg) {
+      const max = Math.max(bg.r, bg.g, bg.b);
+      const min = Math.min(bg.r, bg.g, bg.b);
+      const sat = max > 0 ? (max - min) / max : 0;
+      const lum = relativeLuminance(bg.r, bg.g, bg.b);
+      // Saturated AND not near-white/near-black → featured/highlighted
+      if (sat > 0.25 && lum > 0.1 && lum < 0.85) return 'Featured';
+    }
+    if (hasBorder && !hasBg) return 'Outlined';
+    if (hasBg && hasShadow) return 'Elevated';
+    if (hasBg) return 'Filled';
+    return 'Default';
+  }
+
+  /**
+   * Semantic-hue variants for Badge — small chips that usually carry status
+   * meaning. Reuses the clusterTokens-scope `toOklch` converter so hue
+   * values are consistent with the color-clustering pass.
+   *
+   *   < 0.05 chroma   → Neutral (matches role-namer's low-chroma boundary)
+   *   0°..30°, 350°..360° → Error (red band)
+   *   30°..100°       → Warning (orange / yellow)
+   *   100°..180°      → Success (green / teal)
+   *   180°..250°      → Info (blue / cyan)
+   *   250°..350°      → Brand (purple / pink — typically brand badges)
+   */
+  function classifyHueVariant(el: ElementStyle): string {
+    const bg = parseColor(el.backgroundColor);
+    if (!bg || bg.a < 0.05) return 'Default';
+
+    const rgb = { mode: 'rgb' as const, r: bg.r / 255, g: bg.g / 255, b: bg.b / 255 };
+    const ok = toOklch(rgb) as { c?: number; h?: number } | null;
+    if (!ok || !Number.isFinite(ok.c) || (ok.c ?? 0) < 0.05) return 'Neutral';
+
+    const h = Number.isFinite(ok.h) ? (ok.h as number) : 0;
+    if (h < 30 || h >= 350) return 'Error';
+    if (h < 100) return 'Warning';
+    if (h < 180) return 'Success';
+    if (h < 250) return 'Info';
+    return 'Brand';
+  }
+
+  /**
+   * Top-level variant classifier — dispatches by component type because the
+   * meaningful axis-of-variation differs:
+   *
+   *   - Button:           surface treatment (Primary/Secondary/Ghost/Destructive)
+   *   - Card/PricingTier: surface treatment (Outlined/Elevated/Filled/Featured)
+   *   - Badge:            semantic hue (Success/Warning/Error/Info/Brand/Neutral)
+   *   - Everything else:  'Default'
+   *
+   * Previously every type funneled through the Button classifier, so Heroes,
+   * Footers, Navigations, etc. all got Primary/Secondary/Ghost/Destructive
+   * labels — meaningless for those types. Even Cards (where multiple variants
+   * ARE meaningful) ended up with names that didn't reflect the visual
+   * distinction.
+   */
+  function classifyVariant(el: ElementStyle, type: string): string {
+    if (type === 'Button') return classifyButtonVariant(el);
+    if (type === 'Card' || type === 'PricingTier') return classifySurfaceVariant(el);
+    if (type === 'Badge') return classifyHueVariant(el);
+    return 'Default';
+  }
+
   // Group by component type, then by variant. `pageIndexes` mirrors
   // `pageUrls` order: pageIndexes[0] is the page where elements[0] was
   // first seen — the lookup key for the composed-component screenshot
@@ -1394,7 +1562,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       componentTypeGroups.set(comp.type, new Map());
     }
     const variants = componentTypeGroups.get(comp.type)!;
-    const variantName = classifyVariant(comp.element);
+    const variantName = classifyVariant(comp.element, comp.type);
 
     const existing = variants.get(variantName);
     if (existing) {
@@ -1402,6 +1570,25 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       if (existing.elements.length < 3) {
         existing.elements.push(comp.element);
         existing.pageIndexes.push(comp.pageIndex);
+      } else {
+        // Maintain top-3 by visual score across ALL instances site-wide,
+        // not just the first 3 in DOM walk order. Without this, a sidebar
+        // widget crawled early can shadow a hero card crawled later when
+        // both fall into the same variant bucket. Replace the lowest-scored
+        // kept element if the incoming one beats it. The `representative =
+        // elements[bestIdx]` selection below picks the highest of the
+        // surviving three.
+        const newScore = elementVisualScore(comp.element);
+        let minIdx = 0;
+        let minScore = elementVisualScore(existing.elements[0]);
+        for (let i = 1; i < existing.elements.length; i++) {
+          const s = elementVisualScore(existing.elements[i]);
+          if (s < minScore) { minScore = s; minIdx = i; }
+        }
+        if (newScore > minScore) {
+          existing.elements[minIdx] = comp.element;
+          existing.pageIndexes[minIdx] = comp.pageIndex;
+        }
       }
       if (!existing.pageUrls.includes(comp.pageUrl)) existing.pageUrls.push(comp.pageUrl);
     } else {
@@ -1471,7 +1658,17 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     let variantCounter = 1;
 
     for (const [name, data] of variants) {
-      const representative = data.elements[0];
+      // Pick the highest-scored of the kept (top-3-by-score) elements as the
+      // representative. Both the variant style snapshot and the composed-
+      // component lookups (tree + screenshot) use this index, so they all
+      // come from the same most-prominent instance.
+      let bestIdx = 0;
+      let bestScore = elementVisualScore(data.elements[0]);
+      for (let i = 1; i < data.elements.length; i++) {
+        const s = elementVisualScore(data.elements[i]);
+        if (s > bestScore) { bestScore = s; bestIdx = i; }
+      }
+      const representative = data.elements[bestIdx];
       const interaction = findInteraction(representative);
 
       const style: Record<string, string> = {
@@ -1496,21 +1693,21 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
         .filter((t) => t.length > 0)
         .slice(0, 3);
 
-      const displayName = name === 'Primary' || name === 'Secondary' || name === 'Ghost' || name === 'Destructive'
+      const displayName = RECOGNIZED_VARIANT_NAMES.has(name)
         ? name
         : `Variant-${variantCounter++}`;
 
       // Composed-component augmentation: build the descendant tree and
-      // attach the source-page screenshot URL. `pageIndexes[0]` is the
-      // page where `elements[0]` was first seen — using pageIndex (not
-      // URL) avoids the duplicate-URL collision where Map.set would
-      // overwrite one visit's screenshots with another's. Both lookups
-      // are best-effort — if either fails the variant still ships,
-      // just without the rich preview.
+      // attach the source-page screenshot URL. `pageIndexes[bestIdx]` is the
+      // page where the chosen representative was first seen — using
+      // pageIndex (not URL) avoids the duplicate-URL collision where Map.set
+      // would overwrite one visit's screenshots with another's. Both lookups
+      // are best-effort — if either fails the variant still ships, just
+      // without the rich preview.
       let tree: ComponentNode | undefined;
       let screenshotUrl: string | undefined;
       if (COMPOSED_TYPES.has(type)) {
-        const pageIndex = data.pageIndexes[0];
+        const pageIndex = data.pageIndexes[bestIdx];
         const childrenMap = parentMapsByPageIndex.get(pageIndex);
         if (childrenMap) {
           tree = buildComponentTree(representative, childrenMap);
