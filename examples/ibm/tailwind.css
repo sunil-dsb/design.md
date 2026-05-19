@@ -1,0 +1,76 @@
+/* Tailwind v4 @theme  ibm (https://www.ibm.com/)
+ *
+ * Generated: 2026-05-18
+ * Brand ramp seed: #0f62fe (algorithm: oklch-lightness-curve)
+ *
+ * Paste this into your project. If you already have an @import "tailwindcss";
+ * line, drop the @theme block alongside it; otherwise paste the whole file.
+ */
+@theme {
+  /* Brand ramp  regenerated 12-stop OKLCH, anchored on #0f62fe. */
+  --color-brand-25: #f3fcff;
+  --color-brand-50: #e9f6ff;
+  --color-brand-100: #d9ecff;
+  --color-brand-200: #c5dfff;
+  --color-brand-300: #a2c8ff;
+  --color-brand-400: #73a9ff;
+  --color-brand-500: #367eff;
+  --color-brand-600: #155be2;
+  --color-brand-700: #003db6;
+  --color-brand-800: #001f8c;
+  --color-brand-900: #000064;
+  --color-brand-950: #000033;
+
+  /* Neutral ramp  tinted with brand hue 262° at chroma 0.005. */
+  --color-neutral-25: #fafcff;
+  --color-neutral-50: #f3f5f9;
+  --color-neutral-100: #e9ebef;
+  --color-neutral-200: #dcdee1;
+  --color-neutral-300: #c5c7cb;
+  --color-neutral-400: #a9abae;
+  --color-neutral-500: #87898c;
+  --color-neutral-600: #67696c;
+  --color-neutral-700: #4b4d50;
+  --color-neutral-800: #313335;
+  --color-neutral-900: #191b1d;
+  --color-neutral-950: #060709;
+
+  /* Type families */
+  --font-sans: "IBM Plex Sans";
+  --font-mono: "IBM Plex Mono";
+
+  /* Type scale (role-named  e.g. `text-display-xxl`, `text-body-md`). */
+  --text-display-xl: 54px;
+  --text-display-xl--line-height: 1.07;
+  --text-display-xl--letter-spacing: 0;
+  --text-display-xl--font-weight: 300;
+  --text-display-lg: 42px;
+  --text-display-lg--line-height: 1.19;
+  --text-display-lg--letter-spacing: 0;
+  --text-display-lg--font-weight: 300;
+  --text-display-md: 28px;
+  --text-display-md--line-height: 1.28;
+  --text-display-md--letter-spacing: 0;
+  --text-heading-md: 18px;
+  --text-heading-md--line-height: 1.4;
+  --text-heading-md--letter-spacing: 0;
+  --text-body-md: 16px;
+  --text-body-md--line-height: 1.5;
+  --text-body-md--letter-spacing: 0;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 1.43;
+  --text-body-sm--letter-spacing: 0.16px;
+  --text-caption: 12px;
+  --text-caption--line-height: 1.33;
+  --text-caption--letter-spacing: 0.32px;
+
+  /* Spacing base unit  Tailwind derives the whole numeric scale from this. */
+  --spacing: 8px;
+
+  /* Border radius */
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
+  --radius-xl: 8px;
+  --radius-full: 9999px;
+}

@@ -110,14 +110,20 @@ function styleSnapshot(el: ElementStyle): Record<string, string> {
 
 function attrSnapshot(el: ElementStyle): Record<string, string> {
   const attrs: Record<string, string> = {};
-  // ElementStyle only carries a handful of attribute-like fields. We
-  // expose the ones the renderer needs to render a code snippet that's
-  // useful to a developer: href for <a>, type for <input>. Other attrs
-  // (src, alt) aren't captured today — fine for v1; consumer fills them
-  // in when replanting.
+  // ElementStyle carries a small allowlist of attribute-like fields the
+  // captured tree needs to faithfully render later. href for <a>, type for
+  // <input>/<button>, aria-label for accessibility, src + alt for <img>.
+  // src + alt were added so the LiveTree renderer in the SPA can show real
+  // images (icons, illustrations) instead of broken placeholders. Cross-
+  // origin image loads may still fail at render time — that's a fidelity
+  // limit of the captured-tree approach, not something we can fix here.
   if (el.tag === 'a' && el.href) attrs.href = el.href;
   if ((el.tag === 'input' || el.tag === 'button') && el.type) attrs.type = el.type;
   if (el.ariaLabel) attrs['aria-label'] = el.ariaLabel;
+  if (el.tag === 'img') {
+    if (el.src) attrs.src = el.src;
+    if (el.alt) attrs.alt = el.alt;
+  }
   return attrs;
 }
 
@@ -425,6 +431,221 @@ export function parsePxValue(val: string): number | null {
   return num;
 }
 
+/**
+ * Normalise a CSS border-radius string for cluster keying / emit.
+ *
+ * Used by the radius clustering pass to:
+ *   - Collapse rem-derived sub-pixel drift ("18.7693px", "18.769px") into
+ *     a single integer-px bucket ("19px"). Real design tokens authored
+ *     in rem land here together instead of fragmenting into noise.
+ *   - Filter outliers: any corner > MAX_RADIUS_PX (10000) signals a
+ *     `calc(infinity)` overflow or `Number.MAX_SAFE_INTEGER`-style sentinel
+ *     (Shopify's "3.35544e+07px" was extracted 25 times pre-fix). The cap
+ *     sits above the conventional pill value (`9999px`) so genuine pill
+ *     radii pass through; anything an order of magnitude higher is
+ *     overflow territory and gets dropped.
+ *   - Filter all-zero shorthands ("0px 0px 0px 0px") that the simple
+ *     `value === '0px'` check missed. Same null-return path.
+ *   - Preserve genuine asymmetric corners ("32px 32px 0px 0px"),
+ *     percentages ("50%"), and pill conventions ("9999px") as-is. Each
+ *     of these is its own design intent.
+ *
+ * Returns the normalised string, or null when the input should be
+ * dropped from the radius scale entirely. Exported for unit testing.
+ */
+const MAX_RADIUS_PX = 10000;
+
+/**
+ * Strip invisible layers from a multi-layer CSS box-shadow value
+ * (Issue SH3 fix). Returns the cleaned shadow string, or null if no
+ * visible layer remains.
+ *
+ * Why: Tailwind v4's preflight defines `--tw-ring-offset-shadow`,
+ * `--tw-ring-shadow`, `--tw-inset-shadow`, and `--tw-shadow` as CSS
+ * variables that default to `0 0 #0000` (transparent, all-zero). When
+ * an element ships ANY shadow utility, the computed `box-shadow` value
+ * concatenates ALL FOUR slot values, with the unused ones rendering as
+ * `rgba(0, 0, 0, 0) 0px 0px 0px 0px`  invisible noise that bloats
+ * tokens.json strings and obscures the design-intent layers. See real
+ * Shopify shadow strings: every entry has four placeholder layers
+ * before the actual shadow content.
+ *
+ * A layer is invisible iff:
+ *   - Its colour parses to alpha = 0 (fully transparent), OR
+ *   - All four numeric components (offsetX, offsetY, blur, spread) are 0
+ *
+ * A `rgba(0, 0, 0, 0) 0px 0px 0px 0px` placeholder matches BOTH; either
+ * gate alone suffices. Real shadows have either a visible colour or
+ * a non-zero offset / blur / spread.
+ *
+ * Exported for unit testing.
+ */
+export function normalizeShadowValue(value: string): string | null {
+  if (!value || value === 'none') return null;
+  const layers = splitShadowLayers(value);
+  const visible = layers.filter((layer) => {
+    // Extract the colour (first rgba / hsla / hex / oklab / oklch /
+    // named-colour-ish token). parseColor handles every CSS colour
+    // syntax used in shadows (delegates modern colours to culori).
+    const colorMatch = layer.match(
+      /rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-fA-F]{3,8}|oklab\([^)]+\)|oklch\([^)]+\)/,
+    );
+    if (colorMatch) {
+      const parsed = parseColor(colorMatch[0]);
+      if (parsed && parsed.a === 0) return false;
+    }
+    // Strip the colour fragment, then check the remaining numbers.
+    // Inset keyword + comments don't matter here  we only care if
+    // ALL FOUR of offsetX / offsetY / blur / spread are zero.
+    const sansColor = layer
+      .replace(/rgba?\([^)]+\)/g, '')
+      .replace(/hsla?\([^)]+\)/g, '')
+      .replace(/#[0-9a-fA-F]{3,8}/g, '')
+      .replace(/oklab\([^)]+\)/g, '')
+      .replace(/oklch\([^)]+\)/g, '')
+      .replace(/\binset\b/g, '')
+      .trim();
+    const nums = sansColor
+      .match(/-?\d+(\.\d+)?(px)?/g)
+      ?.map((n) => parseFloat(n)) ?? [];
+    if (nums.length > 0 && nums.every((n) => n === 0)) return false;
+    return true;
+  });
+  if (visible.length === 0) return null;
+  return visible.join(', ');
+}
+
+export function normalizeBorderRadius(raw: string): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === 'none') return null;
+
+  // Split on whitespace to get the individual corners (1-4 components).
+  // CSS allows the `/` separator for elliptical-radius syntax  rare in
+  // practice and not part of any design system we've seen, so we treat
+  // the whole string as opaque if it contains a slash.
+  if (trimmed.includes('/')) return trimmed;
+
+  const parts = trimmed.split(/\s+/);
+  const normalised: string[] = [];
+  let allZero = true;
+  for (const part of parts) {
+    // Percentage: keep authored value as-is. "50%" and "100%" are
+    // semantically distinct from px-based radii (50% = ellipse / circle,
+    // 100% on small widgets, etc.). Don't collapse.
+    if (part.endsWith('%')) {
+      normalised.push(part);
+      if (parseFloat(part) !== 0) allZero = false;
+      continue;
+    }
+    // Try parsing as a px-like length (px / rem / em via parsePxValue).
+    const px = parsePxValue(part);
+    if (px !== null) {
+      // Drop the whole token if ANY corner exceeds the sane radius cap.
+      // Catches Shopify's 3.35544e+07 outlier and similar calc()-overflow
+      // sentinels without affecting realistic pill values (9999px stays).
+      if (px > MAX_RADIUS_PX) return null;
+      const rounded = Math.round(px);
+      normalised.push(`${rounded}px`);
+      if (rounded !== 0) allZero = false;
+      continue;
+    }
+    // Unknown form (calc(), keyword, etc.)  pass through unchanged.
+    normalised.push(part);
+    allZero = false;
+  }
+
+  if (allZero) return null;
+  return normalised.join(' ');
+}
+
+/**
+ * Normalise a CSS line-height to integer pixels relative to a given font
+ * size. Used by the typography clustering pass so that the same authored
+ * line-height surfaces as the same cluster key regardless of which CSS
+ * unit was specified (Issue T3 / T4 fix).
+ *
+ * Handles every CSS line-height syntax getComputedStyle can emit:
+ *   - "24px"           absolute length
+ *   - "1.5"            unitless multiplier (rendered as multiplier x font-size)
+ *   - "150%"           percent multiplier
+ *   - "1.5em" / "rem"  em / rem (rem treated as 1rem = 16px per parsePxValue)
+ *   - "normal"         CSS default; browsers compute ~1.2 x font-size  use 1.2
+ *
+ * Returns the integer pixel value. Rounding to integers groups trivially
+ * different lineHeights (24.001px vs 24px, sub-pixel float drift) into
+ * the same bucket while keeping genuinely-distinct lineHeights (24 vs 28)
+ * separate. Exported for unit testing.
+ */
+export function normalizeLineHeight(
+  lineHeight: string,
+  fontSizePx: number,
+): number {
+  if (!lineHeight || lineHeight === 'normal') {
+    return Math.round(fontSizePx * 1.2);
+  }
+  const trimmed = lineHeight.trim();
+  // Percent value: "150%"  multiply by font-size, divide by 100.
+  if (trimmed.endsWith('%')) {
+    const pct = parseFloat(trimmed);
+    if (Number.isFinite(pct)) return Math.round((pct / 100) * fontSizePx);
+    return Math.round(fontSizePx * 1.2);
+  }
+  // Absolute or rem / em via parsePxValue. Important: this branch must
+  // run BEFORE the unitless branch, because parseFloat("1.5em") = 1.5
+  // and the bare-number path would treat it as a 1.5x multiplier  but
+  // 1.5em is 1.5 x 16 = 24px regardless of font-size.
+  if (trimmed.endsWith('px') || trimmed.endsWith('rem') || trimmed.endsWith('em')) {
+    const px = parsePxValue(trimmed);
+    if (px !== null) return Math.round(px);
+  }
+  // Unitless multiplier: "1.5"  multiplier x font-size.
+  const ratio = parseFloat(trimmed);
+  if (Number.isFinite(ratio)) return Math.round(ratio * fontSizePx);
+  return Math.round(fontSizePx * 1.2);
+}
+
+/**
+ * Count the number of columns in a `grid-template-columns` computed value.
+ *
+ * The naive `.split(/\s+/)` approach over-counts when track sizes contain
+ * embedded whitespace via functional notation. getComputedStyle returns:
+ *   - `minmax(0px, 1fr) minmax(0px, 1fr)` for a 2-col minmax grid
+ *   - `fit-content(200px) 1fr` for fit-content tracks
+ *   - `repeat(...)` is normalized by the browser into explicit tracks, but
+ *     line names `[start]` / `[col-end]` survive in the computed value.
+ *
+ * This helper walks the string tracking paren depth so functional notations
+ * count as a single track, and skips bracket-wrapped line names.
+ *
+ * Exported for unit testing.
+ */
+export function countGridColumns(gtc: string): number {
+  if (!gtc || gtc === 'none') return 0;
+  const tokens: string[] = [];
+  let buf = '';
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  for (let i = 0; i < gtc.length; i++) {
+    const ch = gtc[i];
+    if (ch === '(') parenDepth++;
+    else if (ch === ')') parenDepth = Math.max(0, parenDepth - 1);
+    else if (ch === '[') bracketDepth++;
+    else if (ch === ']') bracketDepth = Math.max(0, bracketDepth - 1);
+    if (/\s/.test(ch) && parenDepth === 0 && bracketDepth === 0) {
+      if (buf.length > 0) {
+        tokens.push(buf);
+        buf = '';
+      }
+      continue;
+    }
+    buf += ch;
+  }
+  if (buf.length > 0) tokens.push(buf);
+  // Line names (bracket-wrapped) don't represent columns.
+  return tokens.filter((t) => t.length > 0 && !t.startsWith('[')).length;
+}
+
 //  Element Visual Score (representative selection)
 
 /**
@@ -480,12 +701,55 @@ function elementVisualScore(el: ElementStyle): number {
  * consume them. Typography / spacing / shadow / radius / component
  * extraction don't apply this gate yet (separate accuracy item).
  */
-function isElementVisible(el: ElementStyle): boolean {
+export function isElementVisible(el: ElementStyle): boolean {
   if (el.display === 'none') return false;
   const opacity = parseFloat(el.opacity || '1');
   if (Number.isFinite(opacity) && opacity === 0) return false;
   if (el.rect.width <= 0 || el.rect.height <= 0) return false;
+  // Screen-reader-only pattern: width:1px; height:1px; clip:rect(...);
+  // overflow:hidden; position:absolute. The element exists in the DOM
+  // and has non-zero rect, but is functionally invisible to sighted
+  // users. We filter the canonical 1x1 (or sub-pixel) signature so it
+  // doesn't pollute touch-target metrics, minFontSize, contrast pairs,
+  // typography clusters, etc. The AND of both dimensions <=1 preserves
+  // legitimate 1px-wide vertical dividers (e.g. 1x100 rect passes).
+  if (el.rect.width <= 1 && el.rect.height <= 1) return false;
   return true;
+}
+
+/**
+ * Set of unique border colours that ACTUALLY render on an element.
+ *
+ * Two correctness wins over the previous "add all 4 border-side colours
+ * unconditionally" approach:
+ *
+ *   1. Per-side width gate. `getComputedStyle` returns a real border-color
+ *      value even when the side has `border-width: 0` (e.g. Tailwind v4
+ *      preflight sets `border-color: rgb(229, 231, 235)` on every element
+ *      by default). Counting those colours conflates "Tailwind preflight
+ *      default" with "design-intent border colour" and inflates the
+ *      hairline-tone frequency. Skipping sides with width 0 fixes that.
+ *
+ *   2. Per-element dedupe. A typical 4-side uniform border (`border: 1px
+ *      solid #abc`) used to contribute its colour FOUR times per element,
+ *      4xing the borderColor count for hairline tones. A `Set<string>`
+ *      keyed on the colour-string makes the count one-per-element.
+ *      getComputedStyle always normalises to the same string for the same
+ *      resolved colour, so string-keyed dedupe is safe.
+ *
+ * Returns an empty set when no side has visible width (the element has no
+ * visible borders at all  the most common case across modern UI).
+ *
+ * Exported for unit testing. Pure  no I/O, no closures, no mutation
+ * of inputs.
+ */
+export function visibleBorderColors(el: ElementStyle): Set<string> {
+  const colors = new Set<string>();
+  if (parseFloat(el.borderTopWidth) > 0) colors.add(el.borderTopColor);
+  if (parseFloat(el.borderRightWidth) > 0) colors.add(el.borderRightColor);
+  if (parseFloat(el.borderBottomWidth) > 0) colors.add(el.borderBottomColor);
+  if (parseFloat(el.borderLeftWidth) > 0) colors.add(el.borderLeftColor);
+  return colors;
 }
 
 //  Usage Context Type
@@ -497,8 +761,31 @@ interface ColorEntry {
   hex: string;
   frequency: number;
   usedAs: Record<UsageContext, number>;
-  pages: Set<string>;
+  // URL  per-page frequency (Issue #4 fix). Was previously a Set<string>
+  // tracking only which pages saw this colour; the final emit then divided
+  // total `frequency` by `pages.size` to fake a uniform per-page split,
+  // which silently lied about per-page distribution. The Map shape lets
+  // the final emit use real counts (3 on page A, 1 on page B) instead.
+  pages: Map<string, number>;
   cssVariableNames: Set<string>;
+  // Distinct alpha values seen for this RGB triple (and OKLCH neighbours
+  // after clustering), mapped to their accumulated frequency. Lets the
+  // final emit surface `alphaVariants` on the ColorToken without losing
+  // the alpha=0.2 contribution when it merges into the alpha=1 cluster
+  // representative. Keys are rounded to 3 decimals  see roundAlpha()
+  // so authored alphas like 0.5 don't fragment into 0.4999 / 0.5001 due
+  // to upstream parsing float drift.
+  alphaCounts: Map<number, number>;
+}
+
+/**
+ * Round alpha to 3 decimals so we don't fragment otherwise-identical
+ * alphas into separate buckets due to upstream float noise. Browsers and
+ * parsers can return 0.9999... for an authored 1.0, or 0.20000000003 for
+ * 0.2  rounding at the bucket level keeps the variant list honest.
+ */
+function roundAlpha(a: number): number {
+  return Math.round(a * 1000) / 1000;
 }
 
 //  Exported Utilities (for testing) 
@@ -744,11 +1031,24 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
 
     const hex = rgbaToHex(parsed.r, parsed.g, parsed.b);
     const key = rgbaKey(parsed);
+    const roundedAlpha = roundAlpha(parsed.a);
     const existing = colorMap.get(key);
     if (existing) {
       existing.frequency++;
       existing.usedAs[context]++;
-      existing.pages.add(pageUrl);
+      // Bump per-page count. Previously this was an unordered Set add
+      // (we only tracked which pages saw the colour); now we track
+      // actual per-page frequency so the final emit can report honest
+      // sourcePages[i].frequency values instead of total / pages.size.
+      existing.pages.set(pageUrl, (existing.pages.get(pageUrl) ?? 0) + 1);
+      // Same rgbaKey means same alpha (rgbaKey includes alpha at 3
+      // decimals), so this just bumps the single existing alpha bucket.
+      // The cross-alpha merge happens later when two same-RGB / different-
+      // alpha entries collapse into one OKLCH cluster.
+      existing.alphaCounts.set(
+        roundedAlpha,
+        (existing.alphaCounts.get(roundedAlpha) ?? 0) + 1,
+      );
     } else {
       colorMap.set(key, {
         rgba: parsed,
@@ -762,8 +1062,9 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
           gradientColor: 0,
           iconColor: 0,
         },
-        pages: new Set([pageUrl]),
+        pages: new Map([[pageUrl, 1]]),
         cssVariableNames: new Set(),
+        alphaCounts: new Map([[roundedAlpha, 1]]),
       });
       colorMap.get(key)!.usedAs[context] = 1;
     }
@@ -786,12 +1087,34 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
 
       addColor(el.color, 'textColor', url);
       addColor(el.backgroundColor, 'bgColor', url);
-      addColor(el.borderTopColor, 'borderColor', url);
-      addColor(el.borderRightColor, 'borderColor', url);
-      addColor(el.borderBottomColor, 'borderColor', url);
-      addColor(el.borderLeftColor, 'borderColor', url);
-      addColor(el.outlineColor, 'borderColor', url);
-      addColor(el.textDecorationColor, 'textColor', url);
+      // Border colours: count each unique colour once per element, gated
+      // by per-side visibility. See visibleBorderColors() for the
+      // correctness story  the previous 4-side unconditional add was
+      // 4xing the count for uniformly-bordered elements AND silently
+      // including phantom Tailwind-preflight colours from zero-width
+      // sides, both of which polluted the frequency ranking and made
+      // role-namer's >= 3 threshold for "hairline" effectively require
+      // 12 real border-uses.
+      for (const borderColor of visibleBorderColors(el)) {
+        addColor(borderColor, 'borderColor', url);
+      }
+      // outline-color + text-decoration-color: NOT collected here. Both
+      // default to the CSS `currentcolor` keyword, which getComputedStyle
+      // resolves to the element's own `color` value. Since we already
+      // count `el.color` as textColor above, adding these unconditionally
+      // (which is what the pre-fix code did) inflated:
+      //   * borderColor for the dominant ink, by ~1 per visible element
+      //     (outline default style is `none` but its colour still
+      //     reports as currentcolor; non-rendering, but counted)
+      //   * textColor for the same ink, by ~1 per visible element on
+      //     anything with text-decoration default of `none`
+      // Real custom focus-ring colours surface via interaction-capture
+      // hover/focus state diffs, not static computed style. Real custom
+      // underline colours are extremely rare and usually equal the brand
+      // primary, captured via the regular `color` path. Net effect of
+      // skipping these two: ink colours stop being over-attributed as
+      // borders, role-namer's border/text ratios become accurate, no
+      // measurable signal is lost.
 
       // Box shadow colors
       const shadowColors = extractShadowColors(el.boxShadow);
@@ -879,19 +1202,66 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       for (const existing of clustered) {
         if (!existing.oklch) continue;
         if (deltaE(color.oklch, existing.oklch) < 3) {
+          // Issue #9 fix: prefer the variable-named entry as the cluster
+          // representative. Decide BEFORE merging the cssVariableNames
+          // sets  after the union, both sides would always have vars.
+          // Rule: swap iff the incoming has a CSS var name AND the
+          // existing doesn't. If both have vars (or neither), keep the
+          // current frequency-based winner. This surfaces design-intent
+          // hex values like `#020202` (set via `var(--text-primary)`)
+          // instead of OKLCH-adjacent raw `#000000` siblings that
+          // outnumbered them in frequency.
+          const shouldSwapRepresentative =
+            color.cssVariableNames.size > 0 &&
+            existing.cssVariableNames.size === 0;
+
           // Merge into existing cluster representative
           existing.frequency += color.frequency;
           for (const [ctx, count] of Object.entries(color.usedAs) as [UsageContext, number][]) {
             existing.usedAs[ctx] += count;
           }
-          for (const p of color.pages) existing.pages.add(p);
+          // Merge per-page counts. Previously this was Set-union (lost
+          // per-page frequency); the Map merge sums counts per URL so a
+          // colour used 3x on page A and 5x on page B post-OKLCH-cluster
+          // surfaces as (3, 5) rather than the fake-uniform (4, 4) the
+          // pre-fix code would emit.
+          for (const [url, freq] of color.pages) {
+            existing.pages.set(url, (existing.pages.get(url) ?? 0) + freq);
+          }
           for (const v of color.cssVariableNames) existing.cssVariableNames.add(v);
+          // Merge alpha buckets. This is the key fix for Issue #3
+          // pre-fix, the loser's alpha was thrown away here (only its
+          // frequency was added), so an alpha=0.2 overlay variant
+          // silently disappeared into the alpha=1 base. Adding the
+          // other entry's alphaCounts means the final colorToken can
+          // expose `alphaVariants: [1, 0.2]` for translucent overlays.
+          for (const [a, count] of color.alphaCounts) {
+            existing.alphaCounts.set(
+              a,
+              (existing.alphaCounts.get(a) ?? 0) + count,
+            );
+          }
+          // Apply the rep-swap decided BEFORE the merges. The hex / rgba
+          // / oklch fields are the "canonical colour" the final emit
+          // writes to tokens.json; everything else is a sum or union.
+          // Swapping just these three preserves the variable-named
+          // entry as the canonical surface without affecting any of the
+          // accumulated frequency / usage / page data.
+          if (shouldSwapRepresentative) {
+            existing.hex = color.hex;
+            existing.rgba = color.rgba;
+            existing.oklch = color.oklch;
+          }
           merged = true;
           break;
         }
       }
     }
     if (!merged) {
+      // Spread copies the Map reference for `alphaCounts`  fine because
+      // we never re-encounter `color` after the unmerged push (the outer
+      // loop iterates each ClusteredColor once). If that invariant ever
+      // breaks, swap `...color` for an explicit field copy + new Map.
       clustered.push({ ...color });
     }
   }
@@ -909,10 +1279,29 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
   // For simplicity, use the pages set on each clustered entry
   const colorTokens: ColorToken[] = clustered.map((c) => {
     const pagesCoverage = c.pages.size / Math.max(totalPages, 1);
-    const sourcePages = Array.from(c.pages).map((url) => ({ url, frequency: 0 }));
-    // We don't track per-page frequency during clustering, so set as distributed
-    const perPageFreq = Math.max(1, Math.round(c.frequency / Math.max(c.pages.size, 1)));
-    for (const sp of sourcePages) sp.frequency = perPageFreq;
+    // Honest per-page counts (Issue #4 fix). The previous code divided
+    // the cluster's total frequency evenly by `pages.size` and assigned
+    // that uniform number to every sourcePages entry, which silently
+    // lied about per-page distribution. Now we emit the actual count
+    // observed per page during addColor + the cluster merge step.
+    // Sort high-to-low so the dominant-on-this-color page is listed
+    // first  matches the existing convention for `alphaVariants`.
+    const sourcePages = Array.from(c.pages.entries())
+      .map(([url, frequency]) => ({ url, frequency }))
+      .sort((a, b) => b.frequency - a.frequency);
+
+    // Derive alpha variants. Field is OMITTED when the cluster only saw
+    // one alpha (the common case)  keeps tokens.json compact for solid
+    // palettes. When > 1 distinct alpha exists, emit them sorted by
+    // frequency desc; the head element matches rgba[3] (dominant alpha
+    // wins cluster representative because sortedByFreq pre-orders the
+    // greedy clustering pass by total entry frequency).
+    let alphaVariants: number[] | undefined;
+    if (c.alphaCounts.size > 1) {
+      alphaVariants = Array.from(c.alphaCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([alpha]) => alpha);
+    }
 
     return {
       hex: c.hex,
@@ -923,6 +1312,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       pagesCoverage,
       sourcePages,
       confidence: c.frequency <= 2 ? 'low' as const : (pagesCoverage >= 0.5 ? 'high' as const : 'medium' as const),
+      ...(alphaVariants ? { alphaVariants } : {}),
     };
   });
 
@@ -1006,6 +1396,12 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     fontFamily: string;
     fontSize: number;
     fontWeight: string;
+    // Canonical normalised line-height in integer pixels (Issue T3 fix).
+    // Was previously NOT part of the cluster key  same family/size/
+    // weight with different lineHeights collapsed into one group and
+    // the dominant lineHeight won via mode(). Now lineHeightPx is a
+    // first-class axis: distinct lineHeights produce distinct levels.
+    lineHeightPx: number;
     lineHeights: string[];
     letterSpacings: string[];
     textTransforms: string[];
@@ -1019,7 +1415,27 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
 
   for (const page of pages) {
     for (const el of page.dom.elements) {
-      if (!el.textContent || el.textContent.trim().length === 0) continue;
+      // Visibility gate (Issue T1 fix). Mirrors the colour-collection
+      // loop's gate: hidden modals, off-screen dropdowns, and a11y-only
+      // visually-hidden helpers all carry text that contributes
+      // nothing to the rendered typography system. dom-collector
+      // pre-filters by display/visibility/opacity/zero-rect, but this
+      // is defence in depth and matches the colour pass's gate verbatim
+      // so the two passes agree on "what's in the typography system".
+      if (!isElementVisible(el)) continue;
+      // Direct-text gate (Issue T2 fix). Wrapper layouts like
+      // <div><div><p>text</p></div></div> have the outer divs report a
+      // non-empty `textContent` (which is descendant-aggregated) even
+      // though they render no glyphs themselves  the typography
+      // contribution belongs to the inner <p>. Using `directText` (text
+      // nodes that are IMMEDIATE children only) gates wrappers out
+      // cleanly without affecting legitimate inline-text elements like
+      // <a> or <em> inside a paragraph (those have their own direct
+      // text and contribute separately, which is correct).
+      // Fallback to textContent when directText is undefined  legacy
+      // captures predating the directText field still flow through.
+      const ownText = el.directText !== undefined ? el.directText : el.textContent;
+      if (!ownText || ownText.trim().length === 0) continue;
 
       const rawSize = parsePxValue(el.fontSize);
       if (!rawSize || rawSize <= 0) continue;
@@ -1027,7 +1443,12 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       const fontFamily = (el.fontFamily || '').split(',')[0].trim().replace(/["']/g, '');
       const roundedSize = Math.round(rawSize);
       const weight = el.fontWeight || '400';
-      const key = `${fontFamily}|${roundedSize}|${weight}`;
+      // Normalise lineHeight to integer pixels so distinct authored
+      // values (24px vs 28px) split cleanly while unit variants
+      // ("24px" vs "1.5" on a 16px font) merge correctly. See
+      // normalizeLineHeight() for the full unit-handling story.
+      const lineHeightPx = normalizeLineHeight(el.lineHeight, rawSize);
+      const key = `${fontFamily}|${roundedSize}|${weight}|${lineHeightPx}`;
 
       const existing = typoGroups.get(key);
       if (existing) {
@@ -1052,6 +1473,7 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
           fontFamily,
           fontSize: roundedSize,
           fontWeight: weight,
+          lineHeightPx,
           lineHeights: [el.lineHeight],
           letterSpacings: [el.letterSpacing],
           textTransforms: el.textTransform && el.textTransform !== 'none' ? [el.textTransform] : [],
@@ -1071,7 +1493,14 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       fontFamily: g.fontFamily,
       fontSize: `${g.fontSize}px`,
       fontWeight: g.fontWeight,
-      lineHeight: mode(g.lineHeights) ?? 'normal',
+      // Emit the canonical normalised lineHeight as integer px. Within
+      // a group all elements have the same lineHeightPx (that's how
+      // they grouped), so the value is unambiguous. Replaces the
+      // pre-fix `mode(g.lineHeights)` which picked an arbitrary
+      // ORIGINAL string from a mixed-unit pool ("24px" vs "1.5") and
+      // could surface either form depending on insertion order  the
+      // T4 ambiguity that T3's normalisation eliminates.
+      lineHeight: `${g.lineHeightPx}px`,
       letterSpacing: mode(g.letterSpacings) ?? 'normal',
       textTransform: g.textTransforms.length > 0 ? mode(g.textTransforms) ?? null : null,
       fontFeatureSettings: g.fontFeatureSettings.length > 0 ? mode(g.fontFeatureSettings) ?? null : null,
@@ -1120,6 +1549,14 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
 
   for (const page of pages) {
     for (const el of page.dom.elements) {
+      // Visibility gate (Issue S1 fix). Mirrors the colour / typography
+      // passes  hidden modals, off-screen dropdowns, and a11y-only
+      // visually-hidden helpers carry padding / margin / gap values
+      // that contribute nothing to the rendered spacing system. Their
+      // values can be off-rhythm (e.g. a hidden tooltip with padding
+      // 7px) and dragging them into the GCD pass would lower baseUnit
+      // and break the scale calculation.
+      if (!isElementVisible(el)) continue;
       const spacingProps = [
         el.paddingTop, el.paddingRight, el.paddingBottom, el.paddingLeft,
         el.marginTop, el.marginRight, el.marginBottom, el.marginLeft,
@@ -1169,14 +1606,63 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
   }
   const spacingScale = Array.from(scaleSet).sort((a, b) => a - b);
 
-  // Max content width
+  // Max content width (Issue S5 fix). The pre-fix code picked mode-of-
+  // strings, which lost to "100%" on 5/7 real brands  many small
+  // responsive widgets ship max-width:100% while only a few layout
+  // containers ship the actual px cap. New decision tree:
+  //
+  //   1. Among px-like values (px / rem / em that parse to absolute
+  //      pixels), prefer the LARGEST that appears at least TWICE. A
+  //      repeated px value is almost always the layout cap, used by
+  //      the header / footer / main containers in concert.
+  //
+  //   2. Else fall back to ANY px value, picking the largest. A
+  //      single-occurrence concrete px still beats a percentage  it
+  //      reflects explicit design intent.
+  //
+  //   3. Else fall back to mode-of-strings (the pre-fix behaviour) for
+  //      the edge case of a truly fluid site that never specifies an
+  //      absolute max-width. "100%" is the right answer there.
+  //
+  // Output is always normalised to "Npx" when a numeric path wins so
+  // the value is unambiguous for downstream consumers (matches the
+  // lineHeight + spacing-scale emit conventions).
   let maxContentWidth: string | null = null;
-  const mwFreq = new Map<string, number>();
-  for (const mw of maxWidthValues) {
-    mwFreq.set(mw, (mwFreq.get(mw) ?? 0) + 1);
-  }
-  if (mwFreq.size > 0) {
-    maxContentWidth = Array.from(mwFreq.entries()).sort((a, b) => b[1] - a[1])[0][0];
+  if (maxWidthValues.length > 0) {
+    const pxCounts = new Map<number, number>();
+    const nonPxFreq = new Map<string, number>();
+    for (const mw of maxWidthValues) {
+      // Only count CSS absolute-length values as "px-like". `100%`,
+      // `fit-content`, `min-content`, `none`, `auto`, `calc(...)` all
+      // route to the non-px bucket where mode-of-strings still applies.
+      if (/^\d+(\.\d+)?(px|rem|em)$/i.test(mw)) {
+        const px = parsePxValue(mw);
+        if (px !== null && px > 0) {
+          const rounded = Math.round(px);
+          pxCounts.set(rounded, (pxCounts.get(rounded) ?? 0) + 1);
+          continue;
+        }
+      }
+      nonPxFreq.set(mw, (nonPxFreq.get(mw) ?? 0) + 1);
+    }
+
+    // Layer 1: largest px appearing at least twice.
+    const repeatedPx = Array.from(pxCounts.entries())
+      .filter(([, c]) => c >= 2)
+      .sort((a, b) => b[0] - a[0]);
+    if (repeatedPx.length > 0) {
+      maxContentWidth = `${repeatedPx[0][0]}px`;
+    } else if (pxCounts.size > 0) {
+      // Layer 2: any px value, largest wins. Single occurrence still
+      // beats percentages because a px cap is explicit design intent.
+      const largestPx = Math.max(...pxCounts.keys());
+      maxContentWidth = `${largestPx}px`;
+    } else if (nonPxFreq.size > 0) {
+      // Layer 3: only non-px values  pick the most frequent. Same as
+      // pre-fix behaviour, only reached when there's no px signal at all.
+      maxContentWidth = Array.from(nonPxFreq.entries())
+        .sort((a, b) => b[1] - a[1])[0][0];
+    }
   }
 
   // Section spacing: large gap values (>= 48px)
@@ -1193,14 +1679,25 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     frequencyMap[val] = freq;
   }
 
-  //  5. Shadow System 
+  //  5. Shadow System
 
   const shadowFreq = new Map<string, { value: string; frequency: number; elements: string[] }>();
 
   for (const page of pages) {
     for (const el of page.dom.elements) {
-      const shadow = el.boxShadow;
-      if (!shadow || shadow === 'none') continue;
+      // Visibility gate (Issue SH1 fix). Mirrors colour / typography /
+      // spacing / radius passes. Hidden modals' shadow chrome
+      // contributes nothing visible to the rendered shadow system.
+      if (!isElementVisible(el)) continue;
+      // Strip Tailwind v4 preflight placeholder layers (Issue SH3 fix).
+      // Tailwind ships four shadow CSS variables that default to
+      // `0 0 #0000` (transparent, all-zero); the computed boxShadow
+      // value concatenates all four even when only one is used. The
+      // normaliser drops invisible layers so tokens.json shows just
+      // the design-intent shadow content. Returns null when every
+      // layer is invisible (functionally equivalent to "none").
+      const shadow = normalizeShadowValue(el.boxShadow);
+      if (!shadow) continue;
 
       const existing = shadowFreq.get(shadow);
       if (existing) {
@@ -1261,14 +1758,23 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
       typicalElements: s.elements,
     }));
 
-  //  6. Radius System 
+  //  6. Radius System
 
   const radiusFreq = new Map<string, { value: string; frequency: number; elements: string[] }>();
 
   for (const page of pages) {
     for (const el of page.dom.elements) {
-      const radius = el.borderRadius;
-      if (!radius || radius === '0px' || radius === '0') continue;
+      // Visibility gate (Issue R1 fix). Mirrors the colour / typography /
+      // spacing passes. Hidden modals' rounded chrome contributes
+      // nothing visible to the rendered radius system.
+      if (!isElementVisible(el)) continue;
+      // Normalise the value (Issue R8 / R9 fix). normalizeBorderRadius
+      // collapses rem-derived sub-pixel drift into integer-px buckets,
+      // filters extreme outliers (`3.35544e+07px` from calc()-overflow
+      // sentinels), drops all-zero shorthands, and preserves genuine
+      // asymmetric corners + percentage / pill values verbatim.
+      const radius = normalizeBorderRadius(el.borderRadius);
+      if (!radius) continue;
 
       const existing = radiusFreq.get(radius);
       if (existing) {
@@ -1312,6 +1818,15 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
     );
 
     for (const el of page.dom.elements) {
+      // Visibility gate (Issue C1 fix). Mirrors the gate on every
+      // other pass in this file (colour / typography / spacing /
+      // radius / shadow). dom-collector already pre-filters display
+      // none / visibility:hidden / opacity:0 / zero-rect at line 206
+      // 209, so this is defence in depth rather than an observable
+      // behaviour change today  but it keeps all six passes agreeing
+      // on the same definition of "in the system" and protects against
+      // future dom-collector changes that loosen the upstream filter.
+      if (!isElementVisible(el)) continue;
       const bg = parseColor(el.backgroundColor);
       const hasBg = bg !== null && bg.a > 0.05;
       const padding = Math.min(
@@ -1750,25 +2265,44 @@ export function clusterTokens(pages: PageExtraction[], cssVariables: CSSVariable
   const columnCounts = new Set<number>();
   for (const page of pages) {
     for (const el of page.dom.elements) {
+      if (!isElementVisible(el)) continue;
       if (el.gridTemplateColumns && el.gridTemplateColumns !== 'none') {
-        const cols = el.gridTemplateColumns.split(/\s+/).filter((s) => s.length > 0).length;
+        const cols = countGridColumns(el.gridTemplateColumns);
         if (cols > 0) columnCounts.add(cols);
       }
     }
   }
 
-  // Content alignment detection
+  // Content alignment detection.
+  //
+  // Restrict to semantic layout-section tags. The previous version of this
+  // loop ran across *every* element, so `fullWidthCount` was effectively
+  // "count of block-level elements on the page"  thousands of <div> /
+  // <p> / <li> inner content drowning out the actual page-level wrappers
+  // and forcing nearly every site to classify as 'full-width' or 'mixed'.
+  // Semantic-section filter focuses on the elements that actually express
+  // page-layout intent. Visibility gate keeps hidden modals / drawers
+  // from contributing (consistency with column-counting loop above).
+  const layoutSectionTags = new Set([
+    'main', 'section', 'header', 'footer', 'nav', 'article', 'aside',
+  ]);
   let centeredCount = 0;
   let fullWidthCount = 0;
   for (const page of pages) {
     for (const el of page.dom.elements) {
+      if (!isElementVisible(el)) continue;
+      if (!layoutSectionTags.has(el.tag)) continue;
       const mwVal = parsePxValue(el.maxWidth);
-      const hasAutoMargin =
-        el.marginLeft === 'auto' || el.marginRight === 'auto' ||
-        el.marginLeft === '0px auto' || el.marginRight === '0px auto';
-      if (mwVal && mwVal > 0 && mwVal < 2000 && hasAutoMargin) {
+      const hasAutoMargin = el.marginLeft === 'auto' || el.marginRight === 'auto';
+      // 3000px upper bound for "centered". Real production wrappers
+      // routinely run 1760-2520px (Airbnb is 2520; large marketing
+      // pages 1920+). The previous 2000px cap misclassified these as
+      // 'full-width' even though margin: auto + a finite max-width
+      // are the textbook definition of a centered layout. Anything
+      // >= 3000px is effectively edge-to-edge on any real monitor.
+      if (mwVal && mwVal > 0 && mwVal < 3000 && hasAutoMargin) {
         centeredCount++;
-      } else if (el.display === 'block' && (!mwVal || mwVal >= 2000)) {
+      } else if (el.display === 'block' && (!mwVal || mwVal >= 3000)) {
         fullWidthCount++;
       }
     }

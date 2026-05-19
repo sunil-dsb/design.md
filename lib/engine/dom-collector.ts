@@ -10,6 +10,11 @@ import type {
 interface BrowserCollectionResult {
   cssVariables: CSSVariable[];
   elements: ElementStyle[];
+  // CAP=5000 truncation metadata. Optional so existing-shape consumers
+  // can ignore it; the orchestrator reads them to warn the operator and
+  // record the truncation in extraction-report.json.
+  truncatedElements?: number;
+  totalElementCandidates?: number;
   pseudoElements: PseudoElementInfo[];
   gradients: GradientInfo[];
   svgColors: string[];
@@ -180,7 +185,18 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
       return hasPriceSignal && hasList && hasCta;
     }
 
-    function extractElements(): ElementStyle[] {
+    function extractElements(): {
+      elements: ElementStyle[];
+      // Count of visible elements that PASSED the visibility filter
+      // (display, opacity, rect, top<15000). The CAP=5000 truncation
+      // applies to this set, NOT to the full querySelectorAll result.
+      totalCandidates: number;
+      // How many candidates were dropped by the CAP. 0 when the page
+      // fits under the cap (the common case for marketing surfaces).
+      // Surfaced in DOMCollection so extract.ts can warn the operator
+      // and the extraction-report.json can record the loss for audit.
+      truncated: number;
+    } {
       const allEls = document.querySelectorAll('*');
 
       // Build a stable DFS-index map BEFORE any filtering. nodeId is the
@@ -216,6 +232,7 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
 
       // If over cap, prioritize
       const CAP = 5000;
+      const totalCandidates = candidates.length;
       let selected = candidates;
 
       if (candidates.length > CAP) {
@@ -228,8 +245,9 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
           return b.area - a.area;
         }).slice(0, CAP);
       }
+      const truncated = totalCandidates - selected.length;
 
-      return selected.map(({ el }) => {
+      const elements = selected.map(({ el }) => {
         const rect = el.getBoundingClientRect();
         const cs = getComputedStyle(el);
         const nodeId = nodeIdMap.get(el) ?? -1;
@@ -276,6 +294,13 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
           textContent: truncate(el.textContent || '', 100),
           href: (el as HTMLAnchorElement).href || '',
           type: (el as HTMLInputElement).type || '',
+          // <img>-specific. HTMLImageElement.src returns the fully-resolved
+          // absolute URL even for relative source attributes — so e.g.
+          // <img src="/icons/foo.svg"> on slack.com becomes
+          // "https://slack.com/icons/foo.svg". Non-img elements return
+          // undefined here, which the `|| ''` collapses to an empty string.
+          src: (el as HTMLImageElement).src || '',
+          alt: (el as HTMLImageElement).alt || '',
           rect: {
             x: Math.round(rect.x),
             y: Math.round(rect.y),
@@ -342,6 +367,8 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
           isInsideMedia: isInsideMedia(el),
         };
       });
+
+      return { elements, totalCandidates, truncated };
     }
 
     //  3. Pseudo-element Extraction 
@@ -630,7 +657,7 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
     //  Run all extractors 
 
     const cssVariables = extractCSSVariables();
-    const elements = extractElements();
+    const elementResult = extractElements();
     const pseudoElements = extractPseudoElements();
     const gradients = extractGradients();
     const svgInfo = extractSVGInfo();
@@ -639,7 +666,13 @@ export async function collectDOM(page: Page): Promise<DOMCollection> {
 
     return {
       cssVariables,
-      elements,
+      elements: elementResult.elements,
+      // Surface CAP=5000 truncation metadata so the orchestrator can
+      // warn the operator + record it in extraction-report.json. Both
+      // fields are optional in DOMCollection for back-compat with old
+      // captures that predate this fix.
+      truncatedElements: elementResult.truncated,
+      totalElementCandidates: elementResult.totalCandidates,
       pseudoElements,
       gradients,
       svgColors: svgInfo.colors,

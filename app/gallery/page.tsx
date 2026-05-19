@@ -7,8 +7,10 @@
 // time so adding a brand is a single-folder change.
 
 import type { Metadata } from "next";
+import { AnnouncementBar } from "@/components/announcement-bar";
 import { Footer } from "@/components/footer";
 import { Gallery } from "@/components/gallery";
+import { GenerateCta } from "@/components/generate-cta";
 import { Navbar } from "@/components/navbar";
 import { SkipLink } from "@/components/skip-link";
 
@@ -22,6 +24,7 @@ export default function GalleryIndexPage() {
   return (
     <>
       <SkipLink />
+      <AnnouncementBar />
       <Navbar />
       <main
         id="main"
@@ -48,6 +51,8 @@ export default function GalleryIndexPage() {
         </header>
 
         <Gallery />
+
+        <GenerateCta />
       </main>
       <Footer />
     </>

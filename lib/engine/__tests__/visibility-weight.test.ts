@@ -29,6 +29,8 @@ function makeElement(overrides: Partial<ElementStyle> = {}): ElementStyle {
     textContent: '',
     href: '',
     type: '',
+    src: '',
+    alt: '',
     rect: { x: 100, y: 1500, width: 100, height: 100 }, // below the fold (y=1500 > viewport.height=900)
     color: '',
     backgroundColor: '',

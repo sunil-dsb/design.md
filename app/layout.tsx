@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import localFont from "next/font/local";
+import { CommandPalette } from "@/components/command-palette";
+import { DynamicTitle } from "@/components/dynamic-title";
 import "./globals.css";
 
 const pixelFont = localFont({
@@ -101,6 +103,8 @@ export default function RootLayout({
         // onto <body>. Suppress at the body level too.
         suppressHydrationWarning
       >
+        <DynamicTitle />
+        <CommandPalette />
         {children}
       </body>
     </html>

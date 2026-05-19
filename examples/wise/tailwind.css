@@ -1,0 +1,70 @@
+/* Tailwind v4 @theme  wise (https://www.wise.com/)
+ *
+ * Generated: 2026-05-18
+ * Brand ramp seed: #9fe870 (algorithm: oklch-lightness-curve)
+ *
+ * Paste this into your project. If you already have an @import "tailwindcss";
+ * line, drop the @theme block alongside it; otherwise paste the whole file.
+ */
+@theme {
+  /* Brand ramp  regenerated 12-stop OKLCH, anchored on #9fe870. */
+  --color-brand-25: #e9ffd9;
+  --color-brand-50: #d6ffba;
+  --color-brand-100: #c7fea7;
+  --color-brand-200: #b7f393;
+  --color-brand-300: #9cdd74;
+  --color-brand-400: #7dc14e;
+  --color-brand-500: #5b9e26;
+  --color-brand-600: #3f7a00;
+  --color-brand-700: #275c00;
+  --color-brand-800: #133e00;
+  --color-brand-900: #042200;
+  --color-brand-950: #000c00;
+
+  /* Neutral ramp  tinted with brand hue 135° at chroma 0.005. */
+  --color-neutral-25: #fafdf9;
+  --color-neutral-50: #f4f6f2;
+  --color-neutral-100: #eaece9;
+  --color-neutral-200: #dcdfdb;
+  --color-neutral-300: #c6c8c5;
+  --color-neutral-400: #a9aba8;
+  --color-neutral-500: #888a87;
+  --color-neutral-600: #686a67;
+  --color-neutral-700: #4c4e4b;
+  --color-neutral-800: #323331;
+  --color-neutral-900: #1a1b19;
+  --color-neutral-950: #070806;
+
+  /* Type families */
+  --font-sans: Inter;
+
+  /* Type scale (role-named  e.g. `text-display-xxl`, `text-body-md`). */
+  --text-heading-md: 20px;
+  --text-heading-md--line-height: 1.400;
+  --text-heading-md--letter-spacing: 0.1px;
+  --text-heading-md--font-weight: 600;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 1.444;
+  --text-body-lg--letter-spacing: -0.108px;
+  --text-body-md: 16px;
+  --text-body-md--line-height: 1.500;
+  --text-body-md--letter-spacing: 0.08px;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 1.550;
+  --text-body-sm--letter-spacing: -0.084px;
+  --text-button: 18px;
+  --text-button--line-height: 1.444;
+  --text-button--letter-spacing: -0.108px;
+  --text-button--font-weight: 600;
+  --text-overline: 16px;
+  --text-overline--line-height: 1.500;
+  --text-overline--letter-spacing: -0.176px;
+  --text-overline--font-weight: 600;
+
+  /* Spacing base unit  Tailwind derives the whole numeric scale from this. */
+  --spacing: 4px;
+
+  /* Border radius */
+  --radius-sm: 2px;
+  --radius-full: 9999px;
+}

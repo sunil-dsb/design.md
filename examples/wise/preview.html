@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DESIGN.md Preview https://www.wise.com/</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Wise Sans', system-ui, -apple-system, sans-serif;
+    background: #ffffff;
+    color: #000000;
+    line-height: 1.5;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 2.25rem; margin-bottom: 0.5rem; font-weight: 800; color: #163300; letter-spacing: -0.02em; }
+  h2 {
+    font-size: 0.75rem;
+    margin: 2.75rem 0 1.25rem;
+    font-weight: 700;
+    color: #163300;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid #16330020;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  h2::before {
+    content: "";
+    display: inline-block;
+    width: 0.45rem;
+    height: 0.45rem;
+    background: #9fe870;
+    border-radius: 50%;
+  }
+  .section { margin-bottom: 3rem; }
+  .page-lede { font-size: 0.95rem; opacity: 0.65; margin-bottom: 2.5rem; line-height: 1.55; max-width: 640px; }
+
+  /* Color Swatches */
+  .color-grid { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .color-swatch {
+    width: 132px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #00000020;
+  }
+  .color-swatch__block { height: 60px; }
+  .color-swatch__info { padding: 0.5rem; font-size: 0.75rem; }
+  .color-swatch__role {
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #163300;
+    margin-bottom: 0.15rem;
+  }
+  .color-swatch__role--unnamed { color: #00000045; }
+  .color-swatch__name { font-size: 0.7rem; opacity: 0.65; margin-bottom: 0.2rem; }
+  .color-swatch__hex { font-family: monospace; font-weight: 600; }
+  .color-swatch__freq { opacity: 0.6; font-family: monospace; }
+  /* Visual separator between the verified Wise design tokens and the
+     content-derived colors we picked up but that don't appear in
+     wise.design's official palette. Honest about what's brand and what
+     was scraped off the page so the demo doesn't lie. */
+  .palette-group {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: #163300;
+    margin: 1.25rem 0 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #16330020;
+    width: 100%;
+  }
+  .palette-group__hint {
+    font-size: 0.7rem;
+    font-weight: 400;
+    opacity: 0.55;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: monospace;
+    margin-left: 0.5rem;
+  }
+  .palette-group--first { margin-top: 0; padding-top: 0; border-top: none; }
+
+  /* Typography
+     Each size row leads with the FONT NAME (large, bold, rendered in the
+     font itself so the user reads "Wise Sans" in Wise Sans). Spec details
+     sit small + monospace on the right. Sample text below in the actual
+     size/weight/line-height. This replaces the original meta line where
+     the font name was buried in a tiny grey footer  font choice is the
+     headline fact of a typography scale, so it gets the headline slot. */
+  .font-families { display: flex; gap: 0.875rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
+  .font-family-card {
+    flex: 1;
+    min-width: 240px;
+    border: 1px solid #16330018;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    background: #fafdf9;
+  }
+  .font-family-card__sample {
+    width: 92px;
+    background: #163300;
+    color: #9fe870;
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    letter-spacing: -0.02em;
+  }
+  .font-family-card__body { padding: 0.9rem 1.1rem; display: flex; flex-direction: column; justify-content: center; }
+  .font-family-card__role {
+    font-size: 0.65rem;
+    opacity: 0.55;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+  }
+  .font-family-card__name { font-size: 1.4rem; font-weight: 700; color: #163300; line-height: 1.15; margin-bottom: 0.25rem; }
+  .font-family-card__detail { font-size: 0.7rem; opacity: 0.6; font-family: monospace; }
+
+  .typo-row {
+    margin-bottom: 0.875rem;
+    padding: 1rem 1.15rem 1.1rem;
+    border: 1px solid #16330012;
+    border-radius: 8px;
+    background: #ffffff;
+  }
+  .typo-row__head { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.65rem; padding-bottom: 0.55rem; border-bottom: 1px dashed #16330018; }
+  .typo-row__font { font-size: 0.95rem; font-weight: 700; color: #163300; }
+  .typo-row__specs { font-size: 0.7rem; font-family: monospace; opacity: 0.55; margin-left: auto; letter-spacing: 0.04em; }
+  .typo-row__sample { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Components */
+  .btn-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn--ghost {
+    background-color: rgba(0, 0, 0, 0);
+    color: rgb(22, 51, 0);
+    font-size: 18px;
+    font-weight: 600;
+    border-radius: 9999px;
+    padding: 8px 12px 8px 12px;
+    transition: color 0.35s cubic-bezier(0.8, 0.05, 0.2, 0.95), background-color 0.35s cubic-bezier(0.8, 0.05, 0.2, 0.95), border-color 0.35s cubic-bezier(0.8, 0.05, 0.2, 0.95);
+  }
+  .btn--ghost:hover {
+    background-color: rgb(226, 246, 213);
+    color: rgb(13, 31, 0);
+    border-color: rgb(13, 31, 0);
+    outline: rgb(13, 31, 0) none 3px;
+  }
+  .btn--secondary {
+    background-color: rgb(22, 51, 0);
+    color: rgb(159, 232, 112);
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 9999px;
+    padding: 11px 24px 11px 24px;
+    border-width: 1px;
+    border-color: rgb(22, 51, 0);
+    border-style: solid;
+    transition: all;
+  }
+  .btn--secondary:hover {
+    opacity: 0.85;
+  }
+  .btn--primary {
+    background-color: rgb(159, 232, 112);
+    color: rgb(22, 51, 0);
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 9999px;
+    padding: 11px 24px 11px 24px;
+    border-width: 1px;
+    border-color: rgb(159, 232, 112);
+    border-style: solid;
+    transition: all;
+  }
+  .btn--primary:hover {
+    opacity: 0.85;
+  }
+
+  /* Shadow Showcase */
+  .shadow-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+  .shadow-card {
+    width: 160px;
+    height: 100px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-family: monospace;
+    word-break: break-all;
+    padding: 0.5rem;
+    border: 1px solid #00000010;
+  }
+
+  /* Input */
+  .input-demo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .input {
+    padding: 0.625rem 0.875rem;
+    border: 1px solid #00000030;
+    background: #ffffff;
+    color: #000000;
+    font-size: 0.875rem;
+    font-family: inherit;
+    outline: none;
+    width: 280px;
+  }
+
+  /* Card */
+  .card {
+    padding: 1.5rem;
+    background: #ffffff;
+    border: 1px solid #00000015;
+    max-width: 360px;
+  }
+  .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .card p { font-size: 0.875rem; opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<h1>Wise design system</h1>
+<p class="page-lede">Extracted from <strong style="color:#163300;">wise.com</strong>  17 colors, 8 type levels, 2 font families, 3 button variants, and a 2-level shadow scale. Cross-verified against <strong style="color:#163300;">wise.design/foundations/colour</strong>.</p>
+
+<!-- Color Palette
+     Labels and role names cross-verified against wise.design/foundations/colour
+     (Wise's public design system). Tokens are grouped into:
+       (1) Wise brand system  colors that appear in Wise's official palette
+           and the role they play there
+       (2) Page-derived  colors the DOM scan picked up that aren't in Wise's
+           published brand system (flag pixels, sentiment states, content
+           images). Kept visible so the user sees the raw extraction; labeled
+           so the demo doesn't pretend they're brand. -->
+<section class="section">
+<h2>Color Palette <span style="font-size:0.7rem;font-weight:400;opacity:0.55;font-family:monospace;">17 extracted · cross-verified vs wise.design</span></h2>
+<div class="color-grid">
+
+  <div class="palette-group palette-group--first">
+    Wise brand system
+    <span class="palette-group__hint">verified against wise.design/foundations/colour</span>
+  </div>
+
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#9fe870"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role">Primary</div>
+      <div class="color-swatch__name">Bright Green</div>
+      <div class="color-swatch__hex">#9fe870</div>
+      <div class="color-swatch__freq">freq: 98</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#163300"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role">Ink</div>
+      <div class="color-swatch__name">Forest Green</div>
+      <div class="color-swatch__hex">#163300</div>
+      <div class="color-swatch__freq">freq: 6346</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#ffffff"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role">Canvas</div>
+      <div class="color-swatch__name">Background Screen</div>
+      <div class="color-swatch__hex">#ffffff</div>
+      <div class="color-swatch__freq">freq: 27</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#0e0f0c"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role">Content Primary</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#0e0f0c</div>
+      <div class="color-swatch__freq">freq: 3228</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#454745"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role">Content Secondary</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#454745</div>
+      <div class="color-swatch__freq">freq: 5563</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#6a6c6a"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role">Content Tertiary</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#6a6c6a</div>
+      <div class="color-swatch__freq">freq: 14</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#a0e1e1"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role">Accent</div>
+      <div class="color-swatch__name">Bright Blue</div>
+      <div class="color-swatch__hex">#a0e1e1</div>
+      <div class="color-swatch__freq">freq: 3</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#e8ebe6"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role">Border Neutral</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#e8ebe6</div>
+      <div class="color-swatch__freq">freq: 85</div>
+    </div>
+  </div>
+
+  <div class="palette-group">
+    Page-derived (not in Wise's brand system)
+    <span class="palette-group__hint">scraped from page content  flags, sentiment, imagery</span>
+  </div>
+
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#000000"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role color-swatch__role--unnamed">Not brand</div>
+      <div class="color-swatch__name">pure #000  Wise uses #0E0F0C</div>
+      <div class="color-swatch__hex">#000000</div>
+      <div class="color-swatch__freq">freq: 86</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#0b4c72"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role color-swatch__role--unnamed">Not brand</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#0b4c72</div>
+      <div class="color-swatch__freq">freq: 70</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#008026"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role color-swatch__role--unnamed">Not brand</div>
+      <div class="color-swatch__name">likely flag/sentiment</div>
+      <div class="color-swatch__hex">#008026</div>
+      <div class="color-swatch__freq">freq: 28</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#808080"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role color-swatch__role--unnamed">Not brand</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#808080</div>
+      <div class="color-swatch__freq">freq: 16</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#3e3b07"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role color-swatch__role--unnamed">Not brand</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#3e3b07</div>
+      <div class="color-swatch__freq">freq: 3</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#c0a080"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role color-swatch__role--unnamed">Not brand</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#c0a080</div>
+      <div class="color-swatch__freq">freq: 2</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#b08060"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role color-swatch__role--unnamed">Not brand</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#b08060</div>
+      <div class="color-swatch__freq">freq: 2</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#101000"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role color-swatch__role--unnamed">Not brand</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#101000</div>
+      <div class="color-swatch__freq">freq: 2</div>
+    </div>
+  </div>
+  <div class="color-swatch">
+    <div class="color-swatch__block" style="background:#ecf9f9"></div>
+    <div class="color-swatch__info">
+      <div class="color-swatch__role color-swatch__role--unnamed">Not brand</div>
+      <div class="color-swatch__name">&nbsp;</div>
+      <div class="color-swatch__hex">#ecf9f9</div>
+      <div class="color-swatch__freq">freq: 1</div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5rem;font-size:0.75rem;opacity:0.6;line-height:1.55;">
+  Wise's full design system also defines <strong>Bright Orange #FFC091</strong>, <strong>Bright Yellow #FFEB69</strong>, <strong>Bright Pink #FFD7EF</strong>, four dark complementaries (Purple #260A2F, Gold #3A341C, Charcoal #21231D, Maroon #320707), and sentiment colors (Negative #A8200D, Positive #2F5711, Warning #EDC843). These don't appear on wise.com's homepage so the live-page extraction didn't see them  they're not missing from Wise, just not used on the page we scanned.
+</p>
+</section>
+
+<!-- Typography
+     Font name is the headline of every row  it's the fact a reader cares
+     about first ("what font is this brand using?"). Specs sit small and
+     monospace on the right. Family overview cards lead the section so the
+     user gets the 2-font story before scanning 8 size rows. -->
+<section class="section">
+<h2>Typography <span style="font-size:0.7rem;font-weight:400;opacity:0.55;font-family:monospace;">2 families · 8 levels captured</span></h2>
+
+<div class="font-families">
+  <div class="font-family-card">
+    <div class="font-family-card__sample" style="font-family:'Wise Sans',system-ui;">Aa</div>
+    <div class="font-family-card__body">
+      <div class="font-family-card__role">Primary  Brand</div>
+      <div class="font-family-card__name" style="font-family:'Wise Sans',system-ui;">Wise Sans</div>
+      <div class="font-family-card__detail">6 of 8 captured levels · display + body</div>
+    </div>
+  </div>
+  <div class="font-family-card">
+    <div class="font-family-card__sample" style="font-family:'Inter',system-ui;">Aa</div>
+    <div class="font-family-card__body">
+      <div class="font-family-card__role">Secondary</div>
+      <div class="font-family-card__name" style="font-family:'Inter',system-ui;">Inter</div>
+      <div class="font-family-card__detail">2 of 8 captured levels · numerics + supporting text</div>
+    </div>
+  </div>
+</div>
+
+<div class="typo-row">
+  <div class="typo-row__head">
+    <span class="typo-row__font" style="font-family:'Wise Sans',system-ui;">Wise Sans</span>
+    <span class="typo-row__specs">105px · 900 · lh 90</span>
+  </div>
+  <div class="typo-row__sample" style="font-family:'Wise Sans',system-ui;font-size:105px;font-weight:900;line-height:0.9;">The quick brown fox</div>
+</div>
+<div class="typo-row">
+  <div class="typo-row__head">
+    <span class="typo-row__font" style="font-family:'Wise Sans',system-ui;">Wise Sans</span>
+    <span class="typo-row__specs">89px · 900 · lh 76</span>
+  </div>
+  <div class="typo-row__sample" style="font-family:'Wise Sans',system-ui;font-size:89px;font-weight:900;line-height:0.9;">The quick brown fox</div>
+</div>
+<div class="typo-row">
+  <div class="typo-row__head">
+    <span class="typo-row__font" style="font-family:'Wise Sans',system-ui;">Wise Sans</span>
+    <span class="typo-row__specs">59px · 900 · lh 50</span>
+  </div>
+  <div class="typo-row__sample" style="font-family:'Wise Sans',system-ui;font-size:59px;font-weight:900;line-height:0.9;">The quick brown fox</div>
+</div>
+<div class="typo-row">
+  <div class="typo-row__head">
+    <span class="typo-row__font" style="font-family:'Wise Sans',system-ui;">Wise Sans</span>
+    <span class="typo-row__specs">49px · 400 · lh 74</span>
+  </div>
+  <div class="typo-row__sample" style="font-family:'Wise Sans',system-ui;font-size:49px;font-weight:400;line-height:1.2;">The quick brown fox</div>
+</div>
+<div class="typo-row">
+  <div class="typo-row__head">
+    <span class="typo-row__font" style="font-family:'Inter',system-ui;">Inter</span>
+    <span class="typo-row__specs">45px · 600 · lh 57</span>
+  </div>
+  <div class="typo-row__sample" style="font-family:'Inter',system-ui;font-size:45px;font-weight:600;line-height:1.2;">The quick brown fox</div>
+</div>
+<div class="typo-row">
+  <div class="typo-row__head">
+    <span class="typo-row__font" style="font-family:'Wise Sans',system-ui;">Wise Sans</span>
+    <span class="typo-row__specs">40px · 900 · lh 34</span>
+  </div>
+  <div class="typo-row__sample" style="font-family:'Wise Sans',system-ui;font-size:40px;font-weight:900;line-height:0.9;">The quick brown fox</div>
+</div>
+<div class="typo-row">
+  <div class="typo-row__head">
+    <span class="typo-row__font" style="font-family:'Wise Sans',system-ui;">Wise Sans</span>
+    <span class="typo-row__specs">40px · 400 · lh 34</span>
+  </div>
+  <div class="typo-row__sample" style="font-family:'Wise Sans',system-ui;font-size:40px;font-weight:400;line-height:1;">The quick brown fox</div>
+</div>
+<div class="typo-row">
+  <div class="typo-row__head">
+    <span class="typo-row__font" style="font-family:'Inter',system-ui;">Inter</span>
+    <span class="typo-row__specs">25px · 600 · lh 32</span>
+  </div>
+  <div class="typo-row__sample" style="font-family:'Inter',system-ui;font-size:25px;font-weight:600;line-height:1.3;">The quick brown fox</div>
+</div>
+</section>
+
+<!-- Components -->
+<section class="section">
+<h2>Buttons <span style="font-size:0.7rem;font-weight:400;opacity:0.55;font-family:monospace;">3 captured variants · hover from live page</span></h2>
+<div class="btn-row">
+  <button class="btn btn--ghost">Ghost</button>
+  <button class="btn btn--secondary">Secondary</button>
+  <button class="btn btn--primary">Primary</button>
+</div>
+</section>
+
+<section class="section">
+<h2>Input</h2>
+<div class="input-demo">
+  <input class="input" style="border-radius:2px" placeholder="Email address" />
+  <button class="btn btn--ghost">Submit</button>
+</div>
+</section>
+
+<!-- Shadows -->
+<section class="section">
+<h2>Shadow System (2 levels)</h2>
+<div class="shadow-grid">
+  <div class="shadow-card" style="box-shadow:rgba(0, 0, 0, 0.15) 0px 10px 32px 0px, rgba(0, 0, 0, 0.04) 0px 40px 40px 0px;border-radius:16px">complex-stack</div>
+  <div class="shadow-card" style="box-shadow:rgba(22, 51, 0, 0.12) 0px 0px 0px 1px;border-radius:16px">border-shadow</div>
+</div>
+</section>
+
+<!-- Card -->
+<section class="section">
+<h2>Card</h2>
+<div class="card" style="border-radius:16px;box-shadow:rgba(0, 0, 0, 0.15) 0px 10px 32px 0px, rgba(0, 0, 0, 0.04) 0px 40px 40px 0px">
+  <h3>Example Card</h3>
+  <p>This card uses the extracted tokens background, border, shadow, and radius values all come from the site's design system.</p>
+</div>
+</section>
+
+</body>
+</html>

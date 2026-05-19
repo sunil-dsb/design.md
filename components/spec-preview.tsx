@@ -7,14 +7,19 @@ import { SpecTabs } from "./spec-tabs";
 // The server component owns the file reads + the static chrome/status bar;
 // the actual tabs + editor pane are delegated to <SpecTabs> (client) so
 // users can switch between DESIGN.md / preview.html / tailwind / shadcn.
-const EXAMPLE_BRAND = "stripe";
-const EXAMPLE_LABEL = "stripe.com";
+const EXAMPLE_BRAND = "wise";
+const EXAMPLE_LABEL = "wise.com";
 
 export async function SpecPreview() {
   const dir = path.join(process.cwd(), "examples", EXAMPLE_BRAND);
-  const [designMd, previewHtml] = await Promise.all([
+  // Read all four artifacts in parallel. The two CSS files are optional
+  // (older example folders predate the emitters)  fall back to null and
+  // SpecTabs shows a placeholder message instead of stale generic samples.
+  const [designMd, previewHtml, tailwindCss, shadcnCss] = await Promise.all([
     fs.readFile(path.join(dir, "DESIGN.md"), "utf8"),
     fs.readFile(path.join(dir, "preview.html"), "utf8"),
+    fs.readFile(path.join(dir, "tailwind.css"), "utf8").catch(() => null),
+    fs.readFile(path.join(dir, "shadcn-theme.css"), "utf8").catch(() => null),
   ]);
 
   // Stats for the bottom status bar  derived once at render time.
@@ -28,7 +33,7 @@ export async function SpecPreview() {
     <section
       id="spec"
       aria-labelledby="spec-heading"
-      className="mx-auto w-full max-w-5xl px-6 pb-24 sm:px-10"
+      className="mx-auto w-full max-w-6xl px-6 pb-24 sm:px-10"
     >
       <header className="mb-8">
         <h2 id="spec-heading" className="font-pixel text-2xl tracking-tight">
@@ -71,6 +76,8 @@ export async function SpecPreview() {
         <SpecTabs
           designMd={designMd}
           previewHtml={previewHtml}
+          tailwindCss={tailwindCss}
+          shadcnCss={shadcnCss}
           exampleLabel={EXAMPLE_LABEL}
         />
 

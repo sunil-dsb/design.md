@@ -53,7 +53,21 @@ const INTERACTIVE_TAGS = new Set(['a', 'button', 'input', 'select', 'textarea'])
 /** Roles that get an interactive boost regardless of underlying tag. */
 const INTERACTIVE_ROLES = new Set(['button', 'link', 'textbox', 'combobox', 'menuitem', 'tab', 'switch']);
 
-/** ElementStyle color fields we attribute weight to. */
+/**
+ * ElementStyle color fields we attribute weight to.
+ *
+ * `outlineColor` and `textDecorationColor` are intentionally EXCLUDED.
+ * Both default to the CSS `currentcolor` keyword, which getComputedStyle
+ * resolves to the element's own `color`. Including them would attribute
+ * the same element's weight to the dominant ink token ~3x (once via
+ * `color`, once via `outlineColor`, once via `textDecorationColor`,
+ * all resolving to the same hex), distorting the visibility ranking
+ * away from honest pixel-coverage and toward "this element exists at
+ * all." Matches the cluster.ts color-collection pass, which dropped the
+ * same two fields for the same reason (Issue #6 + #8 in the colour
+ * audit). Real custom focus-ring / underline colours surface via the
+ * interaction-capture state diffs, not the static computed-style pass.
+ */
 const COLOR_FIELDS: ReadonlyArray<keyof ElementStyle> = [
   'color',
   'backgroundColor',
@@ -61,8 +75,6 @@ const COLOR_FIELDS: ReadonlyArray<keyof ElementStyle> = [
   'borderRightColor',
   'borderBottomColor',
   'borderLeftColor',
-  'outlineColor',
-  'textDecorationColor',
 ] as const;
 
 /**

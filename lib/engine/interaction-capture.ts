@@ -52,6 +52,19 @@ async function discoverElements(page: Page): Promise<DiscoveredElement[]> {
         const rect = el.getBoundingClientRect();
 
         if (rect.width === 0 || rect.height === 0) continue;
+        // Visibility gate (Issue IC7 fix). Hidden interactive elements
+        // (display:none child of a closed accordion, opacity:0 a11y
+        // helpers, visibility:hidden tabs) routinely pass the rect
+        // check  the layout reserves space for them. Without this
+        // gate they go on to time out during the per-element 2s
+        // capture window because the mouse can't reach them, burning
+        // budget that could go to real interactive elements. Mirrors
+        // the visibility gate every other extraction pass already
+        // applies inside cluster.ts.
+        const cs = window.getComputedStyle(el);
+        if (cs.display === 'none') continue;
+        if (cs.visibility === 'hidden') continue;
+        if (cs.opacity === '0') continue;
 
         const classes = el.className && typeof el.className === 'string'
           ? el.className

@@ -1,0 +1,82 @@
+/* Tailwind v4 @theme  supabase (https://supabase.com)
+ *
+ * Generated: 2026-05-18
+ * Brand ramp seed: #3ecf8e (algorithm: oklch-lightness-curve)
+ *
+ * Paste this into your project. If you already have an @import "tailwindcss";
+ * line, drop the @theme block alongside it; otherwise paste the whole file.
+ */
+@theme {
+  /* Brand ramp  regenerated 12-stop OKLCH, anchored on #3ecf8e. */
+  --color-brand-25: #e1fff0;
+  --color-brand-50: #c7ffe2;
+  --color-brand-100: #a5ffd0;
+  --color-brand-200: #8ef8c0;
+  --color-brand-300: #6ce2a7;
+  --color-brand-400: #3dc789;
+  --color-brand-500: #00a368;
+  --color-brand-600: #00804b;
+  --color-brand-700: #006034;
+  --color-brand-800: #00411f;
+  --color-brand-900: #00240d;
+  --color-brand-950: #000d02;
+
+  /* Neutral ramp  tinted with brand hue 159° at chroma 0.005. */
+  --color-neutral-25: #f9fdfa;
+  --color-neutral-50: #f2f6f4;
+  --color-neutral-100: #e8ecea;
+  --color-neutral-200: #dbdfdd;
+  --color-neutral-300: #c5c8c6;
+  --color-neutral-400: #a8acaa;
+  --color-neutral-500: #878a88;
+  --color-neutral-600: #676a68;
+  --color-neutral-700: #4b4e4c;
+  --color-neutral-800: #313432;
+  --color-neutral-900: #191b1a;
+  --color-neutral-950: #060807;
+
+  /* Type families */
+  --font-sans: Circular;
+
+  /* Type scale (role-named  e.g. `text-display-xxl`, `text-body-md`). */
+  --text-display-xxl: 72px;
+  --text-display-xxl--line-height: 1.000;
+  --text-display-xl: 48px;
+  --text-display-xl--line-height: 1.000;
+  --text-display-lg: 36px;
+  --text-display-lg--line-height: 1.111;
+  --text-display-md: 30px;
+  --text-display-md--line-height: 1.200;
+  --text-heading-lg: 24px;
+  --text-heading-lg--line-height: 1.333;
+  --text-heading-lg--letter-spacing: -0.16px;
+  --text-heading-md: 18px;
+  --text-heading-md--line-height: 1.556;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 1.556;
+  --text-body-lg--font-weight: 700;
+  --text-body-md: 16px;
+  --text-body-md--line-height: 1.500;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 1.429;
+  --text-caption: 12px;
+  --text-caption--line-height: 1.333;
+  --text-overline: 12px;
+  --text-overline--line-height: 1.333;
+
+  /* Spacing base unit  Tailwind derives the whole numeric scale from this. */
+  --spacing: 4px;
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 11px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows (elevation only  border-shadows and rings are emitted separately). */
+  --shadow-sm: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
+  --shadow-md: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px;
+  --shadow-lg: rgb(255, 255, 255) 0px 0px 0px 0px, rgba(147, 197, 253, 0.5) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px;
+}

@@ -1,19 +1,23 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
+  createElement,
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type FormEvent,
   type ReactNode,
 } from "react";
 import { ArrowIcon } from "@/icons/arrow";
 import { BubbleButton } from "@/components/bubble-button";
+import { LongTailColors } from "@/components/long-tail-colors";
 import { StabilityChip, StabilityLegend } from "@/components/stability-chip";
 import type { Diagnostic } from "@/lib/engine/diagnostics";
 import { rolePriority, type ColorRole } from "@/lib/engine/role-namer";
 import type { ComponentNode } from "@/lib/engine/types";
+import { resolveUserInput } from "@/lib/url-resolver";
 
 //  Stage-tracking types
 // Mirrors the SSE protocol defined in app/api/extract/route.ts. Four stages
@@ -313,6 +317,7 @@ interface ExtractResponse {
 
 export function ExtractClient() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [url, setUrl] = useState(searchParams.get("url") ?? "");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ExtractResponse | null>(null);
@@ -332,12 +337,95 @@ export function ExtractClient() {
   // Ensures the on-mount auto-extraction only fires once per mount, even
   // if React strict-mode runs the effect twice in dev.
   const autoFiredRef = useRef(false);
+  // Tracks whether we've already fired the "extraction complete" chime +
+  // notification for the current result. Without this, every re-render
+  // while `result` is set would refire the chime — annoying.
+  const notifiedRef = useRef(false);
+
+  // Browser notification + audible chime when an extraction completes.
+  // Fires once per result. Notification only appears if the user granted
+  // permission (we ask on submit). The chime is unconditional — works
+  // without permission, just a brief A5 → E6 tone via Web Audio.
+  useEffect(() => {
+    if (!result || notifiedRef.current) return;
+    notifiedRef.current = true;
+
+    // Show the system notification (when permission was granted).
+    if (
+      typeof Notification !== "undefined" &&
+      Notification.permission === "granted"
+    ) {
+      try {
+        const host = result.url
+          .replace(/^https?:\/\//, "")
+          .replace(/^www\./, "")
+          .replace(/\/.*$/, "");
+        new Notification("design.md extraction complete", {
+          body: `Your DESIGN.md for ${host} is ready.`,
+          icon: "/favicon_io/favicon-32x32.png",
+          tag: "design-md-extraction",
+        });
+      } catch {
+        // Notification constructor throws in some sandboxed contexts
+        // (iframes with no allow-popups, file://). Falls through to
+        // the chime — which is the more universally-supported half of
+        // this duo.
+      }
+    }
+
+    // Brief two-note chime via Web Audio. Generated in-browser so no
+    // audio asset needs shipping. Skipped silently when the audio
+    // context is blocked by autoplay policy (rare — user invoked the
+    // extract by clicking Submit, which counts as a user gesture).
+    try {
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain).connect(ctx.destination);
+      osc.type = "sine";
+      // A5 (880Hz) ramping up to E6 (1318Hz) over 150ms — a friendly
+      // ascending chirp. Gain peaks at 0.15 and decays out by 0.5s.
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1318.5, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+      // Release the AudioContext once the sound has finished playing.
+      // Without this, every chime leaks a context — modern browsers GC
+      // eventually but explicit close is the right pattern. 100ms buffer
+      // past the stop time ensures the final sample renders.
+      osc.onended = () => {
+        ctx.close().catch(() => undefined);
+      };
+    } catch {
+      // Autoplay-blocked browsers throw; not fatal.
+    }
+  }, [result]);
 
   // Core extraction logic, parameterised on the target URL. Both the form
   // submit handler and the auto-fire effect call this. Lets the auto-fire
   // path use the URL pulled directly from searchParams without depending
   // on the input state having been hydrated by React first.
   async function runExtraction(targetUrl: string) {
+    // Reset the once-per-result notification gate so the new extraction's
+    // completion fires its own chime + browser notification.
+    notifiedRef.current = false;
+    // Ask for notification permission here (not in handleSubmit) so BOTH
+    // entry points get it — manual submits AND the auto-fire effect that
+    // runs on mount when `?url=` is in the URL. Browsers only prompt once
+    // per origin lifetime; repeat calls are no-ops after a decision.
+    if (
+      typeof Notification !== "undefined" &&
+      Notification.permission === "default"
+    ) {
+      Notification.requestPermission().catch(() => undefined);
+    }
     const trimmed = targetUrl.trim();
     if (!trimmed) return;
 
@@ -478,11 +566,23 @@ export function ExtractClient() {
     }
   }
 
-  // Thin form wrapper  just prevents default and delegates to runExtraction
-  // with the current input state.
+  // Thin form wrapper. Two branches, both via the shared resolver:
+  //   gallery   user typed a curated brand (or its host). Skip the
+  //              extraction entirely and route to the curated page.
+  //   extract   real URL to crawl. Hand the normalised string to
+  //              runExtraction so the SSE pipeline sees a clean value.
+  // Invalid input keeps the user where they are with no submit  the
+  // resolver returns 'invalid' for empty/malformed strings, which is
+  // also what the original `if (!trimmed) return` in runExtraction did.
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    await runExtraction(url);
+    const resolved = resolveUserInput(url);
+    if (resolved.kind === "invalid") return;
+    if (resolved.kind === "gallery") {
+      router.push(resolved.href);
+      return;
+    }
+    await runExtraction(resolved.normalizedUrl);
   }
 
   //  Auto-fire on mount when ?url= is present in the URL
@@ -616,6 +716,18 @@ const STAGE_DESCRIPTIONS: Record<StageKey, string> = {
     "Final pass: writing the deterministic DESIGN.md with all canonical sections. This is the file you drop in your repo.",
 };
 
+// Rotating reassurance copy under the extraction header. Reinforces "yes
+// this takes a moment, but it's worth waiting" so users don't drop off
+// during the ~4-7 minute extraction window. Each entry leans on a
+// different angle (accuracy, completeness, real DOM) so the message
+// stays interesting even on the slowest sites.
+const REASSURANCE_MESSAGES = [
+  "Great things take time, we're reading every painted style from your site.",
+  "Pixel-perfect accuracy means a full DOM walk + real interaction capture. Worth the wait.",
+  "Real tokens, not guesses. Every value below comes from your actual rendered CSS.",
+  "Analyzing colors, fonts, spacing, shadows, and motion. Hold tight, almost there.",
+] as const;
+
 function LoadingState({
   stages,
   streamedDiagnostics,
@@ -634,6 +746,23 @@ function LoadingState({
   const doneCount = STAGE_ORDER.filter(
     (k) => stages[k].status === "done",
   ).length;
+
+  // Percentage complete based on stages done. Floored at 2% so an empty
+  // start state still shows a visible green sliver — feels active even
+  // before the first stage finishes.
+  const pct = Math.max(2, Math.round((doneCount / STAGE_ORDER.length) * 100));
+
+  // Rotate the reassurance message every ~6s so the copy doesn't feel
+  // static on long-running extractions. Index cycles through the list
+  // forever; the setInterval cleans up on unmount.
+  const [reassureIdx, setReassureIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(
+      () => setReassureIdx((i) => (i + 1) % REASSURANCE_MESSAGES.length),
+      6000,
+    );
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <section
@@ -654,8 +783,35 @@ function LoadingState({
         <Countdown startSeconds={300} />
       </header>
 
+      {/* Linear progress bar — green fill, width = doneCount / total. Sits
+          flush against the header bottom border so it reads as a single
+          progress strip rather than a separate band. The shimmer keeps it
+          visually alive even while a single stage is running for a while.
+          Visual styles (gradient + shimmer animation + reduced-motion
+          opt-out) live on `.progress-shimmer-fill` in globals.css; only
+          the dynamic `width` stays inline here. */}
+      <div
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Extraction progress: ${pct}% complete`}
+        className="relative h-1 w-full bg-white/[0.06]"
+      >
+        <div
+          className="progress-shimmer-fill absolute inset-y-0 left-0 transition-[width] duration-500 ease-out"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
       <div className="px-6 py-5">
         <p className="text-sm leading-relaxed text-white/75">{description}</p>
+        <p
+          className="mt-3 text-xs leading-relaxed text-white/55"
+          aria-live="polite"
+        >
+          {REASSURANCE_MESSAGES[reassureIdx]}
+        </p>
 
         <ul
           role="list"
@@ -877,11 +1033,19 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "section-named-colors", label: "Colors" },
       { id: "section-typography", label: "Typography" },
-      { id: "panel-components-live", label: "Components" },
+      // Buttons surface ahead of Spacing — they're the highest-signal
+      // interactive element a user wants to grab from an extraction.
+      { id: "panel-buttons", label: "Buttons" },
       { id: "panel-spacing", label: "Spacing" },
       { id: "panel-border-radius", label: "Radius" },
       { id: "panel-shadows-elevation", label: "Shadows" },
+      // Cards live between Shadows and Motion — cards lean on elevation
+      // tokens above and motion tokens below (hover lift / transition).
+      { id: "panel-cards", label: "Cards" },
       { id: "panel-motion", label: "Motion" },
+      // "Other" leaf components (badges / links / inputs) round out the
+      // tokens group at the end.
+      { id: "panel-components", label: "Components" },
     ],
   },
   {
@@ -893,17 +1057,14 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "ship",
-    items: [
-      { id: "panel-generate-design-md", label: "Generate prompt" },
-      { id: "panel-downloads", label: "Downloads" },
-    ],
+    items: [{ id: "panel-downloads", label: "Downloads" }],
   },
   {
     label: "review",
     items: [
-      { id: "collapsible-long-tail-colors", label: "Long-tail colors" },
-      { id: "collapsible-responsive", label: "Responsive" },
-      { id: "collapsible-iconography", label: "Iconography" },
+      { id: "section-long-tail-colors", label: "Long-tail colors" },
+      { id: "panel-responsive", label: "Responsive" },
+      { id: "panel-iconography", label: "Iconography" },
       { id: "panel-diagnostics", label: "Things to verify" },
     ],
   },
@@ -1077,9 +1238,34 @@ function ResultState({ result }: { result: ExtractResponse }) {
     <div className="mt-12 space-y-16">
       <aside
         aria-label="Report navigation"
-        className="hidden xl:fixed xl:top-32 xl:bottom-8 xl:left-6 xl:block xl:w-48 xl:overflow-y-auto xl:pr-2"
+        className="hidden xl:fixed xl:top-32 xl:bottom-8 xl:left-6 xl:flex xl:w-48 xl:flex-col xl:pr-2"
       >
-        <ResultNav />
+        {/* Scrollable nav list takes the available height; the CTA below
+            stays pinned to the bottom of the aside. The whole aside is
+            already vertically constrained (top-32 → bottom-8), so the
+            flex-1 child + shrink-0 CTA divide that height. */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <ResultNav />
+        </div>
+        {artifacts?.designMdUrl && (
+          /* Sticky primary CTA — DESIGN.md is the canonical output users
+              came here for, so it earns the most-prominent slot in the
+              sidebar. Green tone matches the Downloads-section "download
+              all" button so the visual language for "download action"
+              stays consistent. `download` attribute saves directly
+              instead of opening the file in a new tab. */
+          <div className="mt-4 shrink-0 border-t border-white/10 pt-4">
+            <BubbleButton
+              href={artifacts.designMdUrl}
+              icon="↓"
+              tone="green"
+              download
+              aria-label="Download DESIGN.md"
+            >
+              DESIGN.md
+            </BubbleButton>
+          </div>
+        )}
       </aside>
 
       <section
@@ -1107,6 +1293,46 @@ function ResultState({ result }: { result: ExtractResponse }) {
           index={1}
           label="named colors"
           count={namedColors.length}
+          info={{
+            summary:
+              "The colors used most often on the page, grouped by what they do. The chip below each color tells you which layer of the design system it belongs to.",
+            glossary: [
+              {
+                label: "primary",
+                meaning: "The main brand color. Usually buttons, links, accents.",
+              },
+              {
+                label: "canvas",
+                meaning: "Page or large-surface background color.",
+              },
+              { label: "ink", meaning: "Default text color." },
+              {
+                label: "439×",
+                meaning: "How many times this color appears across crawled pages.",
+              },
+              { label: "copy", meaning: "Click to copy the hex value." },
+              {
+                label: "▲ Core",
+                meaning:
+                  "Page background, body text, base font — almost never changes.",
+              },
+              {
+                label: "■ System",
+                meaning:
+                  "Brand design system — primary, accent, hairline. Stable across the product.",
+              },
+              {
+                label: "◆ Campaign",
+                meaning:
+                  "Launch-specific — promo gradients, one-off highlights. Will change.",
+              },
+              {
+                label: "● Content",
+                meaning:
+                  "Inside imagery — not really part of the design system. Treat with caution.",
+              },
+            ],
+          }}
         >
           {/* Discoverable legend for the stability chips that appear on
               every colour / typography / radius / shadow card below. Native
@@ -1134,15 +1360,40 @@ function ResultState({ result }: { result: ExtractResponse }) {
       )}
 
       {longTailColors.length > 0 && (
-        <CollapsibleSection
+        <SectionHeader
           index={2}
           label="long-tail colors"
           count={longTailColors.length}
-          subtitle="Unlabelled colors below the role-naming threshold. Review for clustering accuracy."
-          defaultOpen={false}
+          info={{
+            summary:
+              "Less common colors found on the page — usually gradient stops, hover tints, or one-off decorative bits. Review for clustering accuracy.",
+            glossary: [
+              {
+                label: "first row",
+                meaning: "Always visible — the most-frequent long-tail colors.",
+              },
+              {
+                label: "view N more",
+                meaning: "Expand to see every long-tail color we captured.",
+              },
+              {
+                label: "click swatch",
+                meaning: "Copies the hex value to your clipboard.",
+              },
+            ],
+          }}
         >
-          <LongTailColors colors={longTailColors.slice(0, 32)} />
-        </CollapsibleSection>
+          {/* Shared <LongTailColors> from components/ — same component used on
+              /gallery/<brand>. First row always shown, rest behind a
+              "view N more" toggle, so a busy palette doesn't drown the page
+              in fifty near-identical greys. */}
+          <LongTailColors
+            colors={longTailColors.slice(0, 32).map((c) => ({
+              hex: c.hex,
+              frequency: c.frequency,
+            }))}
+          />
+        </SectionHeader>
       )}
 
       {typography.length > 0 && (
@@ -1152,6 +1403,21 @@ function ResultState({ result }: { result: ExtractResponse }) {
           }
           label="typography"
           count={typography.length}
+          info={{
+            summary:
+              "Every text style on the page, ordered from biggest to smallest.",
+            glossary: [
+              { label: "display", meaning: "Largest text — hero headlines." },
+              {
+                label: "h1 / h2 / h3",
+                meaning: "Section headings, from largest to smallest.",
+              },
+              { label: "body", meaning: "Default paragraph text." },
+              { label: "16px", meaning: "Font size in pixels." },
+              { label: "700", meaning: "Weight: 400 = normal, 700 = bold." },
+              { label: "copy", meaning: "Click to copy the font family." },
+            ],
+          }}
         >
           <TypographyList typography={typography.slice(0, 16)} />
         </SectionHeader>
@@ -1162,13 +1428,32 @@ function ResultState({ result }: { result: ExtractResponse }) {
           result reads as one coherent page instead of an embedded foreign
           document. The standalone report.html is still produced on disk
           and available via the Downloads bar below. */}
+      {/* Section ordering rationale: Buttons surface first (after Colors +
+          Typography) because they're the highest-signal interactive
+          element users want to see immediately. Cards then sit between
+          Shadows and Motion — natural pairing with the elevation /
+          surface tokens above them, and Motion belongs near Cards
+          because motion is most visible on hover/lift interactions.
+          "Other components" (badges / links / inputs) goes at the end
+          since they're smaller leaf elements. */}
+      <LiveComponentsSection
+        components={tokens.components}
+        baseUrl={deriveOutputBaseUrl(artifacts)}
+        mode="buttons"
+      />
       <SpacingSection spacingSystem={tokens.spacingSystem} />
       <RadiusSection radiusTokens={tokens.radiusTokens} />
       <ShadowsSection shadowTokens={tokens.shadowTokens} />
+      <LiveComponentsSection
+        components={tokens.components}
+        baseUrl={deriveOutputBaseUrl(artifacts)}
+        mode="cards"
+      />
       <MotionSection motionSystem={tokens.motionSystem} />
       <LiveComponentsSection
         components={tokens.components}
         baseUrl={deriveOutputBaseUrl(artifacts)}
+        mode="other"
       />
       <AccessibilitySection a11yTokens={tokens.a11yTokens} />
       <ResponsiveSection breakpoints={tokens.breakpoints} />
@@ -1180,10 +1465,6 @@ function ResultState({ result }: { result: ExtractResponse }) {
           tokens so users can verify what they're seeing. */}
       {artifacts?.proofHtmlUrl && (
         <ProofPreviewSection proofHtmlUrl={artifacts.proofHtmlUrl} />
-      )}
-
-      {artifacts?.promptPackUrl && (
-        <PromptPackSection promptPackUrl={artifacts.promptPackUrl} />
       )}
 
       {artifacts && <Downloads artifacts={artifacts} outputDir={outputDir} />}
@@ -1274,13 +1555,27 @@ function PanelHeader({
   count,
   subtitle,
   rightSlot,
+  info,
 }: {
   label: string;
   count?: number | string;
   subtitle?: string;
   rightSlot?: ReactNode;
+  // Same shape used by SectionHeader. When provided, renders a
+  // "what's this?" toggle on the right and a help drawer below the
+  // header line when expanded.
+  info?: SectionInfo;
 }) {
-  const headingId = `panel-${label.replace(/\s+/g, "-").replace(/[^a-z0-9-]/gi, "")}`;
+  // Build a URL-safe id from the label. The final `.replace(/-+/g, "-")`
+  // collapses consecutive dashes that result from labels containing
+  // special characters between words (e.g. "shadows + elevation" goes
+  // space-plus-space → "-+-" → "--" after the `+` strip, which would
+  // produce `panel-shadows--elevation` and break the nav-link match).
+  const headingId = `panel-${label
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/gi, "")
+    .replace(/-+/g, "-")}`;
+  const [infoOpen, setInfoOpen] = useState(false);
   return (
     <header className="mb-4">
       <div className="flex items-center gap-3">
@@ -1299,9 +1594,20 @@ function PanelHeader({
             {count}
           </span>
         )}
+        {info && (
+          <SectionInfoToggle
+            open={infoOpen}
+            onToggle={() => setInfoOpen(!infoOpen)}
+          />
+        )}
         {rightSlot}
       </div>
       {subtitle && <p className="mt-2 text-xs text-white/60">{subtitle}</p>}
+      {info && infoOpen && (
+        <div className="mt-3">
+          <SectionInfoPanel info={info} />
+        </div>
+      )}
     </header>
   );
 }
@@ -1341,6 +1647,24 @@ function SpacingSection({
         label="spacing"
         count={spacingSystem.scale.length}
         subtitle={`Each row shows the actual gap you'd get between two elements. Base unit ${base}px.`}
+        info={{
+          summary:
+            "How the site spaces things out. Every gap, padding, and margin is built from one 'base unit' value.",
+          glossary: [
+            {
+              label: "base unit",
+              meaning: "The pixel value every other spacing step is built from.",
+            },
+            {
+              label: "xs / sm / md / lg / xl",
+              meaning: "T-shirt names for relative size.",
+            },
+            {
+              label: "8px row",
+              meaning: "An actual spacing step found on the site.",
+            },
+          ],
+        }}
       />
       <ul
         role="list"
@@ -1350,8 +1674,13 @@ function SpacingSection({
           <li key={step} className="flex items-center gap-5 bg-black px-5 py-5">
             <div aria-hidden="true" className="flex h-10 shrink-0 items-center">
               <span className="size-6 bg-white/80" />
+              {/* White bar instead of primary blue — at 1px height on a
+                  black surface the primary-blue line was hard to spot.
+                  White reads cleanly against black and matches the white
+                  bookend blocks on either side, so the spacing reads as
+                  one continuous element. */}
               <span
-                className="h-px bg-primary"
+                className="h-px bg-white"
                 style={{
                   width: `${Math.min(step, 120)}px`,
                 }}
@@ -1413,6 +1742,16 @@ function RadiusSection({
         label="border radius"
         count={radiusTokens.length}
         subtitle="Each swatch is the actual corner rounding used on the site."
+        info={{
+          summary:
+            "Corner-rounding values found on buttons, cards, badges, and other elements.",
+          glossary: [
+            { label: "0px", meaning: "Sharp, square corners." },
+            { label: "4–8px", meaning: "Subtle rounding — typical for buttons." },
+            { label: "12–24px", meaning: "Card-style rounded corners." },
+            { label: "pill", meaning: "Fully rounded (radius equals element height)." },
+          ],
+        }}
       />
       <ul
         role="list"
@@ -1468,6 +1807,30 @@ function ShadowsSection({
         label="shadows + elevation"
         count={shadowTokens.length}
         subtitle="Each card has the extracted box-shadow applied so you see the real elevation, not a description of it."
+        info={{
+          summary:
+            "Every box-shadow used on the site. The type tells you what the shadow is for.",
+          glossary: [
+            { label: "elevation", meaning: "Lifts a card off the page." },
+            {
+              label: "border-shadow",
+              meaning: "A thin outline replacement (no separate border).",
+            },
+            {
+              label: "ring",
+              meaning: "Focus indicator around inputs and buttons.",
+            },
+            { label: "inset", meaning: "Inner shadow — pressed-in look." },
+            {
+              label: "complex-stack",
+              meaning: "Two or more shadows layered for depth.",
+            },
+            {
+              label: "234× used",
+              meaning: "How many elements share this shadow value.",
+            },
+          ],
+        }}
       />
       <ul
         role="list"
@@ -1540,6 +1903,29 @@ function MotionSection({
         subtitle={`Reduced-motion: ${
           motionSystem.prefersReducedMotion ? "supported" : "not detected"
         }. Hover any duration row to play the animation at the captured timing.`}
+        info={{
+          summary:
+            "Animation timing values used on the site — how long things move, and the curve of the motion.",
+          glossary: [
+            {
+              label: "duration",
+              meaning: "How long the animation runs (in milliseconds).",
+            },
+            {
+              label: "easing curve",
+              meaning: "The shape of the motion — slow-start, slow-end, bouncy, etc.",
+            },
+            {
+              label: "reduced-motion",
+              meaning:
+                "Whether the site honors the user's 'reduce motion' OS setting.",
+            },
+            {
+              label: "hover the row",
+              meaning: "Plays the animation at the captured timing.",
+            },
+          ],
+        }}
       />
 
       {durations.length > 0 && (
@@ -1752,29 +2138,149 @@ function parseEasing(value: string): [number, number, number, number] {
 // The wedge: render real DOM elements using the extracted style dicts so
 // users see the real component, not a screenshot. Hover applies the
 // extracted hoverChanges via React state.
+// Per-mode metadata for the three split rendering passes. `mode` decides
+// which component types to surface plus the panel chrome (label, subtitle,
+// info drawer). Splitting LiveComponentsSection this way lets us interleave
+// Buttons / Cards / "other components" between Spacing / Shadows / Motion
+// rather than dumping everything into one giant block far down the page.
+//
+// Typed explicitly (instead of `as const`) so each preset's `info` field
+// matches the mutable `SectionInfo` shape PanelHeader expects.
+type ComponentModePreset = {
+  label: string;
+  typeKeys: Set<string> | null;
+  subtitle: string;
+  info: SectionInfo;
+};
+
+const COMPONENT_MODE_PRESETS: Record<
+  "buttons" | "cards" | "other",
+  ComponentModePreset
+> = {
+  buttons: {
+    label: "buttons",
+    typeKeys: new Set(["button"]),
+    subtitle:
+      "Every button variant detected on the site, rendered with its captured CSS. Hover any variant to trigger its hover-state styles.",
+    info: {
+      summary:
+        "Button variants the site uses, each rendered as a real <button> with its captured CSS so the look matches the source.",
+      glossary: [
+        {
+          label: "primary / secondary / ghost / outline / destructive",
+          meaning:
+            "Variant name — auto-classified from the button's background + text contrast.",
+        },
+        {
+          label: "12×",
+          meaning: "How many times this variant appears across the site.",
+        },
+        {
+          label: "hover",
+          meaning:
+            "Triggers hover-state styles where the engine captured them.",
+        },
+      ],
+    },
+  },
+  cards: {
+    label: "cards",
+    typeKeys: new Set(["card", "pricingtier"]),
+    subtitle:
+      "Cards and pricing tiers from the site. Toggle between a pixel-perfect screenshot of the source element and the captured HTML+CSS structure.",
+    info: {
+      summary:
+        "Composed components (Cards + Pricing Tiers). Source-tab shows a screenshot of the live element; Code-tab shows the captured HTML + CSS structure.",
+      glossary: [
+        {
+          label: "source",
+          meaning: "Pixel-perfect screenshot of the element as the site renders it.",
+        },
+        {
+          label: "code",
+          meaning: "Captured DOM tree with inline styles — paste-ready snippet.",
+        },
+        { label: "copy", meaning: "Copies the code snippet to your clipboard." },
+        {
+          label: "pricing tier",
+          meaning:
+            "Card-shaped element containing a price signal ($/mo, per month) + list + CTA — split out from generic cards.",
+        },
+      ],
+    },
+  },
+  other: {
+    label: "components",
+    // Anything that isn't Button / Card / PricingTier / Footer / Navigation.
+    // We don't enumerate explicitly because the engine can grow new types;
+    // exclusion list is more future-proof.
+    typeKeys: null,
+    subtitle:
+      "Smaller captured components — badges, links, inputs — rendered with their captured CSS.",
+    info: {
+      summary:
+        "Smaller leaf components from the site (badges, links, inputs). Each rendered with the captured CSS — hover for hover-state styles where captured.",
+      glossary: [
+        {
+          label: "badge / link / input",
+          meaning: "Element type — captured outer styles applied to a real element.",
+        },
+        {
+          label: "primary / outline / ghost",
+          meaning: "Variant name auto-classified from background + text contrast.",
+        },
+        {
+          label: "12×",
+          meaning: "How many times this variant appears across the site.",
+        },
+      ],
+    },
+  },
+};
+
+// Excluded from every mode (full-page layout regions whose captured
+// outer-chrome render isn't useful on its own). Engine still extracts
+// them for downstream consumers; the UI just doesn't surface them.
+const ALWAYS_SKIP_TYPES = new Set(["footer", "navigation"]);
+
 function LiveComponentsSection({
   components,
   baseUrl,
+  mode,
 }: {
   components?: ExtractResponse["tokens"]["components"];
   baseUrl: string;
+  // Which slice of the captured components this instance renders. The same
+  // component is mounted three times in the result page (buttons /
+  // cards / other) so each slice gets its own panel + sidebar entry.
+  mode: keyof typeof COMPONENT_MODE_PRESETS;
 }) {
-  // Drop Footer + Navigation — they're full-page layout regions whose
-  // captured outer-chrome render isn't useful on its own (without the
-  // page's full layout context, they look like empty containers). The
-  // engine still extracts them into tokens.json for downstream consumers
-  // (DESIGN.md, prompt-pack); we just don't surface them in the UI.
-  const SKIP_TYPES = new Set(["footer", "navigation"]);
-  const filtered = (components ?? []).filter(
-    (g) => !SKIP_TYPES.has(g.type.toLowerCase()),
-  );
+  const preset = COMPONENT_MODE_PRESETS[mode];
+  // Filter: drop always-skipped types, then keep only what this mode owns.
+  // `other` mode has typeKeys=null and uses the inverse — anything NOT
+  // claimed by buttons / cards. Non-null assertions are safe by
+  // construction: buttons and cards always declare their typeKeys; only
+  // `other` is null. The TypeScript type allows null because the union
+  // needs it for the `other` preset.
+  const claimedByOtherModes = new Set<string>([
+    ...COMPONENT_MODE_PRESETS.buttons.typeKeys!,
+    ...COMPONENT_MODE_PRESETS.cards.typeKeys!,
+  ]);
+  const filtered = (components ?? []).filter((g) => {
+    const k = g.type.toLowerCase();
+    if (ALWAYS_SKIP_TYPES.has(k)) return false;
+    if (preset.typeKeys) return preset.typeKeys.has(k);
+    // `other` mode: keep anything not already claimed by another preset.
+    return !claimedByOtherModes.has(k);
+  });
   if (filtered.length === 0) return null;
   return (
     <section>
       <PanelHeader
-        label="components (live)"
+        label={preset.label}
         count={filtered.reduce((n, g) => n + g.variants.length, 0)}
-        subtitle="Buttons / badges / inputs render with the captured CSS. Cards and pricing tiers show pixel-perfect screenshots of the source element (toggle to see the captured HTML+CSS structure)."
+        subtitle={preset.subtitle}
+        info={preset.info}
       />
       <div className="space-y-10">
         {filtered.map((g) => {
@@ -1885,9 +2391,19 @@ function ComposedVariantCard({
 }) {
   const hasScreenshot = !!variant.screenshotUrl && !!baseUrl;
   const hasTree = !!variant.tree;
-  const [tab, setTab] = useState<"preview" | "code">(
-    hasScreenshot ? "preview" : "code",
-  );
+  // Default tab order of preference: live > source > code.
+  //   - Live is the primary view because it's actionable (real DOM the
+  //     user can inspect via DevTools / fork into a .tsx file).
+  //   - Source is the pixel-truth screenshot from the original site —
+  //     fallback when no tree was captured.
+  //   - Code is the paste-into-codebase text artifact — fallback when
+  //     no screenshot exists either.
+  const initialTab: "live" | "source" | "code" = hasTree
+    ? "live"
+    : hasScreenshot
+      ? "source"
+      : "code";
+  const [tab, setTab] = useState<"live" | "source" | "code">(initialTab);
   // HTML is the default format because the captured tree is closer to
   // generic markup than to any specific framework. JSX is the toggle for
   // users dropping the snippet into a React / Next.js codebase.
@@ -1923,14 +2439,32 @@ function ComposedVariantCard({
           aria-label={`${variant.name} preview mode`}
           className="flex items-stretch border-b border-white/10 bg-black/30"
         >
+          {/* Tab order is fixed: live | source | code. Each button only
+              renders if its underlying data is available — older fixtures
+              missing a tree fall back to source-only, etc. */}
+          {hasTree && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "live"}
+              onClick={() => setTab("live")}
+              className={`px-4 py-2 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
+                tab === "live"
+                  ? "bg-white text-black"
+                  : "text-white/55 hover:text-white"
+              }`}
+            >
+              live
+            </button>
+          )}
           {hasScreenshot && (
             <button
               type="button"
               role="tab"
-              aria-selected={tab === "preview"}
-              onClick={() => setTab("preview")}
+              aria-selected={tab === "source"}
+              onClick={() => setTab("source")}
               className={`px-4 py-2 font-pixel text-[10px] uppercase tracking-widest transition-colors ${
-                tab === "preview"
+                tab === "source"
                   ? "bg-white text-black"
                   : "text-white/55 hover:text-white"
               }`}
@@ -1999,14 +2533,37 @@ function ComposedVariantCard({
       )}
 
       <div className="relative flex min-h-48 flex-1 flex-col">
-        {tab === "preview" && screenshotSrc && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={screenshotSrc}
-            alt={`${variant.name} source render`}
-            className="block w-full max-h-[640px] object-contain bg-white"
-            loading="lazy"
-          />
+        {tab === "live" && hasTree && (
+          /* Live render — captured DOM tree rendered as actual React
+             elements via the LiveTree component. White background +
+             centered + scrollable matches the source-tab framing so the
+             user can compare the two views without layout shift.
+             max-h-[640px] caps the height; taller cards get a scroll
+             affordance instead of pushing the page down. The inner
+             `max-w-full` keeps captured elements that asked for their
+             own width-fitting (rare; layout fields aren't captured) from
+             escaping the card. */
+          <div className="flex max-h-[640px] overflow-auto bg-white p-8">
+            <div className="m-auto max-w-full">
+              <LiveTree node={variant.tree!} />
+            </div>
+          </div>
+        )}
+        {tab === "source" && screenshotSrc && (
+          /* Padded white frame around the screenshot so the captured
+              element has breathing room — without this the image fills
+              the card edge-to-edge and reads as a zoomed crop instead of
+              a framed preview. Same `p-8` padding as the live-tree view
+              above so both tabs feel like one stage when toggled. */
+          <div className="flex max-h-[640px] items-start justify-center overflow-auto bg-white p-8">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={screenshotSrc}
+              alt={`${variant.name} source render`}
+              className="block h-auto max-w-full object-contain"
+              loading="lazy"
+            />
+          </div>
         )}
         {tab === "code" && hasTree && (
           <pre className="overflow-x-auto bg-black px-4 py-4 font-mono text-[11px] leading-relaxed text-white/85">
@@ -2055,6 +2612,157 @@ const TREE_VOID_TAGS = new Set([
   "wbr",
   "col",
 ]);
+
+// Subset of void tags safe to render as actual DOM in the "live" preview.
+// iframe / object / embed / link / meta / source / track / area / col are
+// excluded — they can load external resources or affect document structure
+// in ways we don't want from captured arbitrary-site content. <img> and
+// <input> are intentionally included because cards routinely contain them
+// and we've already captured src/alt/type via the engine's allowlist.
+const LIVE_VOID_TAGS = new Set(["br", "hr", "img", "input", "wbr"]);
+
+// Tags we refuse to render in the live preview even if they slip past the
+// engine's TREE_SKIP_TAGS filter. Defense-in-depth — the tree builder in
+// cluster.ts already filters these at capture time.
+const LIVE_UNSAFE_TAGS = new Set([
+  "script",
+  "style",
+  "iframe",
+  "object",
+  "embed",
+  "link",
+  "meta",
+  "base",
+  "form",
+]);
+
+// Tags that require a specific parent to be valid HTML — substituted with
+// <div> at depth 0 so they don't produce invalid nesting inside the
+// ComposedVariantCard <li> wrapper (li-in-li, tr without tbody, etc.).
+// React surfaces these as hydration warnings; browsers silently fix them
+// in ways that break captured styles. Only swapped at the root because
+// internal structure (captured by the engine as a complete subtree) is
+// self-consistent.
+const LIVE_ROOT_NEEDS_PARENT = new Set([
+  "li",
+  "tr",
+  "td",
+  "th",
+  "thead",
+  "tbody",
+  "tfoot",
+  "caption",
+  "colgroup",
+  "dt",
+  "dd",
+  "option",
+  "optgroup",
+  "legend",
+  "summary",
+]);
+
+/**
+ * Recursive React component that renders a captured ComponentNode tree as
+ * actual DOM. Used by the "live" tab on Card / PricingTier variants — the
+ * engine captures `variant.tree` for COMPOSED_TYPES only (see
+ * lib/engine/cluster.ts COMPOSED_TYPES), so this is unreachable for
+ * Button / Badge / etc. which render via LiveVariant from their captured
+ * style dict.
+ *
+ * Safety posture (layered):
+ *   1. Tag is regex-validated (lowercase + hyphen + digit only). Anything
+ *      else collapses to <div>.
+ *   2. Tags in LIVE_UNSAFE_TAGS are dropped entirely.
+ *   3. `on*` attributes are stripped (already filtered by the tree builder,
+ *      but redundant guard).
+ *   4. `javascript:` URLs in href / src are dropped.
+ *   5. Style is applied via React's `style` prop — React rejects unsafe
+ *      values like `expression(...)` automatically, and the engine's
+ *      TREE_STYLE_FIELDS allowlist excludes `backgroundImage`, so there's
+ *      no `url(javascript:...)` vector either.
+ *   6. Depth capped at 16 — engine emits at most MAX_TREE_DEPTH=8, so
+ *      this is generous headroom in case the cap is ever loosened.
+ *
+ * Fidelity limits (these are the same caveats the user sees in the
+ * "code" tab — documented in lib/engine/cluster.ts:63-98 TREE_STYLE_FIELDS):
+ *   - Layout fields (width/height/position/transform) intentionally NOT
+ *     captured, so card sizing flows from content, not the original
+ *     dimensions. Most cards still look right because flex / grid
+ *     parent contexts are captured.
+ *   - Web fonts not embedded — system fallback used.
+ *   - CSS variables (`var(--brand-primary)`) referenced from the source
+ *     site's parent stylesheets won't resolve; affected properties fall
+ *     to browser defaults.
+ *   - Pseudo-elements (`::before`, `::after`) not captured.
+ *   - Cross-origin <img src> may be blocked by source CSP / hotlink rules.
+ */
+function LiveTree({
+  node,
+  depth = 0,
+}: {
+  node: ComponentNode;
+  depth?: number;
+}): ReactNode {
+  if (depth > 16) return null;
+
+  let tag = /^[a-z][a-z0-9-]*$/.test(node.tag) ? node.tag : "div";
+  if (LIVE_UNSAFE_TAGS.has(tag)) return null;
+  // Root nesting fix: ComposedVariantCard wraps every variant in <li>, so a
+  // captured <li> root would produce li-in-li (invalid, React warns,
+  // browsers silently re-parent it). Same for <tr>/<td>/<dt> needing a
+  // table or <dl> parent. Substitute <div> at depth 0 only — internal
+  // structure stays intact since the engine captures complete subtrees.
+  if (depth === 0 && LIVE_ROOT_NEEDS_PARENT.has(tag)) {
+    tag = "div";
+  }
+
+  // Filter attrs: strip on* handlers and javascript: URLs. The tree
+  // builder already does this at capture time, but redundant filtering
+  // means the safety property holds even if a future engine change
+  // loosens the upstream filter.
+  const safeAttrs: Record<string, string> = {};
+  for (const [k, v] of Object.entries(node.attrs ?? {})) {
+    if (/^on/i.test(k)) continue;
+    if ((k === "href" || k === "src") && /^javascript:/i.test(v)) continue;
+    safeAttrs[k] = v;
+  }
+
+  // React's style prop takes a camelCase object — exactly how the engine
+  // captures style keys from CSSStyleDeclaration property names. No
+  // transform needed; the shape already matches CSSProperties.
+  const styleObj = (node.style ?? {}) as CSSProperties;
+
+  // Void tags self-render with no children. <img> gets loading="lazy" so a
+  // dozen cards loading at once doesn't block the page paint; the browser
+  // also won't show an alert dialog for a failed image, just the broken
+  // icon — acceptable since the screenshot tab is the visual ground truth.
+  if (LIVE_VOID_TAGS.has(tag)) {
+    const voidExtras: Record<string, unknown> = {};
+    if (tag === "img") voidExtras.loading = "lazy";
+    return createElement(tag, {
+      ...safeAttrs,
+      ...voidExtras,
+      style: styleObj,
+    });
+  }
+
+  const text = node.text ? node.text : null;
+  const kids = (node.children ?? []).map((c, i) => (
+    <LiveTree key={i} node={c} depth={depth + 1} />
+  ));
+
+  // Render: tag + (safeAttrs + style) + (text first, then children).
+  // The text-then-kids ordering matches the stringifier's HTML output and
+  // matches dom-collector's `directText` capture, which represents only
+  // the element's own immediate text (descendant text lives on the
+  // descendant nodes, so no duplication).
+  return createElement(
+    tag,
+    { ...safeAttrs, style: styleObj },
+    text,
+    ...kids,
+  );
+}
 
 // Convert ComponentNode (engine-emitted tree) to a readable HTML+CSS
 // string. Used for the "code" tab of composed variant cards. Never
@@ -2403,6 +3111,29 @@ function AccessibilitySection({
         label="accessibility"
         count={pairs.length}
         subtitle="WCAG 2.2 AA: text must hit 4.5:1 contrast against its background (3:1 for large text). Anything failing is flagged below in red."
+        info={{
+          summary:
+            "Contrast checks for every text + background pair found on the site. Red rows mean the text is hard to read.",
+          glossary: [
+            {
+              label: "AA",
+              meaning:
+                "WCAG 2.2 AA — text needs 4.5:1 contrast (3:1 for large text).",
+            },
+            {
+              label: "4.5:1",
+              meaning:
+                "The contrast ratio between text and its background. Higher = easier to read.",
+            },
+            {
+              label: "large text",
+              meaning:
+                "18px regular or 14px bold and bigger gets the easier 3:1 ratio.",
+            },
+            { label: "fails", meaning: "Below the AA bar — readability concern." },
+            { label: "passes", meaning: "Meets or exceeds the AA bar." },
+          ],
+        }}
       />
 
       {pairs.length > 0 && (
@@ -2663,17 +3394,52 @@ function ResponsiveSection({
 }) {
   if (!breakpoints || breakpoints.length === 0) return null;
   return (
-    <CollapsibleSection
-      label="responsive"
-      count={breakpoints.length}
-      subtitle="Each row is a media-query breakpoint with the number of CSS rules that scope under it."
-      defaultOpen={false}
-    >
-      <ul
-        role="list"
-        className="divide-y divide-white/10 border border-white/15"
-      >
-        {breakpoints.slice(0, 12).map((bp, i) => (
+    <section>
+      <PanelHeader
+        label="responsive"
+        count={breakpoints.length}
+        subtitle="Each row is a media-query breakpoint with the number of CSS rules that scope under it."
+        info={{
+          summary:
+            "Breakpoints where the layout changes — typically mobile / tablet / desktop boundaries.",
+          glossary: [
+            {
+              label: "min-width / max-width",
+              meaning: "Which side of the threshold the rules apply on.",
+            },
+            {
+              label: "768px",
+              meaning: "The actual breakpoint value from the source CSS.",
+            },
+            {
+              label: "12 rules",
+              meaning: "How many CSS rules scope under this media query.",
+            },
+          ],
+        }}
+      />
+      <ResponsiveList breakpoints={breakpoints.slice(0, 12)} />
+    </section>
+  );
+}
+
+// First N rows always visible; the rest hide behind a "view N more" toggle.
+// Same progressive-disclosure pattern as LongTailColors — keeps the section
+// noticeable on first scroll without dumping a 12-row list on the user.
+function ResponsiveList({
+  breakpoints,
+}: {
+  breakpoints: NonNullable<ExtractResponse["tokens"]["breakpoints"]>;
+}) {
+  const FIRST_ROWS = 4;
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? breakpoints : breakpoints.slice(0, FIRST_ROWS);
+  const remaining = breakpoints.length - FIRST_ROWS;
+
+  return (
+    <div className="border border-white/15">
+      <ul role="list" className="divide-y divide-white/10">
+        {visible.map((bp, i) => (
           <li
             key={`${bp.type}-${bp.value}-${i}`}
             className="grid grid-cols-[6rem_1fr_auto] items-center gap-4 px-5 py-3"
@@ -2688,7 +3454,17 @@ function ResponsiveSection({
           </li>
         ))}
       </ul>
-    </CollapsibleSection>
+      {remaining > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="block w-full border-t border-white/10 px-4 py-2.5 text-center font-pixel text-[10px] uppercase tracking-widest text-white/60 transition hover:bg-white/3 hover:text-white"
+        >
+          {expanded ? "show less" : `view ${remaining} more`}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -2700,11 +3476,41 @@ function IconographySection({
 }) {
   if (!iconSystem) return null;
   return (
-    <CollapsibleSection
-      label="iconography"
-      subtitle={`${iconSystem.library ?? "custom / unknown"} · ${iconSystem.totalCount ?? 0} icons observed`}
-      defaultOpen={false}
-    >
+    <section>
+      <PanelHeader
+        label="iconography"
+        subtitle={`${iconSystem.library ?? "custom / unknown"} · ${iconSystem.totalCount ?? 0} icons observed`}
+        info={{
+          summary:
+            "SVG icons used on the page, plus the most common size and stroke width.",
+          glossary: [
+            {
+              label: "library",
+              meaning:
+                "Detected icon library (lucide / heroicons / custom / etc).",
+            },
+            {
+              label: "stroke width",
+              meaning:
+                "The pixel thickness of icon strokes. Empty when icons are solid (no stroke).",
+            },
+            {
+              label: "color mode",
+              meaning:
+                "How icons are colored — monochrome / multi-color / inherits.",
+            },
+            {
+              label: "labeled %",
+              meaning:
+                "How many icons have a screen-reader label (title or aria-label).",
+            },
+            {
+              label: "sizes",
+              meaning: "Pixel sizes the icons render at across the site.",
+            },
+          ],
+        }}
+      />
       <div className="grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
         <A11yFact label="library" value={iconSystem.library ?? "custom"} />
         <A11yFact
@@ -2734,7 +3540,7 @@ function IconographySection({
           </code>
         </p>
       )}
-    </CollapsibleSection>
+    </section>
   );
 }
 
@@ -2745,6 +3551,26 @@ function ProofPreviewSection({ proofHtmlUrl }: { proofHtmlUrl: string }) {
       <PanelHeader
         label="fidelity proof"
         subtitle="Pixel-level side-by-side between the live site and our extracted palette (ΔE<12)."
+        info={{
+          summary:
+            "Side-by-side: the live source site vs. the colors we extracted. Lets you see how close our palette matches what's actually rendered.",
+          glossary: [
+            {
+              label: "ΔE < 12",
+              meaning:
+                "A color-difference threshold. ΔE measures perceived difference between two colors — under 12 means they look basically the same.",
+            },
+            {
+              label: "coverage",
+              meaning:
+                "What percentage of sampled pixels we matched within the ΔE 12 threshold.",
+            },
+            {
+              label: "unmatched swatches",
+              meaning: "Colors we missed — usually image regions or gradients.",
+            },
+          ],
+        }}
         rightSlot={
           <a
             href={proofHtmlUrl}
@@ -2777,96 +3603,13 @@ function ProofPreviewSection({ proofHtmlUrl }: { proofHtmlUrl: string }) {
   );
 }
 
-function PromptPackSection({ promptPackUrl }: { promptPackUrl: string }) {
-  // Copy-to-clipboard status. Brief visual feedback ("COPIED ✓") then revert
-  // to idle. Network errors flag as "COPY FAILED" so the user knows to use
-  // the download link as a fallback.
-  const [status, setStatus] = useState<
-    "idle" | "copying" | "copied" | "failed"
-  >("idle");
-
-  async function handleCopy() {
-    setStatus("copying");
-    try {
-      const res = await fetch(promptPackUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      // navigator.clipboard requires a secure context (https or localhost).
-      // Local dev is localhost so this always works in our use case; on
-      // file:// or insecure http the API throws and we fall back to error.
-      await navigator.clipboard.writeText(text);
-      setStatus("copied");
-      setTimeout(() => setStatus("idle"), 2000);
-    } catch {
-      setStatus("failed");
-      setTimeout(() => setStatus("idle"), 3000);
-    }
-  }
-
-  const buttonLabel =
-    status === "copied"
-      ? "COPIED ✓"
-      : status === "failed"
-        ? "COPY FAILED"
-        : status === "copying"
-          ? "COPYING…"
-          : "COPY PROMPT";
-
-  return (
-    <section aria-labelledby="panel-build-ui">
-      <div className="mb-4 flex items-center gap-3">
-        <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
-        <h2
-          id="panel-build-ui"
-          className="font-pixel text-xs uppercase tracking-widest text-white"
-        >
-          build ui with this design
-        </h2>
-      </div>
-      <div className="border border-white/15 p-6">
-        <p className="font-pixel text-sm tracking-tight text-white">
-          Paste this into any AI agent, then ask it to build.
-        </p>
-        <p className="mt-2 text-sm text-white/60">
-          A short prompt with the extracted colors, typography, spacing, radius,
-          and shadows. Drop it into Claude Code, Cursor, v0, Lovable, Replit
-          Agent, Windsurf, ChatGPT, Codex, or Copilot and append a one-liner
-          like &ldquo;build a pricing page with this design&rdquo; your agent
-          ships UI grounded in the extracted brand, not generic AI defaults.
-        </p>
-        <div className="mt-6 flex flex-wrap items-center gap-4">
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={status === "copying"}
-            aria-live="polite"
-            className="clip-btn shrink-0 disabled:opacity-40"
-          >
-            <span aria-hidden="true" className="clip-btn__shadow">
-              {buttonLabel}
-            </span>
-            <span className="clip-btn__face">{buttonLabel}</span>
-          </button>
-          <a
-            href={promptPackUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-pixel text-xs uppercase tracking-widest text-white/50 underline-offset-2 hover:text-primary hover:underline"
-          >
-            view in new tab ↗
-          </a>
-          <a
-            href={promptPackUrl}
-            download="universal.md"
-            className="font-pixel text-xs uppercase tracking-widest text-white/50 underline-offset-2 hover:text-primary hover:underline"
-          >
-            download universal.md ↓
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
+// PromptPackSection was removed — it surfaced `universal.md` as a
+// separate "build UI with this design" panel, but DESIGN.md already
+// serves that exact purpose (and is the canonical, agent-ready spec).
+// Having both was misleading: users had to guess which one to actually
+// paste into their AI agent. DESIGN.md wins; universal.md is still
+// emitted to disk for downstream tooling but no longer surfaced in the
+// UI.
 
 function Downloads({
   artifacts,
@@ -2875,11 +3618,18 @@ function Downloads({
   artifacts: NonNullable<ExtractResponse["artifacts"]>;
   outputDir: string;
 }) {
-  // Curated list — only the 5 artifacts a user actually drops into a
-  // project. Skipped: regenerated-ramp.json (internal), preview/proof.html
-  // (debug aids), prompts/universal.md (rolled into DESIGN.md now), and
-  // shadcn-omit-reason.md (only meaningful when shadcn-theme.css is
-  // skipped, which we surface via the absence of the shadcn entry).
+  // Curated download list — only the 4 unique artifacts a user actually
+  // drops into a project. Skipped:
+  //  - regenerated-ramp.json (internal)
+  //  - preview/proof.html (debug aids)
+  //  - prompts/universal.md (rolled into DESIGN.md now)
+  //  - shadcn-omit-reason.md (only meaningful when shadcn-theme.css is
+  //    skipped, which we surface via the absence of the shadcn entry)
+  //  - report.html — DEMOTED to an "open in new tab" link below, because
+  //    the inline UI on this page already renders the same data as the
+  //    report. Keeping it as a download would duplicate content; surfacing
+  //    it as an external-tab link still gives access without cluttering
+  //    the downloads row.
   const items: Array<{ label: string; url: string }> = [];
   items.push({ label: "tokens.json", url: artifacts.tokensJsonUrl });
   if (artifacts.tailwindCssUrl) {
@@ -2887,9 +3637,6 @@ function Downloads({
   }
   if (artifacts.shadcnThemeUrl) {
     items.push({ label: "shadcn-theme.css", url: artifacts.shadcnThemeUrl });
-  }
-  if (artifacts.reportHtmlUrl) {
-    items.push({ label: "report.html", url: artifacts.reportHtmlUrl });
   }
   if (artifacts.designMdUrl) {
     items.push({ label: "DESIGN.md", url: artifacts.designMdUrl });
@@ -2963,9 +3710,27 @@ function Downloads({
           </li>
         ))}
       </ul>
-      <p className="mt-4 text-xs text-white/60">
-        on disk at <code className="font-mono text-white/80">{outputDir}/</code>
-      </p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-white/60">
+          on disk at{" "}
+          <code className="font-mono text-white/80">{outputDir}/</code>
+        </p>
+        {/* report.html lives next to the others on disk but isn't a
+            download CTA — the inline result page above already renders the
+            same data. Surfacing it as a quiet open-in-new-tab link keeps
+            access available for users who want the standalone HTML
+            (sharing, archiving, offline reading). */}
+        {artifacts.reportHtmlUrl && (
+          <a
+            href={artifacts.reportHtmlUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-pixel text-[10px] uppercase tracking-widest text-white/55 underline-offset-4 transition-colors hover:text-white hover:underline"
+          >
+            view report.html in new tab ↗
+          </a>
+        )}
+      </div>
     </section>
   );
 }
@@ -3129,81 +3894,12 @@ function Stats({ items }: { items: Array<{ label: string; value: string }> }) {
   );
 }
 
-// Collapsible variant of SectionHeader / PanelHeader. Same visual chrome
-// numbered prefix, hairline rule, white H2 label, count  but wraps the
-// section in a native <details> so it folds down to just the header bar.
-// Used for non-headline sections (long-tail colors, responsive breakpoints,
-// iconography) that are review-aid material, not the primary result.
-function CollapsibleSection({
-  index,
-  label,
-  count,
-  subtitle,
-  defaultOpen = false,
-  children,
-}: {
-  index?: number;
-  label: string;
-  count?: number;
-  subtitle?: string;
-  defaultOpen?: boolean;
-  children: ReactNode;
-}) {
-  const headingId = `collapsible-${label.replace(/\s+/g, "-").replace(/[^a-z0-9-]/gi, "")}`;
-  return (
-    <section aria-labelledby={headingId}>
-      <details open={defaultOpen} className="group">
-        <summary className="-mx-2 cursor-pointer list-none px-2 py-1 transition-colors hover:bg-white/2">
-          <div className="flex items-center gap-3">
-            {index !== undefined && (
-              <span
-                aria-hidden="true"
-                className="font-pixel text-xs uppercase tracking-widest text-primary"
-              >
-                {String(index).padStart(2, "0")}
-              </span>
-            )}
-            <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
-            <h2
-              id={headingId}
-              className="font-pixel text-xs uppercase tracking-widest text-white"
-            >
-              {label}
-              {count !== undefined && (
-                <span className="sr-only"> ({count} items)</span>
-              )}
-            </h2>
-            {count !== undefined && (
-              <span
-                aria-hidden="true"
-                className="font-pixel text-xs text-white/60"
-              >
-                {count}
-              </span>
-            )}
-            {/* Affordance text swaps between collapsed/expanded states so users
-                know the section is interactive. Visually paired with the chevron
-                which rotates -90deg when open. */}
-            <span
-              aria-hidden="true"
-              className="font-pixel text-[10px] uppercase tracking-widest text-white/60 transition-colors group-hover:text-white"
-            >
-              <span className="group-open:hidden">click to expand</span>
-              <span className="hidden group-open:inline">hide</span>
-            </span>
-            <ArrowIcon
-              aria-hidden="true"
-              focusable="false"
-              className="size-3 shrink-0 rotate-90 text-white/55 transition-transform group-open:-rotate-90"
-            />
-          </div>
-          {subtitle && <p className="mt-2 text-xs text-white/60">{subtitle}</p>}
-        </summary>
-        <div className="mt-4">{children}</div>
-      </details>
-    </section>
-  );
-}
+// CollapsibleSection (full <details> wrapper that hid the whole section)
+// was removed once every consumer migrated to the always-visible pattern:
+// long-tail colors / responsive / iconography now show their header +
+// first row inline, with progressive disclosure (LongTailColors,
+// ResponsiveList) for the rest. Users were missing the fully-collapsed
+// sections entirely, so the pattern wasn't earning its complexity.
 
 // Renders one typography row with a live preview of the role name in the
 // extracted style  same font-family, size, weight as captured. Browsers
@@ -3249,9 +3945,25 @@ function TypographyCard({
   // Strip CSS quotes from font-family stacks so the footer shows
   // "Geist Sans, sans-serif" not '"Geist Sans", sans-serif'.
   const familyDisplay = t.fontFamily.replace(/"/g, "").replace(/'/g, "");
+  // Primary family — first entry in the comma-separated stack. This is
+  // the one we surface in the top-right badge because it's the value a
+  // designer / dev actually wants to read ("Geist Sans", not the whole
+  // fallback chain).
+  const primaryFamily = familyDisplay.split(",")[0]?.trim() || familyDisplay;
 
   return (
     <li className="group relative flex flex-col border border-white/10 bg-white/[0.02] transition-colors hover:border-white/25 hover:bg-white/[0.04]">
+      {/* Top-right font-name badge — the most important data point on the
+          card. Keeping it prominent so users can scan a stack of cards
+          and read the family at a glance without dropping into the
+          metadata row. */}
+      <span
+        aria-hidden="true"
+        className="absolute right-3 top-3 z-10 max-w-[55%] truncate border border-white/15 bg-black/55 px-2 py-1 font-pixel text-[9px] uppercase tracking-widest text-white/85 backdrop-blur-sm"
+      >
+        {primaryFamily}
+      </span>
+
       <div className="flex min-h-24 flex-1 items-center px-6 py-6 sm:px-8 sm:py-7">
         <p
           aria-hidden="true"
@@ -3269,8 +3981,6 @@ function TypographyCard({
               {t.roleLabel}
             </span>
           )}
-          <span className="truncate">{familyDisplay}</span>
-          <span aria-hidden="true" className="text-white/25">·</span>
           <span className="shrink-0 text-white/75">{t.fontSize}</span>
           <span aria-hidden="true" className="text-white/25">·</span>
           {/* Weight as bare number (was "w600") — the "w" prefix added
@@ -3279,7 +3989,9 @@ function TypographyCard({
         </p>
         {/* Underlined text-link copy affordance — quieter than the
             button style elsewhere; matches the inline tone of the
-            metadata row. */}
+            metadata row. Copies the full family stack (not just the
+            primary shown in the badge) so the developer gets the
+            complete CSS-ready value. */}
         <CopyInlineLink
           value={familyDisplay}
           label={`font family ${t.fontFamily}`}
@@ -3411,18 +4123,99 @@ function TypographyList({
   );
 }
 
+// Shape for the click-to-expand "what's this?" help affordance shown on the
+// right of every section. `summary` is the one-sentence explanation;
+// `glossary` lists what each label / number / chip in the section means.
+// Keep copy short and jargon-free — users open this to *understand*, not
+// to read documentation.
+type SectionInfo = {
+  summary: string;
+  glossary?: Array<{ label: string; meaning: string }>;
+};
+
+// Help drawer rendered below a section header when the user clicks
+// "what's this?". Two parts: a one-line summary, then an optional
+// definition-list of the labels/badges used in that section. Shared
+// between SectionHeader and PanelHeader so the visual treatment is
+// identical everywhere.
+function SectionInfoPanel({ info }: { info: SectionInfo }) {
+  return (
+    <div className="mb-4 border border-white/10 bg-white/[0.02] px-4 py-3">
+      <p className="text-xs leading-relaxed text-white/75">{info.summary}</p>
+      {info.glossary && info.glossary.length > 0 && (
+        <dl className="mt-3 grid grid-cols-1 gap-y-1.5">
+          {info.glossary.map((g) => (
+            <div
+              key={g.label}
+              className="grid grid-cols-[6.5rem_1fr] gap-x-3 sm:grid-cols-[8rem_1fr]"
+            >
+              <dt className="truncate font-pixel text-[10px] uppercase tracking-widest text-white/60">
+                {g.label}
+              </dt>
+              <dd className="font-mono text-[11px] leading-relaxed text-white/75">
+                {g.meaning}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+// "what's this?" trigger — small circular `i` icon plus a text label.
+// The icon makes the affordance instantly recognisable; the text spells
+// out the action for users who don't read the symbol as "info". Both
+// part of one button so the click target stays generous and the keyboard
+// focus ring covers the whole control.
+function SectionInfoToggle({
+  open,
+  onToggle,
+}: {
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="group inline-flex shrink-0 items-center gap-1.5 font-pixel text-[10px] uppercase tracking-widest text-white/55 underline-offset-4 transition-colors hover:text-white"
+    >
+      <span
+        aria-hidden="true"
+        className="inline-flex size-3.5 items-center justify-center rounded-full border border-current text-[9px] font-pixel leading-none transition-colors group-hover:border-white"
+      >
+        i
+      </span>
+      <span className="group-hover:underline">
+        {open ? "hide" : "what's this?"}
+      </span>
+    </button>
+  );
+}
+
 function SectionHeader({
   index,
   label,
   count,
+  info,
   children,
 }: {
   index: number;
   label: string;
   count: number;
+  info?: SectionInfo;
   children: ReactNode;
 }) {
-  const headingId = `section-${label.replace(/\s+/g, "-")}`;
+  // Same id-safety treatment as PanelHeader: collapse special chars +
+  // multiple dashes so labels with punctuation produce a stable, nav-
+  // matching id regardless of how they're worded.
+  const headingId = `section-${label
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/gi, "")
+    .replace(/-+/g, "-")}`;
+  const [infoOpen, setInfoOpen] = useState(false);
   return (
     <section aria-labelledby={headingId}>
       <div className="mb-4 flex items-center gap-3">
@@ -3443,7 +4236,14 @@ function SectionHeader({
         <span aria-hidden="true" className="font-pixel text-xs text-white/60">
           {count}
         </span>
+        {info && (
+          <SectionInfoToggle
+            open={infoOpen}
+            onToggle={() => setInfoOpen(!infoOpen)}
+          />
+        )}
       </div>
+      {info && infoOpen && <SectionInfoPanel info={info} />}
       {children}
     </section>
   );
@@ -3452,55 +4252,10 @@ function SectionHeader({
 // StabilityChip + STABILITY_COLORS moved to components/stability-chip.tsx
 // (imported at top) so the brand-viewer route at /gallery/<brand> renders
 // identical chips without duplicating the implementation.
-
-// Long-tail color grid with progressive disclosure. The CollapsibleSection
-// wrapper folds the whole block; once expanded, we still only show one
-// row's worth of swatches by default and tuck the rest behind a "view all"
-// button. Keeps the section from dominating when a site has dozens of
-// unnamed minor colors (gradient stops, hover tints, etc.).
-function LongTailColors({
-  colors,
-}: {
-  colors: NonNullable<ExtractResponse["tokens"]["colorTokens"]>;
-}) {
-  const [showAll, setShowAll] = useState(false);
-  // 8 fills exactly one row at md+; on smaller viewports it wraps into 2
-  // rows, but the resulting block is still compact (~120px tall).
-  const TOP_VISIBLE = 8;
-  const visible = showAll ? colors : colors.slice(0, TOP_VISIBLE);
-  const remaining = colors.length - TOP_VISIBLE;
-
-  return (
-    <>
-      <ul
-        role="list"
-        className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8"
-      >
-        {visible.map((c, i) => (
-          <li key={`${c.hex}-${i}`} className="border border-white/10 p-2">
-            <div
-              aria-hidden="true"
-              className="aspect-square w-full"
-              style={{ background: c.hex }}
-            />
-            <p className="mt-2 truncate font-mono text-[10px] text-white/70">
-              {c.hex}
-            </p>
-          </li>
-        ))}
-      </ul>
-      {!showAll && remaining > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowAll(true)}
-          className="mt-3 inline-flex items-center gap-2 border border-white/15 bg-white/[0.02] px-4 py-2 font-pixel text-[10px] uppercase tracking-widest text-white/70 transition-colors hover:border-white/30 hover:text-white"
-        >
-          view all {remaining} more
-        </button>
-      )}
-    </>
-  );
-}
+//
+// LongTailColors was also factored out to components/long-tail-colors.tsx
+// so the extract page and the /gallery/<brand> page render the same UX:
+// first row always visible, rest behind a "view N more" toggle.
 
 function ColorCell({
   hex,

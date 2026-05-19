@@ -1,0 +1,72 @@
+/* Tailwind v4 @theme  shopify (https://shopify.com/)
+ *
+ * Generated: 2026-05-18
+ * Brand ramp seed: #36f4a4 (algorithm: oklch-lightness-curve)
+ *
+ * Paste this into your project. If you already have an @import "tailwindcss";
+ * line, drop the @theme block alongside it; otherwise paste the whole file.
+ */
+@theme {
+  /* Brand ramp  regenerated 12-stop OKLCH, anchored on #36f4a4. */
+  --color-brand-25: #e1fff0;
+  --color-brand-50: #c7ffe2;
+  --color-brand-100: #98ffcc;
+  --color-brand-200: #78fcba;
+  --color-brand-300: #4de7a0;
+  --color-brand-400: #00cb81;
+  --color-brand-500: #00a762;
+  --color-brand-600: #008149;
+  --color-brand-700: #006034;
+  --color-brand-800: #00411f;
+  --color-brand-900: #00240d;
+  --color-brand-950: #000d02;
+
+  /* Neutral ramp  tinted with brand hue 159° at chroma 0.005. */
+  --color-neutral-25: #f9fdfa;
+  --color-neutral-50: #f2f6f4;
+  --color-neutral-100: #e8ecea;
+  --color-neutral-200: #dbdfdd;
+  --color-neutral-300: #c5c8c6;
+  --color-neutral-400: #a8acaa;
+  --color-neutral-500: #878a88;
+  --color-neutral-600: #676a68;
+  --color-neutral-700: #4b4e4c;
+  --color-neutral-800: #313432;
+  --color-neutral-900: #191b1a;
+  --color-neutral-950: #060807;
+
+  /* Type families */
+  --font-sans: "Inter-Variable";
+
+  /* Type scale (role-named  e.g. `text-display-xxl`, `text-body-md`). */
+  --text-display-xxl: 96px;
+  --text-display-xxl--line-height: 1.080;
+  --text-display-xxl--letter-spacing: -2.4px;
+  --text-display-xxl--font-weight: 300;
+  --text-display-xl: 55px;
+  --text-display-xl--line-height: 1.164;
+  --text-display-xl--font-weight: 330;
+  --text-heading-lg: 24px;
+  --text-heading-lg--line-height: 1.300;
+  --text-heading-lg--letter-spacing: -0.24px;
+  --text-heading-md: 20px;
+  --text-heading-md--line-height: 1.300;
+  --text-heading-md--font-weight: 450;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 1.253;
+  --text-body-lg--letter-spacing: 0.72px;
+  --text-body-lg--font-weight: 500;
+  --text-body-md: 16px;
+  --text-body-md--line-height: 1.500;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 1.429;
+
+  /* Spacing base unit  Tailwind derives the whole numeric scale from this. */
+  --spacing: 4px;
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 12px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+}

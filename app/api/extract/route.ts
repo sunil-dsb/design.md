@@ -19,6 +19,7 @@ import { stripDarkScreenshotsOnDisk } from "@/lib/engine/strip-dark-screenshots"
 import { applyButtonClustering } from "@/lib/engine/button-cluster";
 import { generateAndWriteShadcnCss } from "@/lib/engine/shadcn-emit";
 import { checkAndRecordRateLimit, getClientIp } from "@/lib/rate-limit";
+import { normalizeUrl } from "@/lib/url-resolver";
 import type { ColorToken, TypographyLevel } from "@/lib/engine/types";
 
 // Note on the Turbopack NFT trace warning at build time: these engine
@@ -98,17 +99,6 @@ interface ExtractRequest {
   // When true (default), runs preview-gen + proof.ts + report-gen after
   // extract finishes so the result panel can embed the visual artifacts.
   withPhase3?: boolean;
-}
-
-function normalizeUrl(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  try {
-    return new URL(withProtocol).toString();
-  } catch {
-    return null;
-  }
 }
 
 function slugForOutput(url: string): string {

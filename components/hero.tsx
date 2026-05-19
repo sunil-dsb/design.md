@@ -9,9 +9,11 @@ import {
   SiStripe,
   SiSupabase,
   SiVercel,
+  SiWise,
 } from "@icons-pack/react-simple-icons";
 import { GoogleIcon } from "@/icons/google";
 import { HeroInteractive } from "./hero-interactive";
+import { HeroSearchForm } from "./hero-search-form";
 
 //  Marquee data
 // Server-rendered text + brand logos, scrolled by a CSS-only animation.
@@ -30,6 +32,7 @@ type Brand = {
 // Row 1: brands we extract design systems from. Each pill carries a logo
 // for visual recognition (the same Simple Icons used by the gallery).
 const BRANDS: Brand[] = [
+  { name: "wise", Logo: SiWise },
   { name: "stripe", Logo: SiStripe },
   { name: "ibm", logoSrc: "/ibm.png" },
   { name: "linear", Logo: SiLinear },
@@ -139,46 +142,15 @@ export function Hero() {
       </h1>
 
       <p className="mt-8 max-w-xl text-base leading-7 text-white/70 sm:text-lg">
-        Paste a URL. Get a DESIGN.md with colors, typography, spacing, and
-        tokens ready for your AI agent to read.
+        The <span className="text-white">most accurate</span> DESIGN.md generator.
+        Perceptual color clustering + pixel-fidelity verification.
+        <span className="text-white"> Free forever.</span> Open source, MIT.
       </p>
 
-      <form
-        action="/extract"
-        method="GET"
-        role="search"
-        aria-label="Generate DESIGN.md from a URL"
-        className="mt-10 flex w-full max-w-xl items-center gap-2 border border-white/20 px-2 py-2"
-      >
-        <label htmlFor="url" className="sr-only">
-          Website URL
-        </label>
-        <input
-          id="url"
-          name="url"
-          type="url"
-          inputMode="url"
-          required
-          autoComplete="url"
-          placeholder="paste any website URL e.g. stripe.com"
-          className="min-w-0 flex-1 appearance-none bg-transparent px-3 py-2 text-sm text-white caret-white placeholder-white/30 outline-none focus:outline-none focus-visible:outline-none [-webkit-tap-highlight-color:transparent]"
-        />
-        <button
-          type="submit"
-          aria-label="Generate DESIGN.md"
-          className="clip-btn shrink-0"
-        >
-          {/* "GENERATE " prefix hidden below sm so the form fits on a 320px
-              viewport without crushing the input. aria-label on the button
-              still announces the full action to screen readers. */}
-          <span aria-hidden="true" className="clip-btn__shadow">
-            <span className="hidden sm:inline">GENERATE </span>.md
-          </span>
-          <span className="clip-btn__face">
-            <span className="hidden sm:inline">GENERATE </span>.md
-          </span>
-        </button>
-      </form>
+      {/* Client island  the form needs JS for the inline hint that shows
+          "✓ Wise is already curated  enter opens /gallery/wise" while
+          typing, and to intercept submit for the gallery-shortcut redirect. */}
+      <HeroSearchForm />
 
       {/* Two-row scrolling marquee. Pure server-rendered text + inline
           SVG logos (no JS), scrolled by a CSS-only animation. Both rows

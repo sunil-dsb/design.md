@@ -1,5 +1,6 @@
 import type { DOMCollection, InteractionData, CSSAnalysis, A11yTokens } from './types';
 import type { Page } from 'playwright';
+import { isElementVisible } from './cluster';
 
 function linearize(channel: number): number {
   const c = channel / 255;
@@ -51,6 +52,22 @@ function parseFontSize(fontSize: string): number {
 
 function pairKey(fg: string, bg: string): string {
   return `${fg}|||${bg}`;
+}
+
+/**
+ * Recognise an effectively-transparent colour. getComputedStyle never
+ * returns the literal `"transparent"` keyword — it normalises to
+ * `"rgba(0, 0, 0, 0)"` (or `rgba(R, G, B, 0)` if a tinted-transparent
+ * was authored). A plain string `=== 'transparent'` check therefore
+ * fails on every real-world page; this helper covers both the literal
+ * and the alpha-0 rgba form.
+ */
+function isTransparent(color: string): boolean {
+  if (!color) return true;
+  if (color === 'transparent') return true;
+  const m = color.match(/rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)/);
+  if (m) return parseFloat(m[1]) === 0;
+  return false;
 }
 
 function extractFocusIndicator(
@@ -199,7 +216,11 @@ async function extractAltTextCoverage(
 
     for (const img of images) {
       const alt = img.getAttribute('alt');
-      if (alt !== null && alt.trim().length > 0) {
+      // WCAG: `alt=""` is the correct, explicit signal that an image is
+      // purely decorative and should be ignored by AT. Treat that the
+      // same as a meaningful alt for coverage purposes  the only
+      // failure mode is `alt` attribute MISSING entirely (alt === null).
+      if (alt !== null) {
         withAlt++;
       } else {
         withoutAlt++;
@@ -229,8 +250,21 @@ export function extractA11y(
 
   for (const collection of domCollections) {
     for (const el of collection.elements) {
+      // Issue A1: hidden modals / off-screen drawers shouldn't drag
+      // phantom contrast pairs into the report.
+      if (!isElementVisible(el)) continue;
+      // Issue A2: a contrast pair is only meaningful when there's
+      // actual rendered text. Empty wrappers with color/background
+      // declared inflate counts without contributing readability data.
+      if (!el.textContent?.trim()) continue;
       if (!el.color || !el.backgroundColor) continue;
-      if (el.color === 'transparent' || el.backgroundColor === 'transparent') continue;
+      // Skip if either side is effectively transparent  including the
+      // canonical `rgba(0, 0, 0, 0)` form that getComputedStyle returns
+      // for `background: transparent`. The literal-string check alone
+      // never matched real pages, so the report previously listed
+      // garbage 1.32-ratio pairs comparing real text against the math
+      // fallback for transparent.
+      if (isTransparent(el.color) || isTransparent(el.backgroundColor)) continue;
 
       const key = pairKey(el.color, el.backgroundColor);
       const existing = pairCounts.get(key);
@@ -266,6 +300,14 @@ export function extractA11y(
 
   contrastPairs.sort((a, b) => b.usageCount - a.usageCount);
 
+  // Issue A4: track the smaller of (width, height) independently per
+  // element and surface the worst case. Previously the loop tracked the
+  // pair from the element with the smallest AREA, which picks the wrong
+  // element  a 200xx20 wide link (area 4000) loses to a 50x50 button
+  // (area 2500) even though the link's 20px height is the real
+  // touch-target failure point (44px is the WCAG floor).
+  // Issue A5: visibility gate keeps hidden modals / dropdowns from
+  // dragging tiny rects into the metric.
   const interactiveTags = new Set(['button', 'a', 'input', 'select', 'textarea']);
   let minWidth = Infinity;
   let minHeight = Infinity;
@@ -273,12 +315,11 @@ export function extractA11y(
   for (const collection of domCollections) {
     for (const el of collection.elements) {
       if (!interactiveTags.has(el.tag)) continue;
+      if (!isElementVisible(el)) continue;
       if (el.rect.width <= 0 || el.rect.height <= 0) continue;
 
-      if (el.rect.width * el.rect.height < minWidth * minHeight) {
-        minWidth = el.rect.width;
-        minHeight = el.rect.height;
-      }
+      if (el.rect.width < minWidth) minWidth = el.rect.width;
+      if (el.rect.height < minHeight) minHeight = el.rect.height;
     }
   }
 
@@ -292,6 +333,10 @@ export function extractA11y(
 
   for (const collection of domCollections) {
     for (const el of collection.elements) {
+      // Issue A6: a hidden tooltip / off-screen drawer with 8px text
+      // would otherwise set the page's "smallest font" to 8px even
+      // though no user can read it.
+      if (!isElementVisible(el)) continue;
       if (!el.fontSize || !el.textContent?.trim()) continue;
       const size = parseFontSize(el.fontSize);
       if (size > 0 && size < smallestFontSize) {

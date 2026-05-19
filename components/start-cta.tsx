@@ -62,15 +62,17 @@ export function StartCTA() {
           Your AI agent stops averaging and starts referencing.
         </p>
         <div className="mt-10 flex justify-center">
+          {/* End-of-page CTA points back at the action, not at another reading
+              page. `/#url` jumps to the hero URL input — the most-converting
+              place to land an interested user. (Old "learn more" → /why was
+              sending hot intent into a long-form explainer; converts worse.) */}
           <BubbleButton
-            href="/why"
+            href="/#url"
             size="lg"
-            // Descriptive name for screen readers & Lighthouse  the visible
-            // "learn more" alone is flagged as non-descriptive link text.
-            aria-label="Read why design.md exists"
+            aria-label="Try design.md — paste a URL"
             icon={<ArrowLineIcon className="size-5" />}
           >
-            learn more
+            try it now
           </BubbleButton>
         </div>
       </div>

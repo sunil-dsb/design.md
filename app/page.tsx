@@ -49,7 +49,7 @@ export default function Home() {
 
       <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
         <Hero />
-        <Gallery />
+        <Gallery variant="home" />
         <SpecPreview />
         <Features />
         <StartCTA />

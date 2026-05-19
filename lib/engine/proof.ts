@@ -155,6 +155,18 @@ function buildProofHtml(
 ): string {
   const pct = result.coverage;
   const pctStr = (pct * 100).toFixed(1);
+  // Degenerate case: every sample candidate landed inside an excluded
+  // raster region (<img>/<video>/<canvas>/background-image), so we have
+  // zero non-image pixels to score against the palette. Coverage is
+  // mathematically 0/0 — *not* "0% match". Showing 0% with a red "Needs
+  // Work" label misleads users into thinking extraction failed when really
+  // there's just no CSS-only area to measure on this viewport (typical
+  // for image-heavy SaaS landing pages). When `isMeasurable` is false we
+  // render an "n/a — image-heavy" variant of the score ring instead, with
+  // a plain-language explanation in place of the misleading percentage.
+  // The diagnostics module's `low-proof-samples` rule still fires
+  // independently to flag this state in the SPA result panel.
+  const isMeasurable = result.totalSampled > 0;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -219,11 +231,18 @@ function buildProofHtml(
 </div>
 
 <div class="score-block">
-  <div class="score-ring" style="background: conic-gradient(${scoreColor(pct)} ${pct * 360}deg, var(--border) 0deg);">
+  ${isMeasurable
+    ? `<div class="score-ring" style="background: conic-gradient(${scoreColor(pct)} ${pct * 360}deg, var(--border) 0deg);">
     <span class="score-num" style="color:${scoreColor(pct)}">${pctStr}%</span>
     <span class="score-sub">${scoreLabel(pct)}</span>
   </div>
-  <p style="color:var(--muted);font-size:0.85rem;">Color Palette Coverage CSS-rendered areas only (images and media excluded)</p>
+  <p style="color:var(--muted);font-size:0.85rem;">Color Palette Coverage CSS-rendered areas only (images and media excluded)</p>`
+    : `<div class="score-ring" style="background: var(--border);">
+    <span class="score-num" style="color:var(--muted);font-size:1.5rem;">n/a</span>
+    <span class="score-sub">image-heavy</span>
+  </div>
+  <p style="color:var(--muted);font-size:0.85rem;max-width:520px;margin:0 auto;line-height:1.5;">Every sampled pixel fell inside an &lt;img&gt;, &lt;video&gt;, &lt;canvas&gt;, or background-image region. There are no CSS-only areas on this viewport to score against the palette  typical for image-heavy landing pages. The extracted tokens are still valid; the pixel-fidelity metric just isn't applicable here.</p>`
+  }
 
   <div class="metric-row">
     <div class="metric">

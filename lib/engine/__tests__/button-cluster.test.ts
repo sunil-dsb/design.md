@@ -26,6 +26,8 @@ function makeElement(overrides: Partial<ElementStyle> = {}): ElementStyle {
     textContent: 'Click me',
     href: '',
     type: '',
+    src: '',
+    alt: '',
     rect: { x: 100, y: 200, width: 120, height: 40 },
     color: 'rgb(255, 255, 255)',
     backgroundColor: 'rgb(99, 91, 255)',

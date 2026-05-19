@@ -18,9 +18,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { AnnouncementBar } from "@/components/announcement-bar";
 import { CopyHex } from "@/components/copy-hex";
 import { Footer } from "@/components/footer";
+import { GenerateCta } from "@/components/generate-cta";
 import { LongTailColors } from "@/components/long-tail-colors";
+import { BrandDownloads } from "@/components/brand-downloads";
 import { MdActions } from "@/components/md-actions";
 import { Navbar } from "@/components/navbar";
 import { SkipLink } from "@/components/skip-link";
@@ -73,10 +76,21 @@ export function generateStaticParams(): Array<{ brand: string }> {
 interface BrandData {
   brand: string;
   tokens: DesignTokens;
+  /** DESIGN.md content. Still read into memory because the bottom
+   *  DesignMdSection renders it inline via ReactMarkdown. The TOP
+   *  download bar uses /api/example links and does NOT need this. */
   designMd: string | null;
   sourceUrl: string | null;
   /** True when a generated DESIGN.md sits next to the tokens. */
   hasDesignMd: boolean;
+  /** Flags only  no file contents. Used by BrandDownloads to decide
+   *  which buttons to render. The actual bytes are streamed by
+   *  /api/example/<brand>/<file> on download click, not embedded in
+   *  the page payload. Cut /gallery/wise from 3.3 MB to ~500 KB by
+   *  not serializing the 1.8 MB tokens.json into the React tree. */
+  hasTokensJson: boolean;
+  hasTailwindCss: boolean;
+  hasShadcnCss: boolean;
 }
 
 function loadBrand(brand: string): BrandData | null {
@@ -110,6 +124,12 @@ function loadBrand(brand: string): BrandData | null {
       designMd,
       sourceUrl,
       hasDesignMd: designMd !== null,
+      // The tokens.json file is read above (we need to parse it); the
+      // flag is true here unconditionally because if it didn't exist
+      // we'd have caught that on the readFileSync line.
+      hasTokensJson: true,
+      hasTailwindCss: fs.existsSync(path.join(dir, "tailwind.css")),
+      hasShadcnCss: fs.existsSync(path.join(dir, "shadcn-theme.css")),
     };
   } catch {
     return null;
@@ -148,6 +168,7 @@ export default async function BrandGalleryPage({
   return (
     <>
       <SkipLink />
+      <AnnouncementBar />
       <Navbar />
       <main
         id="main"
@@ -158,16 +179,41 @@ export default async function BrandGalleryPage({
           <TopRow />
           <BrandHeader data={data} />
           <BrandStats data={data} />
+          {/* Section ordering mirrors the live /extract result page:
+              Colors (1) → Typography (2) → Buttons (3) → Spacing (4)
+              → Radius (5) → Shadows (6) → Cards (7) → DESIGN.md (8).
+              Buttons surface early because they're the highest-signal
+              interactive element; Cards sit after Shadows because card
+              styles depend on the elevation/surface tokens above. The
+              download CTA in BrandHeader covers the "I just want the
+              file" path; the full DESIGN.md section at the bottom is
+              for users who want to read it inline before grabbing. */}
           <ColorsSection tokens={data.tokens} />
           <TypographySection tokens={data.tokens} />
+          <ComponentsSection
+            brand={data.brand}
+            tokens={data.tokens}
+            section="buttons"
+          />
           <SpacingSection tokens={data.tokens} />
           <RadiusSection tokens={data.tokens} />
           <ShadowsSection tokens={data.tokens} />
-          <ComponentsSection brand={data.brand} tokens={data.tokens} />
+          <ComponentsSection
+            brand={data.brand}
+            tokens={data.tokens}
+            section="cards"
+          />
           {data.designMd && (
             <DesignMdSection brand={data.brand} source={data.designMd} />
           )}
         </article>
+
+        {/* Conversion hand-off  the reader just scrolled through a full
+            brand teardown. Sibling of <article>, not a child, because
+            the CTA is a hand-off to the *reader*, not part of the
+            brand's design system content. Self-contained max-width so
+            it lines up with the article above. */}
+        <GenerateCta brand={data.brand} />
       </main>
       <Footer />
     </>
@@ -240,6 +286,28 @@ function BrandHeader({ data }: { data: BrandData }) {
           </code>
           .
         </p>
+      )}
+      {/* Top-of-page download bar. DESIGN.md is the primary CTA (right-
+          aligned, green tone); tokens.json + tailwind.css + shadcn-
+          theme.css sit on the left as supporting artifacts. The bar
+          appears above the fold on most viewports so users who just
+          want the file don't have to scroll past the colour / type /
+          component proof to find it.
+          BrandDownloads is a SERVER component and renders plain `<a
+          href download>` anchors pointing at /api/example/<brand>/...
+          so file contents stay off the page payload  the previous
+          implementation embedded the full tokens.json (1.8 MB on Wise)
+          as a React prop, bloating /gallery/wise to 3.3 MB. */}
+      {data.hasDesignMd && (
+        <div className="mt-8">
+          <BrandDownloads
+            brand={data.brand}
+            hasDesignMd={data.hasDesignMd}
+            hasTokensJson={data.hasTokensJson}
+            hasTailwindCss={data.hasTailwindCss}
+            hasShadcnCss={data.hasShadcnCss}
+          />
+        </div>
       )}
     </header>
   );
@@ -538,7 +606,7 @@ function SpacingSection({ tokens }: { tokens: DesignTokens }) {
   const maxStep = scale[scale.length - 1];
   return (
     <section className="mt-16">
-      <SectionHeader index={3} label="spacing" count={scale.length} />
+      <SectionHeader index={4} label="spacing" count={scale.length} />
       <div className="border border-white/10 bg-black p-6">
         <p className="mb-4 font-pixel text-[10px] uppercase tracking-widest text-white/55">
           base unit · {spacing.baseUnit}px
@@ -577,7 +645,7 @@ function RadiusSection({ tokens }: { tokens: DesignTokens }) {
   if (radii.length === 0) return null;
   return (
     <section className="mt-16">
-      <SectionHeader index={4} label="border radius" count={radii.length} />
+      <SectionHeader index={5} label="border radius" count={radii.length} />
       <ul
         role="list"
         className="grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-3 md:grid-cols-4"
@@ -627,7 +695,7 @@ function ShadowsSection({ tokens }: { tokens: DesignTokens }) {
   if (shadows.length === 0) return null;
   return (
     <section className="mt-16">
-      <SectionHeader index={5} label="shadows" count={shadows.length} />
+      <SectionHeader index={6} label="shadows" count={shadows.length} />
       <ul
         role="list"
         className="grid grid-cols-1 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-3"
@@ -709,12 +777,74 @@ interface CapturedComponentGroup {
   variants: CapturedVariant[];
 }
 
+// Pick a card-appropriate radius. The naive "highest-frequency radius
+// token" approach (what we used before) breaks on brands whose top
+// radius is `50%` (circle avatars — paints a rectangle as an ellipse)
+// or `9999px` (pill buttons — rounds a wide card into a stadium). And
+// the next-highest can be `2px` (used for inputs / hairlines, not cards
+// e.g. Wise), which renders as essentially-sharp corners on a card.
+//
+// Strategy:
+//   1. Prefer the actual captured Card variant's `borderRadius`. That's
+//      a measured value from a real DOM element classified as Card, so
+//      it's the closest thing we have to "what this brand uses for
+//      cards." For asymmetric shorthands like "32px 32px 0px 0px" take
+//      the largest corner value — it captures the brand's rounded-card
+//      vibe even when the specific captured card has mixed corners.
+//   2. Fall back to the frequency-sorted radiusTokens, but skip values
+//      that semantically aren't card radii: `%` (circles), `≥ 100px`
+//      (pills), and asymmetric shorthands.
+//   3. Final fallback: 6px.
+function pickCardRadius(tokens: DesignTokens): string {
+  const cardGroup = (tokens.components ?? []).find(
+    (c) => (c.type ?? "").toLowerCase() === "card",
+  );
+  const captured = cardGroup?.variants?.[0]?.style?.borderRadius;
+  if (captured) {
+    const corners = captured
+      .split(/\s+/)
+      .map((s) => parseFloat(s))
+      .filter((n) => Number.isFinite(n));
+    const maxCorner = corners.length > 0 ? Math.max(...corners) : NaN;
+    // Allow 0 — flat-card brands like IBM/Carbon legitimately use 0px.
+    if (Number.isFinite(maxCorner) && maxCorner >= 0 && maxCorner < 100) {
+      return `${maxCorner}px`;
+    }
+  }
+  const radii = tokens.radiusTokens ?? [];
+  for (const r of radii) {
+    const v = r.value;
+    if (v.includes("%")) continue;
+    if (v.includes(" ")) continue;
+    const px = parseFloat(v);
+    if (!Number.isFinite(px)) continue;
+    // Allow 0 — Carbon / IBM tiles are flat-corner 0px by convention.
+    if (px < 0) continue;
+    if (px >= 100) continue;
+    return v;
+  }
+  return "6px";
+}
+
 function ComponentsSection({
   brand,
   tokens,
+  section,
 }: {
   brand: string;
   tokens: DesignTokens;
+  /**
+   * Splits the captured-components surface into two top-level sections
+   * so the page flow matches the live `/extract` result page: buttons
+   * surface early (after Typography), cards surface later (after
+   * Shadows). Without this prop we'd render buttons + cards in one
+   * fused block, which is what extract-client.tsx explicitly avoids.
+   *
+   *   "buttons"  buttons subsection only. Header index 3.
+   *   "cards"    reference cards + captured links + also-captured list.
+   *                Header index 7.
+   */
+  section: "buttons" | "cards";
 }) {
   const components = (tokens.components ??
     []) as unknown as CapturedComponentGroup[];
@@ -806,7 +936,7 @@ function ComponentsSection({
     muted: pick("muted") ?? "#64748b",
     primary: pick("primary") ?? "#6366f1",
     accent: pick("accent"),
-    radius: tokens.radiusTokens?.[0]?.value ?? "6px",
+    radius: pickCardRadius(tokens),
     signatureShadow:
       tokens.shadowTokens?.find((s) => s.type === "complex-stack")?.value ??
       tokens.shadowTokens?.[0]?.value ??
@@ -850,62 +980,63 @@ function ComponentsSection({
         .replace(/\/$/, "")
     : brand;
 
+  // Buttons-only section: surfaces high-signal interactive component
+  // immediately after Typography, mirroring the live /extract result
+  // page order so the same brand reads the same way on both surfaces.
+  if (section === "buttons") {
+    if (totalButtons === 0) return null;
+    return (
+      <section className={`mt-16 ${componentFont.variable}`}>
+        <SectionHeader index={3} label="buttons" count={totalButtons} />
+        <p className="mb-6 max-w-2xl text-sm leading-7 text-white/65">
+          Real DOM observations from{" "}
+          <code className="font-mono text-white/85">{sourceHost}</code> at
+          crawl time. Backgrounds, paddings, borders, even the sample text
+          all captured, none invented. Buttons sit on the brand&apos;s own
+          canvas colour so transparent and translucent variants render the
+          way they do on the live page.
+        </p>
+        <CapturedButtonsPanel
+          variants={buttons!.variants}
+          stageBg={stageBg}
+          bodyFont={bodyFont}
+          iconStyle={iconStyle}
+        />
+      </section>
+    );
+  }
+
+  // Cards section: reference card recipes (hand-curated brand patterns
+  // composed from extracted tokens) + captured links + the "also
+  // captured" footer for non-rendered component types (Footer / Nav /
+  // Input). Lives after Shadows to match the live result page order.
   return (
     <section className={`mt-16 ${componentFont.variable}`}>
-      <SectionHeader index={6} label="captured components" />
+      <SectionHeader index={7} label="cards" />
       <p className="mb-6 max-w-2xl text-sm leading-7 text-white/65">
-        Every value below is a real DOM observation from{" "}
-        <code className="font-mono text-white/85">{sourceHost}</code> at
-        crawl time. Backgrounds, paddings, borders, even the sample text
-        all captured, none invented. Buttons sit on the brand&apos;s own canvas
-        colour so transparent and translucent variants render the way they
-        do on the live page.
+        Reference card patterns composed from{" "}
+        <code className="font-mono text-white/85">{sourceHost}</code>
+        &apos;s extracted canvas + hairline + signature shadow + base
+        radius. Useful as a recipe when an agent rebuilds the brand
+        style; not pretending these specific layouts were captured from
+        the DOM.
       </p>
-
-      {totalButtons > 0 && (
-        <div className="space-y-4">
-          <SubsectionLabel
-            name="buttons"
-            caption={`${totalButtons} variant${totalButtons === 1 ? "" : "s"} captured · full CSS recipes in DESIGN.md below`}
-          />
-          <CapturedButtonsPanel
-            variants={buttons!.variants}
-            stageBg={stageBg}
-            bodyFont={bodyFont}
-            iconStyle={iconStyle}
-          />
-        </div>
-      )}
-
-      <div className="mt-10 space-y-4">
-        <SubsectionLabel
-          name="reference cards"
-          caption="composed from extracted tokens · not captured as components"
-        />
-        <p className="text-xs leading-6 text-white/55">
-          Two card patterns the brand uses on its product surfaces, built
-          from the brand&apos;s extracted canvas + hairline + signature shadow +
-          base radius. Useful as a recipe when an agent rebuilds the brand
-          style; not pretending these specific layouts were captured from
-          the DOM.
-        </p>
-        <ul role="list" className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {referenceCards && referenceCards.length > 0 ? (
-            referenceCards.map((recipe, i) => (
-              <ReferenceCardFromRecipe
-                key={`${recipe.title}-${i}`}
-                recipe={recipe}
-                tokens={cardTokens}
-              />
-            ))
-          ) : (
-            <>
-              <ReferenceContentCard tokens={cardTokens} />
-              <ReferenceFeatureCard tokens={cardTokens} />
-            </>
-          )}
-        </ul>
-      </div>
+      <ul role="list" className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {referenceCards && referenceCards.length > 0 ? (
+          referenceCards.map((recipe, i) => (
+            <ReferenceCardFromRecipe
+              key={`${recipe.title}-${i}`}
+              recipe={recipe}
+              tokens={cardTokens}
+            />
+          ))
+        ) : (
+          <>
+            <ReferenceContentCard tokens={cardTokens} />
+            <ReferenceFeatureCard tokens={cardTokens} />
+          </>
+        )}
+      </ul>
 
       {totalLinks > 0 && (
         <div className="mt-10 space-y-4">
@@ -1205,12 +1336,15 @@ interface ReferenceCardTokens {
 function cardWrapperStyle(
   tokens: ReferenceCardTokens,
   padding: string,
+  override?: { surface?: string; textColor?: string },
 ): React.CSSProperties {
+  const surface = override?.surface ?? tokens.surface;
+  const ink = override?.textColor ?? tokens.ink;
   const base: React.CSSProperties = {
-    background: tokens.surface,
+    background: surface,
     borderRadius: tokens.radius,
     padding,
-    color: tokens.ink,
+    color: ink,
     fontFamily: `'${tokens.bodyFont}', var(--font-component), system-ui, sans-serif`,
     display: "flex",
     flexDirection: "column",
@@ -1218,6 +1352,8 @@ function cardWrapperStyle(
     minHeight: tokens.style === "flat" ? "320px" : undefined,
   };
   if (tokens.style === "elevated") {
+    // Hairline reads against the page (dark), not against the card surface,
+    // so we keep it on for both white and brand-coloured override surfaces.
     base.border = `1px solid ${tokens.hairline}`;
     base.boxShadow = tokens.signatureShadow;
   }
@@ -1415,6 +1551,24 @@ interface ReferenceCardRecipe {
   /** Inline CTA label rendered at the bottom in the brand's primary
    *  colour, followed by the brand's trailing-icon glyph. */
   ctaLabel: string;
+  /** Optional layout switch. "feature" (default) is the standard icon +
+   *  title + body + inline CTA pattern. "testimonial" swaps the layout
+   *  to icon + blockquote + author, used when a brand's reference card
+   *  pattern is a customer-quote surface (Wise ships this on its
+   *  marketing pages — green-surfaced quote tile with forest ink). */
+  layout?: "feature" | "testimonial";
+  /** Optional per-card surface override. When set, this card uses the
+   *  given hex as its background instead of the brand's `cardSurface`.
+   *  Used when a brand ships multiple card surfaces (e.g. Wise pairs a
+   *  white action-card with a Bright-Green testimonial-card). */
+  surface?: string;
+  /** Optional per-card foreground override. Pairs with `surface` when the
+   *  override surface needs a non-default ink colour (e.g. Wise's green
+   *  testimonial card reads in forest #163300, not the default ink). */
+  textColor?: string;
+  /** Author / attribution for the testimonial layout. Ignored for
+   *  feature layout. */
+  author?: string;
 }
 
 // Line-art icon registry for reference-card recipes. Each is 20×20 inside
@@ -1486,12 +1640,12 @@ const CARD_ICONS = {
   ),
 } as const;
 
-// Render a single recipe. Layout follows Stripe's marketing feature-block
-// convention: tile-wrapped line-art icon at top, bold title inline with
-// body text below (one paragraph), brand-primary CTA + chevron/arrow at
-// the bottom. Container respects `tokens.surface` + `tokens.style` so a
-// flat-Stripe card renders pure-white without shadow, while an elevated
-// brand still gets the signature shadow if it chooses this recipe.
+// Render a single recipe — dispatches on layout. Feature layout is the
+// Stripe-style marketing block (icon + title + body + inline CTA); the
+// testimonial layout swaps to icon + blockquote + author and is used
+// when a brand pairs a quote card with its action cards (Wise's green
+// quote tile pattern). Container always respects `tokens.style` so a
+// flat brand still gets sharp corners regardless of layout choice.
 function ReferenceCardFromRecipe({
   recipe,
   tokens,
@@ -1499,9 +1653,34 @@ function ReferenceCardFromRecipe({
   recipe: ReferenceCardRecipe;
   tokens: ReferenceCardTokens;
 }) {
+  if (recipe.layout === "testimonial") {
+    return <ReferenceTestimonialCard recipe={recipe} tokens={tokens} />;
+  }
+  return <ReferenceFeatureRecipeCard recipe={recipe} tokens={tokens} />;
+}
+
+function ReferenceFeatureRecipeCard({
+  recipe,
+  tokens,
+}: {
+  recipe: ReferenceCardRecipe;
+  tokens: ReferenceCardTokens;
+}) {
   const IconGlyph = CARD_ICONS[recipe.icon] ?? CARD_ICONS["trending-up"];
+  const surface = recipe.surface ?? tokens.surface;
+  const ink = recipe.textColor ?? tokens.ink;
+  // When the card has an override surface (Wise white-on-green), the
+  // body-text mutedink contrast loses meaning — switch to the primary
+  // ink for body too, since "muted" is calibrated against the default
+  // surface, not arbitrary brand colours.
+  const bodyInk = recipe.surface ? ink : tokens.muted;
   return (
-    <li style={cardWrapperStyle(tokens, "32px")}>
+    <li
+      style={cardWrapperStyle(tokens, "32px", {
+        surface: recipe.surface,
+        textColor: recipe.textColor,
+      })}
+    >
       <div
         aria-hidden="true"
         style={{
@@ -1523,14 +1702,12 @@ function ReferenceCardFromRecipe({
           margin: 0,
           fontSize: "16px",
           lineHeight: 1.5,
-          color: tokens.ink,
+          color: ink,
           fontFamily: `'${tokens.bodyFont}', var(--font-component), system-ui, sans-serif`,
         }}
       >
-        <strong style={{ fontWeight: 700, color: tokens.ink }}>
-          {recipe.title}
-        </strong>{" "}
-        <span style={{ color: tokens.muted }}>{recipe.body}</span>
+        <strong style={{ fontWeight: 700, color: ink }}>{recipe.title}</strong>{" "}
+        <span style={{ color: bodyInk }}>{recipe.body}</span>
       </p>
       <p
         style={{
@@ -1556,6 +1733,78 @@ function ReferenceCardFromRecipe({
         >
           <BrandTrailingIcon iconStyle={tokens.iconStyle} />
         </span>
+      </p>
+    </li>
+  );
+}
+
+// Testimonial card  Wise's customer-quote tile pattern. Brand-coloured
+// surface (Bright Green for Wise) with forest-ink text, icon at top,
+// blockquote in the middle, author at the bottom. No CTA — quote
+// surfaces don't take you anywhere, they're social-proof anchors.
+// `recipe.ctaLabel` is reused as the author when `recipe.author` is
+// absent, since both fields are optional in user-authored token JSON.
+function ReferenceTestimonialCard({
+  recipe,
+  tokens,
+}: {
+  recipe: ReferenceCardRecipe;
+  tokens: ReferenceCardTokens;
+}) {
+  const IconGlyph = CARD_ICONS[recipe.icon] ?? CARD_ICONS["trending-up"];
+  const surface = recipe.surface ?? tokens.primary;
+  const ink = recipe.textColor ?? tokens.ink;
+  const author = recipe.author ?? recipe.ctaLabel;
+  return (
+    <li
+      style={cardWrapperStyle(tokens, "32px", {
+        surface,
+        textColor: ink,
+      })}
+    >
+      {/* Icon sits in a white inset tile so it pops off the brand surface
+          matches Wise's Google-Play badge treatment on its testimonial
+          cards. The inner foreground uses the brand primary so the icon
+          itself reads as part of the brand vocabulary. */}
+      <div
+        aria-hidden="true"
+        style={{
+          width: "44px",
+          height: "44px",
+          borderRadius: "9999px",
+          background: "#ffffff",
+          color: tokens.primary,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: "24px",
+        }}
+      >
+        <IconGlyph />
+      </div>
+      <blockquote
+        style={{
+          margin: 0,
+          fontSize: "18px",
+          lineHeight: 1.45,
+          fontWeight: 700,
+          color: ink,
+          fontFamily: `'${tokens.bodyFont}', var(--font-component), system-ui, sans-serif`,
+        }}
+      >
+        {recipe.title} {recipe.body}
+      </blockquote>
+      <p
+        style={{
+          marginTop: "auto",
+          paddingTop: "32px",
+          margin: "32px 0 0",
+          color: ink,
+          fontSize: "14px",
+          fontWeight: 600,
+        }}
+      >
+        {author}
       </p>
     </li>
   );
@@ -1596,7 +1845,7 @@ function DesignMdSection({
 }) {
   return (
     <section className="mt-16">
-      <SectionHeader index={7} label="DESIGN.md" />
+      <SectionHeader index={8} label="DESIGN.md" />
       <div className="border border-white/10 bg-black">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-3">
           <div className="flex flex-wrap items-center gap-3">

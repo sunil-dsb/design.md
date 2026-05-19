@@ -261,6 +261,19 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
       const dom = await collectDOM(page);
       totalElements += dom.elements.length;
 
+      // Issue #7 fix: surface CAP=5000 truncation per page. dom-collector
+      // prioritises viewport / z-index / area before truncating, so the
+      // dropped elements are by definition the lowest-importance ones —
+      // but silently losing N elements still hides a real fidelity cost
+      // from the operator. Warn at extraction time + carry the count
+      // forward so extract.ts can record it in extraction-report.json's
+      // `warnings` field below.
+      if (dom.truncatedElements && dom.truncatedElements > 0) {
+        console.warn(
+          `[dom-collector] ${pageData.url}: truncated ${dom.truncatedElements}/${dom.totalElementCandidates} visible elements past CAP=5000 — only the highest-priority ${dom.elements.length} elements analysed`,
+        );
+      }
+
       // Component screenshot pass — must run BEFORE css analysis /
       // interaction capture, because both passes do more DOM work that
       // could detach elements or scroll the page in ways that invalidate
@@ -505,6 +518,14 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
     path.join(options.output, 'tokens.json'),
     JSON.stringify(finalTokens, null, 2),
   );
+  // Instance-identity probe — when production "files not found" 404s, the
+  // log line below will tell us whether the write happened on the SAME
+  // container instance that later serves the file-fetch (compare against
+  // the corresponding `[file-server 404]` line in app/api/output/[...path]).
+  // K_REVISION is set by Cloud Run automatically; falsy on local dev.
+  console.log(
+    `[extract] wrote tokens.json: cwd=${process.cwd()} output=${options.output} K_REVISION=${process.env.K_REVISION ?? 'local'}`,
+  );
 
   // raw-data.json (full raw data for debugging)
   const rawData = {
@@ -545,6 +566,18 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
   }
   if (tokens.typographyLevels.length < 3) {
     report.warnings.push('Low typography level count may need more diverse pages');
+  }
+  // Issue #7: per-page CAP=5000 truncation lands in the report's warnings
+  // array so post-extraction audits can spot it without re-running. One
+  // warning per affected page  for sites that go over the cap (long-form
+  // docs, news sites, dense dashboards) operators see the URL and the
+  // exact drop count.
+  for (const pe of pageExtractions) {
+    if (pe.dom.truncatedElements && pe.dom.truncatedElements > 0) {
+      report.warnings.push(
+        `CAP=5000 truncation: dropped ${pe.dom.truncatedElements}/${pe.dom.totalElementCandidates ?? '?'} elements on ${pe.url} (kept the highest-priority subset; deeper / off-viewport / low-z elements were skipped)`,
+      );
+    }
   }
 
   fs.writeFileSync(

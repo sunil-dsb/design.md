@@ -2,80 +2,52 @@
 
 import { useState } from "react";
 import { HighlightedMd } from "./highlight-md";
+import { WisePreview } from "./wise-preview";
 
 type TabId = "design" | "preview" | "tailwind" | "shadcn";
 
 type Props = {
   designMd: string;
   previewHtml: string;
+  // Real per-brand CSS read from examples/<brand>/{tailwind.css, shadcn-theme.css}
+  // by the server parent. Nullable so older example folders that predate
+  // the emitters fall through to a placeholder message instead of stale
+  // generic-purple samples that don't match the showcased brand.
+  tailwindCss: string | null;
+  shadcnCss: string | null;
   exampleLabel: string;
 };
 
-// Static placeholder content for the formats we plan to emit but haven't
-// wired yet (plan-v1.md W6a/W6b). Shown verbatim under the corresponding
-// tab so users can see the shape of the output we'll generate per brand.
-// Static sample showing the SHAPE of the real Tailwind v4 emitter output
-// (lib/engine/tailwind-emit.ts). The actual hex values come from regenerated
-// OKLCH ramps; this placeholder uses 6-digit hex from a single seed so the
-// homepage tab reads as concrete code without requiring a live extraction.
-const TAILWIND_SAMPLE = `@theme {
-  --color-brand-25:  #f3f4ff;
-  --color-brand-50:  #eaecff;
-  --color-brand-100: #d8dcff;
-  --color-brand-500: #6e70ff;
-  --color-brand-900: #160061;
-  --color-brand-950: #06002f;
+// Placeholder shown only when the brand's CSS file is missing on disk.
+// Wise (the home demo) has both, so this is a defensive fallback  not
+// the visible-on-load state.
+const MISSING_PLACEHOLDER = (format: string, brand: string) =>
+  `/* ${format} for ${brand} has not been generated yet.\n * The DESIGN.md and preview.html on the other tabs are still real;\n * the CSS emitters just haven't run for this example folder.\n */`;
 
-  --font-sans:    Geist;
-  --font-mono:    "Geist Mono";
-
-  --spacing: 4px;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-}`;
-
-// Static sample mirroring the SHAPE of the real shadcn emitter output
-// (lib/engine/shadcn-emit.ts). The actual values come from regenerated
-// ramps + role-namer; this placeholder uses generic purple hex stops so
-// the homepage tab reads as concrete code without a live extraction. All
-// 20 slots are present so users see the full mapping at a glance.
-const SHADCN_SAMPLE = `:root {
-  --background:             #ffffff;
-  --foreground:             #171717;
-  --card:                   #ffffff;
-  --card-foreground:        #171717;
-  --popover:                #ffffff;
-  --popover-foreground:     #171717;
-  --primary:                #6e70ff;
-  --primary-foreground:     #ffffff;
-  --secondary:              #eaebee;
-  --secondary-foreground:   #1a1a1d;
-  --muted:                  #eaebee;
-  --muted-foreground:       #88898c;
-  --accent:                 #eaebee;
-  --accent-foreground:      #1a1a1d;
-  --destructive:            #dc2626;
-  --destructive-foreground: #ffffff;
-  --border:                 #dddee1;
-  --input:                  #dddee1;
-  --ring:                   #6e70ff;
-  --radius:                 0.5rem;
-}`;
-
+// `badge` is a small uppercase chip after the tab label. Currently only
+// "hot" exists (filled primary, attention-grabbing) for freshly-shipped
+// tabs. New badge values can be added to the union  rendering branches
+// on the value, so adding "new" or "beta" later is a single-line change.
 type Tab = {
   id: TabId;
   label: string;
-  soon?: boolean;
+  badge?: "hot";
 };
 
 const TABS: Tab[] = [
   { id: "design", label: "DESIGN.md" },
   { id: "preview", label: "preview.html" },
-  { id: "tailwind", label: "tailwind.css", soon: true },
-  { id: "shadcn", label: "shadcn.css", soon: true },
+  { id: "tailwind", label: "tailwind.css", badge: "hot" },
+  { id: "shadcn", label: "shadcn.css" },
 ];
 
-export function SpecTabs({ designMd, previewHtml, exampleLabel }: Props) {
+export function SpecTabs({
+  designMd,
+  previewHtml,
+  tailwindCss,
+  shadcnCss,
+  exampleLabel,
+}: Props) {
   const [active, setActive] = useState<TabId>("design");
 
   return (
@@ -112,9 +84,9 @@ export function SpecTabs({ designMd, previewHtml, exampleLabel }: Props) {
                 }
               />
               {t.label}
-              {t.soon ? (
-                <span className="ml-1 bg-primary/20 px-1.5 py-0.5 font-pixel text-[9px] tracking-widest text-primary uppercase">
-                  soon
+              {t.badge ? (
+                <span className="ml-1 bg-primary px-1.5 py-0.5 font-pixel text-[9px] tracking-widest text-white uppercase">
+                  {t.badge}
                 </span>
               ) : null}
             </button>
@@ -138,14 +110,18 @@ export function SpecTabs({ designMd, previewHtml, exampleLabel }: Props) {
           {active === "preview" ? <EditorPane source={previewHtml} /> : null}
           {active === "tailwind" ? (
             <EditorPane
-              source={TAILWIND_SAMPLE}
-              banner="Tailwind v4 @theme  generated per brand"
+              source={
+                tailwindCss ?? MISSING_PLACEHOLDER("tailwind.css", exampleLabel)
+              }
+              banner={`Tailwind v4 @theme  ${exampleLabel}`}
             />
           ) : null}
           {active === "shadcn" ? (
             <EditorPane
-              source={SHADCN_SAMPLE}
-              banner="shadcn/ui theme  generated per brand"
+              source={
+                shadcnCss ?? MISSING_PLACEHOLDER("shadcn-theme.css", exampleLabel)
+              }
+              banner={`shadcn/ui theme  ${exampleLabel}`}
             />
           ) : null}
 
@@ -177,13 +153,14 @@ export function SpecTabs({ designMd, previewHtml, exampleLabel }: Props) {
               </span>
             </span>
           </div>
-          <iframe
-            srcDoc={previewHtml}
-            title={`${exampleLabel} DESIGN.md rendered preview`}
-            sandbox=""
-            loading="lazy"
-            className="h-full w-full border-0 bg-white pt-9"
-          />
+          {/* Brand-on-brand rich render of the Wise design system —
+              replaces the auto-generated preview.html iframe with a
+              hand-tailored React component so the showcase actually
+              looks like wise.com rather than a generic auto-rendered
+              page. `previewHtml` prop stays for backwards-compat with
+              the parent's data load; can be removed in a follow-up
+              cleanup once no consumer reads it. */}
+          <WisePreview />
         </div>
       </div>
     </>

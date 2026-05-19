@@ -1,0 +1,32 @@
+/* shadcn theme  linear (https://linear.app)
+ *
+ * Generated:    2026-05-18
+ * Confidence:   MEDIUM (source uses Tailwind without shadcn primitives)
+ * Brand primary: #00ff05
+ *
+ * Paste this into your shadcn project's globals.css inside
+ * @layer base { :root { ... } }. Every shadcn component will
+ * pick up these tokens automatically.
+ */
+:root {
+  --background:             #f7f8f8;
+  --foreground:             #08090a;
+  --card:                   #f7f8f8;
+  --card-foreground:        #08090a;
+  --popover:                #f7f8f8;
+  --popover-foreground:     #08090a;
+  --primary:                #00ff05;
+  --primary-foreground:     #060806;
+  --secondary:              #e9ece9;
+  --secondary-foreground:   #191b19;
+  --muted:                  #e9ece9;
+  --muted-foreground:       #878a87;
+  --accent:                 #f79ce0;
+  --accent-foreground:      #060806;
+  --destructive:            #d6303d;
+  --destructive-foreground: #ffffff;
+  --border:                 #d0d6e0;
+  --input:                  #d0d6e0;
+  --ring:                   #00ff05;
+  --radius:                 0.25rem;
+}

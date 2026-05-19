@@ -1,0 +1,33 @@
+/* shadcn theme  supabase (https://supabase.com)
+ *
+ * Generated:    2026-05-18
+ * Confidence:   MEDIUM (source uses Tailwind without shadcn primitives)
+ * Brand primary: #3ecf8e
+ * Note: no semantic red was extracted from the source; --destructive uses a sensible default (#dc2626).
+ *
+ * Paste this into your shadcn project's globals.css inside
+ * @layer base { :root { ... } }. Every shadcn component will
+ * pick up these tokens automatically.
+ */
+:root {
+  --background:             #fafafa;
+  --foreground:             #393939;
+  --card:                   #fafafa;
+  --card-foreground:        #393939;
+  --popover:                #fafafa;
+  --popover-foreground:     #393939;
+  --primary:                #3ecf8e;
+  --primary-foreground:     #060807;
+  --secondary:              #e8ecea;
+  --secondary-foreground:   #191b1a;
+  --muted:                  #e8ecea;
+  --muted-foreground:       #878a88;
+  --accent:                 #db8e00;
+  --accent-foreground:      #060807;
+  --destructive:            #dc2626;
+  --destructive-foreground: #ffffff;
+  --border:                 #dbdfdd;
+  --input:                  #dbdfdd;
+  --ring:                   #3ecf8e;
+  --radius:                 0.50rem;
+}

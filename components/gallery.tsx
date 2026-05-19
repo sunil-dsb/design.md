@@ -1,12 +1,18 @@
 import Image from "next/image";
 import type { ComponentType, SVGProps } from "react";
 import {
+  SiAntdesign,
+  SiAtlassian,
   SiGithub,
+  SiGoogle,
   SiLinear,
+  SiPinterest,
   SiRaycast,
+  SiShopify,
   SiStripe,
   SiSupabase,
   SiVercel,
+  SiWise,
 } from "@icons-pack/react-simple-icons";
 import { BubbleButton } from "@/components/bubble-button";
 import { ArrowLineIcon } from "@/icons/arrow-line";
@@ -14,10 +20,6 @@ import { ArrowLineIcon } from "@/icons/arrow-line";
 // First four ship with committed gold DESIGN.md files in examples/.
 // The rest are placeholders until they pass extractor vetting (anti-bot,
 // design-system completeness). Update `live: true` once they're curated.
-//
-// `views` / `installs` are illustrative until real telemetry is wired up
-// (planned post-launch). They live in this file so it's a one-line change
-// when we swap to a real data source.
 type Badge = "hot" | "new";
 
 type LogoComponent = ComponentType<SVGProps<SVGSVGElement>>;
@@ -30,12 +32,37 @@ type GalleryEntry = {
   Logo?: LogoComponent;
   logoSrc?: string;
   live: boolean;
-  views?: number;
-  installs?: number;
+  // Honest, reproducible per-brand metrics derived from the extracted
+  // tokens.json. `colors` = count of OKLCH-clustered color tokens,
+  // `tokens` = total token count (colors + type + spacing + radius +
+  // shadow). Previous `views` / `installs` were placeholder telemetry
+  // and a trust risk on a pre-launch site, so we swapped to numbers
+  // that the engine itself produces and anyone can re-verify by
+  // running `pnpm engine:extract <url>`.
+  colors?: number;
+  tokens?: number;
   badge?: Badge;
 };
 
 const GALLERY: GalleryEntry[] = [
+  {
+    slug: "wise",
+    name: "Wise",
+    tagline: "International money transfer",
+    // Bright Green → Forest Green: Wise's two-color brand pairing
+    // (#9FE870 primary accent, #163300 ink/dark surface) verified
+    // against wise.design.
+    swatch: "linear-gradient(135deg,#9fe870,#163300)",
+    Logo: SiWise,
+    live: true,
+    // Real counts from examples/wise/tokens.json (must stay in sync if the
+    // file is regenerated): 17 colorTokens; 17 typographyLevels + 13 spacing
+    // scale + 13 radiusTokens + 2 shadowTokens = 45 non-color tokens →
+    // 62 total tokens.
+    colors: 17,
+    tokens: 62,
+    badge: "hot",
+  },
   {
     slug: "stripe",
     name: "Stripe",
@@ -43,9 +70,8 @@ const GALLERY: GalleryEntry[] = [
     swatch: "linear-gradient(135deg,#635bff,#7a73ff)",
     Logo: SiStripe,
     live: true,
-    views: 487,
-    installs: 92,
-    badge: "hot",
+    colors: 76,
+    tokens: 142,
   },
   {
     slug: "ibm",
@@ -54,8 +80,8 @@ const GALLERY: GalleryEntry[] = [
     swatch: "linear-gradient(135deg,#0f62fe,#002d9c)",
     logoSrc: "/ibm.png",
     live: true,
-    views: 412,
-    installs: 78,
+    colors: 56,
+    tokens: 128,
     badge: "hot",
   },
   {
@@ -65,8 +91,8 @@ const GALLERY: GalleryEntry[] = [
     swatch: "linear-gradient(135deg,#5e6ad2,#8b93ff)",
     Logo: SiLinear,
     live: true,
-    views: 356,
-    installs: 64,
+    colors: 40,
+    tokens: 92,
   },
   {
     slug: "vercel",
@@ -75,8 +101,8 @@ const GALLERY: GalleryEntry[] = [
     swatch: "linear-gradient(135deg,#000000,#404040)",
     Logo: SiVercel,
     live: true,
-    views: 248,
-    installs: 47,
+    colors: 47,
+    tokens: 88,
   },
   {
     slug: "supabase",
@@ -85,9 +111,106 @@ const GALLERY: GalleryEntry[] = [
     swatch: "linear-gradient(135deg,#3ecf8e,#1f6f4d)",
     Logo: SiSupabase,
     live: true,
-    views: 184,
-    installs: 32,
+    colors: 17,
+    tokens: 64,
     badge: "new",
+  },
+  // Popular / trending public design systems. All `live: false` until each
+  // has a curated extraction committed to `examples/<slug>/`. Each tagline
+  // names the design system the brand publishes so a viewer reading the
+  // card knows what the eventual extraction will be verifiable against.
+  {
+    slug: "github",
+    name: "GitHub",
+    tagline: "Primer",
+    swatch: "linear-gradient(135deg,#24292f,#0d1117)",
+    Logo: SiGithub,
+    live: false,
+  },
+  {
+    slug: "shopify",
+    name: "Shopify",
+    tagline: "Ecommerce platform",
+    // Captured accent pairing  Mint (#36f4a4) into the classic bag
+    // green (#95bf47)  verified at extraction time against the live
+    // shopify.com surface. Tagline follows the descriptor pattern of
+    // the other live entries (Wise = "International money transfer",
+    // Stripe = "Payments infrastructure") rather than claiming a
+    // design-system name; the captured palette is shopify.com's own
+    // marketing surface, which is Polaris-adjacent (shares Inter, the
+    // 450/550 font weights, and the Magic-purple token) but not a
+    // 1:1 admin-Polaris extraction.
+    swatch: "linear-gradient(135deg,#36f4a4,#95bf47)",
+    Logo: SiShopify,
+    live: true,
+    colors: 32,
+    tokens: 78,
+    badge: "new",
+  },
+  {
+    slug: "atlassian",
+    name: "Atlassian",
+    tagline: "Atlassian Design System",
+    swatch: "linear-gradient(135deg,#0052cc,#2684ff)",
+    Logo: SiAtlassian,
+    live: false,
+  },
+  {
+    slug: "pinterest",
+    name: "Pinterest",
+    tagline: "Gestalt",
+    swatch: "linear-gradient(135deg,#e60023,#ad081b)",
+    Logo: SiPinterest,
+    live: false,
+  },
+  {
+    slug: "material",
+    name: "Material",
+    tagline: "Material Design 3",
+    // Google's product hero blue + the Material 3 accent green
+    swatch: "linear-gradient(135deg,#0061a4,#5cb874)",
+    Logo: SiGoogle,
+    live: false,
+  },
+  {
+    slug: "antdesign",
+    name: "Ant Design",
+    tagline: "Ant Design (React)",
+    swatch: "linear-gradient(135deg,#1677ff,#0958d9)",
+    Logo: SiAntdesign,
+    live: false,
+  },
+  // Adobe / Microsoft / Twilio / Salesforce don't ship in @icons-pack
+  // (Adobe + Microsoft excluded for trademark; Twilio + Salesforce just
+  // absent). Logo slot stays empty  the centered brand name carries
+  // recognition on the coming-soon overlay.
+  {
+    slug: "adobe",
+    name: "Adobe",
+    tagline: "Spectrum",
+    swatch: "linear-gradient(135deg,#fa0f00,#b1041d)",
+    live: false,
+  },
+  {
+    slug: "microsoft",
+    name: "Microsoft",
+    tagline: "Fluent 2",
+    swatch: "linear-gradient(135deg,#0078d4,#003a76)",
+    live: false,
+  },
+  {
+    slug: "twilio",
+    name: "Twilio",
+    tagline: "Paste",
+    swatch: "linear-gradient(135deg,#f22f46,#9f1c2b)",
+    live: false,
+  },
+  {
+    slug: "salesforce",
+    name: "Salesforce",
+    tagline: "Lightning Design System",
+    swatch: "linear-gradient(135deg,#00a1e0,#0070d2)",
+    live: false,
   },
   {
     slug: "raycast",
@@ -95,14 +218,6 @@ const GALLERY: GalleryEntry[] = [
     tagline: "Mac launcher",
     swatch: "linear-gradient(135deg,#ff6363,#ff8a3d)",
     Logo: SiRaycast,
-    live: false,
-  },
-  {
-    slug: "github",
-    name: "GitHub",
-    tagline: "Code hosting",
-    swatch: "linear-gradient(135deg,#24292f,#0d1117)",
-    Logo: SiGithub,
     live: false,
   },
   {
@@ -123,7 +238,31 @@ function formatCount(n: number): string {
   return String(n);
 }
 
-export function Gallery() {
+// Home-page slice: the first 10 entries from GALLERY ("hottest" order is
+// the array order  Wise/Stripe/IBM lead, then the most-recognised public
+// design systems) plus MakeMyAISite pinned as the 11th slot for the
+// promotional callout. 11 brand cards + view-all bubble = 12 grid cells,
+// which lays out cleanly as 3×4 on lg, 2×6 on sm, 1×12 on mobile.
+//
+// Anything beyond this slice surfaces on /gallery (the "view all" page).
+const HOME_GALLERY: GalleryEntry[] = (() => {
+  const top = GALLERY.slice(0, 10);
+  const promo = GALLERY.find((g) => g.slug === "makemyaisite");
+  return promo ? [...top, promo] : top;
+})();
+
+export function Gallery({
+  variant = "full",
+}: {
+  /**
+   * `"home"` shows the hottest 10 + MakeMyAISite + a "view all gallery"
+   * bubble pointing to /gallery. `"full"` lists every entry with no
+   * view-all (we're already on /gallery in that case).
+   */
+  variant?: "home" | "full";
+} = {}) {
+  const entries = variant === "home" ? HOME_GALLERY : GALLERY;
+  const showViewAll = variant === "home";
   return (
     <section
       id="gallery"
@@ -143,21 +282,23 @@ export function Gallery() {
         role="list"
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
       >
-        {GALLERY.map((b) => (
+        {entries.map((b) => (
           <li key={b.slug} className="flex items-stretch">
             <GalleryCard entry={b} />
             <StatsPanel entry={b} />
           </li>
         ))}
-        <li className="flex items-center justify-end">
-          <BubbleButton
-            href="/gallery"
-            aria-label="View all gallery entries"
-            icon={<ArrowLineIcon className="size-4" />}
-          >
-            view all gallery
-          </BubbleButton>
-        </li>
+        {showViewAll && (
+          <li className="flex items-center justify-end">
+            <BubbleButton
+              href="/gallery"
+              aria-label="View all gallery entries"
+              icon={<ArrowLineIcon className="size-4" />}
+            >
+              view all gallery
+            </BubbleButton>
+          </li>
+        )}
       </ul>
     </section>
   );
@@ -270,16 +411,21 @@ function GalleryCard({ entry }: { entry: GalleryEntry }) {
 // Detached metadata column. Brand-primary blue body with white text;
 // when a badge is set the badge sits in its own cell at the top with an
 // inverse treatment (white bg, blue text) so it visually pops off the
-// blue bar. Order top→bottom: badge (optional) · views · installs.
+// blue bar. Order top→bottom: badge (optional) · colors · tokens.
+//
+// Stats are *honest, reproducible* numbers from the engine: colors =
+// extracted color-cluster count, tokens = total token count across colors,
+// type, spacing, radius, shadow. Anyone can verify by re-running
+// `pnpm engine:extract <url>`.
 function StatsPanel({ entry }: { entry: GalleryEntry }) {
-  const hasData = entry.live && entry.views != null && entry.installs != null;
+  const hasData = entry.live && entry.colors != null && entry.tokens != null;
 
   const ariaLabel = (() => {
     const parts: string[] = [`${entry.name} info`];
     if (entry.badge) parts.push(entry.badge);
     if (hasData) {
-      parts.push(`${formatCount(entry.views!)} views`);
-      parts.push(`${formatCount(entry.installs!)} installs`);
+      parts.push(`${formatCount(entry.colors!)} colors`);
+      parts.push(`${formatCount(entry.tokens!)} tokens`);
     } else {
       parts.push("stats not yet available");
     }
@@ -307,14 +453,14 @@ function StatsPanel({ entry }: { entry: GalleryEntry }) {
         </>
       ) : null}
       <StatCell
-        value={hasData ? formatCount(entry.views!) : ""}
-        label="views"
+        value={hasData ? formatCount(entry.colors!) : ""}
+        label="colors"
         dim={!hasData}
       />
       <div className={divider} />
       <StatCell
-        value={hasData ? formatCount(entry.installs!) : ""}
-        label="installs"
+        value={hasData ? formatCount(entry.tokens!) : ""}
+        label="tokens"
         dim={!hasData}
       />
     </aside>

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AnnouncementBar } from "@/components/announcement-bar";
-import { BubbleButton } from "@/components/bubble-button";
 import { Footer } from "@/components/footer";
+import { HeroSearchForm } from "@/components/hero-search-form";
 import { Navbar } from "@/components/navbar";
 import { SkipLink } from "@/components/skip-link";
-import { ArrowLineIcon } from "@/icons/arrow-line";
 import { EyesIcon } from "@/icons/eyes";
 
 export const metadata: Metadata = {
@@ -110,7 +109,20 @@ export default function WhyPage() {
               Every AI-generated landing page looks the same. Rounded cards. A
               purple-to-blue gradient. A centered hero. A &quot;Get
               Started&quot; button. It works. It also looks like everything
-              else. This page is about how to escape that.
+              else.
+            </p>
+            {/* The payoff. Old line was a meta-promise ("This page is about
+                how to escape that") that dodged the answer. This gives it in
+                three short sentences  the fix, the action, the outcome. */}
+            <p className="mt-6 max-w-xl text-lg leading-7 text-white">
+              One markdown file fixes it. Drop it in your repo. Every UI your
+              AI agent makes matches your brand &mdash; not the internet&apos;s
+              average.
+            </p>
+            {/* Trust strip  three checkable facts, no marketing copy. */}
+            <p className="mt-8 font-pixel text-[11px] tracking-[0.2em] text-white/55 uppercase">
+              Open source &middot; MIT licensed &middot; Built on Google&apos;s
+              DESIGN.md spec
             </p>
           </header>
 
@@ -227,6 +239,31 @@ export default function WhyPage() {
             </div>
           </Section>
 
+          <Section heading="How we make it accurate">
+            <p>
+              Most tools look at the homepage and dump every color they see
+              &mdash; even sale banners, ad placements, one-off gradients. We
+              crawl up to 8 pages and group colors the way human eyes actually
+              do, so <code className="text-white">#635bff</code> and{" "}
+              <code className="text-white">#645cff</code> become one color, not
+              two.
+            </p>
+            <p>
+              After extracting, we screenshot the live site and check every
+              color we wrote against what&apos;s actually on screen. If
+              something doesn&apos;t match within{" "}
+              <strong className="text-white">1.2% perceptual difference</strong>,
+              we know we missed it.
+            </p>
+            <p>
+              Same URL gives the same output every time. Run{" "}
+              <code className="text-white">pnpm engine:extract stripe.com</code>{" "}
+              yourself &mdash; you&apos;ll get the same{" "}
+              <strong className="text-white">76 colors</strong> we got. No LLM
+              ranking, no drift between runs.
+            </p>
+          </Section>
+
           <Section heading="How you use it">
             <ol className="divide-y divide-white/15 border border-white/15">
               <Step
@@ -333,15 +370,12 @@ export default function WhyPage() {
               Paste any URL. Get a DESIGN.md back. Drop it in your repo. Watch
               the agent stop averaging.
             </p>
-            <div className="mt-8 flex justify-center">
-              <BubbleButton
-                href="/"
-                size="lg"
-                icon={<ArrowLineIcon className="size-5" />}
-              >
-                TRY IT NOW
-              </BubbleButton>
-            </div>
+            {/* Inline URL form replaces the old "TRY IT NOW" button that
+                navigated to /. Eliminates the navigation hop at peak intent
+                 reader pastes, presses Enter, never leaves /why.
+                The form's smart hint ("✓ Wise is already curated") still
+                works here too. */}
+            <HeroSearchForm className="mx-auto mt-8 w-full max-w-xl text-left" />
           </section>
 
           <section

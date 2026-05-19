@@ -1,0 +1,33 @@
+/* shadcn theme  wise (https://www.wise.com/)
+ *
+ * Generated:    2026-05-18
+ * Confidence:   MEDIUM (source uses Tailwind without shadcn primitives)
+ * Brand primary: #9fe870
+ * Note: no semantic red was extracted from the source; --destructive uses a sensible default (#dc2626).
+ *
+ * Paste this into your shadcn project's globals.css inside
+ * @layer base { :root { ... } }. Every shadcn component will
+ * pick up these tokens automatically.
+ */
+:root {
+  --background:             #ffffff;
+  --foreground:             #163300;
+  --card:                   #ffffff;
+  --card-foreground:        #163300;
+  --popover:                #ffffff;
+  --popover-foreground:     #163300;
+  --primary:                #9fe870;
+  --primary-foreground:     #070806;
+  --secondary:              #eaece9;
+  --secondary-foreground:   #1a1b19;
+  --muted:                  #eaece9;
+  --muted-foreground:       #888a87;
+  --accent:                 #eaece9;
+  --accent-foreground:      #070806;
+  --destructive:            #dc2626;
+  --destructive-foreground: #ffffff;
+  --border:                 #e8ebe6;
+  --input:                  #e8ebe6;
+  --ring:                   #9fe870;
+  --radius:                 0.1250rem;
+}

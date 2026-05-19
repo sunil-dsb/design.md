@@ -1,0 +1,33 @@
+/* shadcn theme  shopify (https://shopify.com/)
+ *
+ * Generated:    2026-05-18
+ * Confidence:   MEDIUM (source uses Tailwind without shadcn primitives)
+ * Brand primary: #36f4a4
+ * Note: no semantic red was extracted from the source; --destructive uses a sensible default (#dc2626).
+ *
+ * Paste this into your shadcn project's globals.css inside
+ * @layer base { :root { ... } }. Every shadcn component will
+ * pick up these tokens automatically.
+ */
+:root {
+  --background:             #ffffff;
+  --foreground:             #000000;
+  --card:                   #ffffff;
+  --card-foreground:        #000000;
+  --popover:                #ffffff;
+  --popover-foreground:     #000000;
+  --primary:                #36f4a4;
+  --primary-foreground:     #060807;
+  --secondary:              #e8ecea;
+  --secondary-foreground:   #191b1a;
+  --muted:                  #e8ecea;
+  --muted-foreground:       #878a88;
+  --accent:                 #95bf47;
+  --accent-foreground:      #060807;
+  --destructive:            #dc2626;
+  --destructive-foreground: #ffffff;
+  --border:                 #e5e7eb;
+  --input:                  #e5e7eb;
+  --ring:                   #36f4a4;
+  --radius:                 0.75rem;
+}

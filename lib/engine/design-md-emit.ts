@@ -103,16 +103,6 @@ export function generateDesignMd(
 
   const out: string[] = [];
 
-  // Header (verbatim format from resources/design-md-format.md)
-  out.push(
-    `<!-- Generated: ${date} | Source: ${opts.url} | Pages: ${pageCount} | Framework: ${frameworkLabel} | Format: v2 -->`,
-  );
-  out.push(
-    '<!-- This is not the official design system. Colors, fonts, and spacing may not be 100% accurate. -->',
-  );
-  out.push('<!-- Sections 0, 1, 7, 8 are skipped in the deterministic emitter  they require -->');
-  out.push('<!-- brand judgement. Paste prompts/universal.md into an AI agent for full coverage. -->');
-  out.push('');
   out.push(`# Design System: ${siteName}`);
   out.push('');
 
@@ -141,6 +131,20 @@ export function generateDesignMd(
     out.push(emitSection12Iconography(tokens));
   }
   out.push(emitSection13AgentGuide(tokens));
+
+  // Provenance footer  format spec from resources/design-md-format.md.
+  // Moved here from the top so the DESIGN.md viewer opens on real content
+  // (Section 2 onward) rather than on metadata the reader has to scroll
+  // past. Same four lines, same order, same content.
+  out.push('');
+  out.push(
+    `<!-- Generated: ${date} | Source: ${opts.url} | Pages: ${pageCount} | Framework: ${frameworkLabel} | Format: v2 -->`,
+  );
+  out.push(
+    '<!-- This is not the official design system. Colors, fonts, and spacing may not be 100% accurate. -->',
+  );
+  out.push('<!-- Sections 0, 1, 7, 8 are skipped in the deterministic emitter  they require -->');
+  out.push('<!-- brand judgement. Paste prompts/universal.md into an AI agent for full coverage. -->');
 
   return out.join('\n') + '\n';
 }

@@ -1,0 +1,32 @@
+/* shadcn theme  vercel (https://vercel.com)
+ *
+ * Generated:    2026-05-18
+ * Confidence:   MEDIUM (source uses Tailwind without shadcn primitives)
+ * Brand primary: #7820bc
+ *
+ * Paste this into your shadcn project's globals.css inside
+ * @layer base { :root { ... } }. Every shadcn component will
+ * pick up these tokens automatically.
+ */
+:root {
+  --background:             #ffffff;
+  --foreground:             #171717;
+  --card:                   #ffffff;
+  --card-foreground:        #171717;
+  --popover:                #ffffff;
+  --popover-foreground:     #171717;
+  --primary:                #7820bc;
+  --primary-foreground:     #ffffff;
+  --secondary:              #eceaee;
+  --secondary-foreground:   #1b1a1c;
+  --muted:                  #eceaee;
+  --muted-foreground:       #8a888c;
+  --accent:                 #0068d6;
+  --accent-foreground:      #ffffff;
+  --destructive:            #bd2864;
+  --destructive-foreground: #ffffff;
+  --border:                 #dfdde1;
+  --input:                  #dfdde1;
+  --ring:                   #7820bc;
+  --radius:                 0.25rem;
+}

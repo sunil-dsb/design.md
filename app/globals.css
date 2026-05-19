@@ -38,6 +38,20 @@ body {
   user-select: none;
 }
 
+/* Mobile overflow guard — clip any horizontal overflow at the body so a
+   single wide child (long unbroken string in a code block, an image with
+   captured CSS that asks for `min-width`, a marquee, etc.) can't push
+   the page wider than the viewport. iOS Safari is particularly aggressive
+   about letting horizontal overflow trigger pinch-zoom / scroll-drift —
+   without this guard, the extract result page felt like it was "moving
+   around" on touch. `clip` is preferred over `hidden` because it doesn't
+   establish a new containing block, which preserves `position: sticky`
+   on descendants (the navbar uses it). */
+html,
+body {
+  overflow-x: clip;
+}
+
 /* Keep the conventional affordance signal on interactive elements, but
    override with our pixel cursor on top. The native cursor (pointer/text)
    stays as the fallback so behavior degrades gracefully. */
@@ -162,6 +176,38 @@ select {
 .bubble-btn--green .bubble-btn__text,
 .bubble-btn--green .bubble-btn__icon {
   background-color: #1aa040;
+}
+
+/* Extraction progress bar — moves a brighter green band across the fill
+   so the strip reads as "alive / working" even while a single stage runs
+   for a while. Pure compositor-friendly (background-position only). */
+.progress-shimmer-fill {
+  background-image: linear-gradient(
+    90deg,
+    #1aa040 0%,
+    #2bc452 50%,
+    #1aa040 100%
+  );
+  background-size: 200% 100%;
+  animation: progress-shimmer 2s linear infinite;
+}
+
+@keyframes progress-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Hold the fill steady when the user opts out of motion. The bar's
+     width still animates (essential for communicating progress); only
+     the decorative shimmer is silenced. */
+  .progress-shimmer-fill {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

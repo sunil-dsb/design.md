@@ -21,6 +21,24 @@ export interface PageData {
 export interface DOMCollection {
   cssVariables: CSSVariable[];
   elements: ElementStyle[];
+  /**
+   * Number of visible-element candidates that were DROPPED by dom-
+   * collector's CAP=5000 truncation (Issue #7 fix). 0 when the page
+   * fits under the cap (the common case for marketing surfaces; all
+   * 7 curated brands today land under 5000). When > 0, the orchestrator
+   * emits a warning + records the loss in extraction-report.json so
+   * operators know per-page that some elements weren't analysed.
+   * Optional to keep older captures (committed examples/<brand>/
+   * outputs) deserialising cleanly.
+   */
+  truncatedElements?: number;
+  /**
+   * Total candidates that passed the visibility filter BEFORE the
+   * CAP=5000 truncation. Pairs with `truncatedElements` to show the
+   * full picture: `kept = totalElementCandidates - truncatedElements`.
+   * Optional for back-compat.
+   */
+  totalElementCandidates?: number;
   pseudoElements: PseudoElementInfo[];
   gradients: GradientInfo[];
   svgColors: string[];
@@ -68,6 +86,16 @@ export interface ElementStyle {
   textContent: string;
   href: string;
   type: string;
+  // <img> source URL (fully-resolved by the browser at capture time, so a
+  // relative <img src="/icons/foo.svg"> becomes "https://site.com/icons/foo.svg").
+  // Empty string for non-img elements. Captured so the LiveTree renderer in
+  // the SPA can show real images instead of broken placeholders. Note:
+  // cross-origin hotlinking may be blocked by the source site's CSP / CORS
+  // policy — graceful failure: img loads broken, rest of the tree renders.
+  src: string;
+  // <img> alt text. Empty string for non-img elements. Captured for a11y
+  // and as a fallback when the src image fails to load.
+  alt: string;
   rect: { x: number; y: number; width: number; height: number };
   color: string;
   backgroundColor: string;
@@ -433,6 +461,26 @@ export interface ColorToken {
   sourcePages: { url: string; frequency: number }[];
   confidence: 'high' | 'medium' | 'low';
   stability?: StabilityClassification;
+  /**
+   * Distinct alpha values observed across elements that contributed to
+   * this cluster, sorted by frequency descending. The first entry equals
+   * `rgba[3]` (the dominant alpha). Multiple entries mean the same RGB
+   * triple appeared at different opacities in the source CSS  e.g. an
+   * overlay variant like `rgba(0,0,0,0.5)` of a solid `rgb(0,0,0)` text
+   * colour, or Shopify's 20%-opacity oklab Tertiary button surfacing on
+   * top of a solid white canvas elsewhere.
+   *
+   * Field is omitted (undefined) when the cluster only ever saw a single
+   * alpha  the common case across most sites, so tokens.json stays
+   * compact for solid palettes. Alphas are rounded to 3 decimals to
+   * suppress trivial float-noise fragmentation (0.9999 vs 1.0).
+   *
+   * Downstream consumers (Tailwind utility emit, palette UI) can use this
+   * to surface translucent variants without exploding the token list
+   * into one row per alpha. Backward-compatible: existing consumers
+   * that ignore the field keep their current behaviour.
+   */
+  alphaVariants?: number[];
 }
 
 export interface TypographyLevel {

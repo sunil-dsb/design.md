@@ -54,6 +54,14 @@ export async function GET(
   }
 
   if (!fs.existsSync(requested)) {
+    // Instance-identity probe — pair with the `[extract] wrote tokens.json …`
+    // line in extract.ts to verify whether the 404 is happening on the SAME
+    // instance that wrote the files. On Cloud Run, K_REVISION matches the
+    // revision name; different instance IDs across the two lines = multi-
+    // instance routing confirmed.
+    console.log(
+      `[file-server 404] path=${requested} cwd=${process.cwd()} K_REVISION=${process.env.K_REVISION ?? 'local'}`,
+    );
     return new Response("Not found", { status: 404 });
   }
 

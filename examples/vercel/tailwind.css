@@ -1,0 +1,91 @@
+/* Tailwind v4 @theme  vercel (https://vercel.com)
+ *
+ * Generated: 2026-05-18
+ * Brand ramp seed: #7820bc (algorithm: oklch-lightness-curve)
+ *
+ * Paste this into your project. If you already have an @import "tailwindcss";
+ * line, drop the @theme block alongside it; otherwise paste the whole file.
+ */
+@theme {
+  /* Brand ramp  regenerated 12-stop OKLCH, anchored on #7820bc. */
+  --color-brand-25: #fff7ff;
+  --color-brand-50: #fbefff;
+  --color-brand-100: #f4e2ff;
+  --color-brand-200: #ead0ff;
+  --color-brand-300: #dab1ff;
+  --color-brand-400: #c686ff;
+  --color-brand-500: #a65def;
+  --color-brand-600: #833fc2;
+  --color-brand-700: #64239a;
+  --color-brand-800: #470274;
+  --color-brand-900: #2a004c;
+  --color-brand-950: #100023;
+
+  /* Neutral ramp  tinted with brand hue 304° at chroma 0.005. */
+  --color-neutral-25: #fcfbff;
+  --color-neutral-50: #f6f4f8;
+  --color-neutral-100: #eceaee;
+  --color-neutral-200: #dfdde1;
+  --color-neutral-300: #c8c6ca;
+  --color-neutral-400: #abaaad;
+  --color-neutral-500: #8a888c;
+  --color-neutral-600: #69686b;
+  --color-neutral-700: #4e4c4f;
+  --color-neutral-800: #333235;
+  --color-neutral-900: #1b1a1c;
+  --color-neutral-950: #080709;
+
+  /* Type families */
+  --font-sans: Geist;
+  --font-mono: "Geist Mono";
+
+  /* Type scale (role-named  e.g. `text-display-xxl`, `text-body-md`). */
+  --text-display-xl: 48px;
+  --text-display-xl--line-height: 1.167;
+  --text-display-xl--letter-spacing: -2.88px;
+  --text-display-xl--font-weight: 600;
+  --text-display-lg: 40px;
+  --text-display-lg--line-height: 1.200;
+  --text-display-lg--letter-spacing: -2.4px;
+  --text-display-lg--font-weight: 600;
+  --text-display-md: 32px;
+  --text-display-md--line-height: 1.250;
+  --text-display-md--letter-spacing: -1.28px;
+  --text-display-md--font-weight: 600;
+  --text-heading-lg: 24px;
+  --text-heading-lg--line-height: 1.333;
+  --text-heading-lg--letter-spacing: -0.96px;
+  --text-heading-lg--font-weight: 600;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 1.520;
+  --text-body-md: 16px;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 1.429;
+  --text-caption: 12px;
+  --text-caption--line-height: 1.333;
+  --text-micro: 10px;
+  --text-pico: 8px;
+  --text-pico--line-height: 1.000;
+  --text-pico--font-weight: 600;
+  --text-overline: 12px;
+  --text-overline--line-height: 1.000;
+  --text-overline--font-weight: 500;
+
+  /* Spacing base unit  Tailwind derives the whole numeric scale from this. */
+  --spacing: 4px;
+
+  /* Border radius */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 100px;
+  --radius-full: 9999px;
+
+  /* Shadows (elevation only  border-shadows and rings are emitted separately). */
+  --shadow-sm: rgb(234, 234, 234) 0px -1px 0px 0px inset;
+  --shadow-md: rgba(0, 0, 0, 0.04) 0px 1px 2px 0px;
+  --shadow-lg: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px 0px, rgb(250, 250, 250) 0px 0px 0px 1px;
+  --shadow-xl: rgba(0, 0, 0, 0.04) 0px 2px 2px 0px;
+  --shadow-2xl: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px 0px, rgba(0, 0, 0, 0.04) 0px 8px 8px -8px, rgb(250, 250, 250) 0px 0px 0px 1px;
+}

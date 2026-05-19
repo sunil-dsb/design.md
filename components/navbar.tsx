@@ -1,16 +1,14 @@
 import Link from "next/link";
 import { BubbleButton } from "@/components/bubble-button";
+import { StarBadge } from "@/components/star-badge";
 import { GithubIcon } from "@/icons/github";
 
 const GITHUB_REPO = "sunil-dsb/design.md";
 
-// Note on the star count: an earlier version of this component was an async
-// server component that fetched GitHub's star count via `fetch(api.github.com)`
-// on every render. That coupled every page render to GitHub's API and
-// caused intermittent dev-server hangs when GitHub was slow or rate-limited.
-// If a live star badge is wanted in future, move the fetch into a small
-// client component that runs on mount — that way SSR finishes immediately
-// and the badge fades in once GitHub responds.
+// Star count is rendered by a tiny client component (StarBadge) so the
+// server render finishes instantly and the badge fades in once GitHub
+// responds. An earlier server-side implementation coupled every page
+// render to GitHub's API and caused dev-server hangs when rate-limited.
 
 export function Navbar() {
   return (
@@ -50,6 +48,9 @@ export function Navbar() {
                   aria-hidden="true"
                   focusable="false"
                 />
+                {/* Live star count — renders nothing on first paint so SSR is
+                    fast; fades in once GitHub responds. Silent on failure. */}
+                <StarBadge />
               </a>
             </li>
             <li className="flex items-center px-2 sm:px-3">
