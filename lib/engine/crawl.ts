@@ -1,5 +1,6 @@
 import { chromium, type Browser, type Page } from 'playwright';
 import type { CrawlResult, PageData } from './types';
+import { patchEvaluateForTsxKeepNames } from './patch-evaluate';
 
 //  Options 
 
@@ -11,6 +12,10 @@ export interface CrawlOptions {
   extraUrls?: string[];
   verbose: boolean;
   waitFor?: WaitStrategy;
+  // Path to a Playwright storageState JSON file (cookies + localStorage)
+  // produced by bin/login.ts. When set, every crawl context is created
+  // pre-authenticated so login-gated sites can be crawled normally.
+  storageState?: string;
 }
 
 const DEFAULT_OPTIONS: CrawlOptions = {
@@ -603,6 +608,7 @@ async function processPage(
   url: string,
   verbose: boolean,
   waitStrategy?: WaitStrategy,
+  storageState?: string,
 ): Promise<{ page: PageData | null; discoveredLinks: DiscoveredLink[]; error: string | null }> {
   const start = Date.now();
   log(verbose, `START ${url}`);
@@ -611,9 +617,11 @@ async function processPage(
     userAgent: USER_AGENT,
     viewport: { width: 1440, height: 900 },
     ignoreHTTPSErrors: true,
+    storageState,
   });
 
   const page = await context.newPage();
+  patchEvaluateForTsxKeepNames(page);
   const errors: string[] = [];
 
   try {
@@ -747,7 +755,7 @@ export async function crawlPages(
         await semaphore.acquire();
         try {
           await enforceDomainDelay(url, lastRequestByDomain);
-          return processPage(browser, url, opts.verbose, opts.waitFor);
+          return processPage(browser, url, opts.verbose, opts.waitFor, opts.storageState);
         } finally {
           semaphore.release();
         }
@@ -809,7 +817,7 @@ export async function crawlPages(
           await semaphore.acquire();
           try {
             await enforceDomainDelay(url, lastRequestByDomain);
-            return { url, result: await processPage(browser, url, opts.verbose) };
+            return { url, result: await processPage(browser, url, opts.verbose, undefined, opts.storageState) };
           } finally {
             semaphore.release();
           }
