@@ -39,6 +39,9 @@ interface ExtractOptions {
   verbose: boolean;
   waitFor?: WaitStrategy;
   mergeWith?: string;
+  // Path to a Playwright storageState JSON file (cookies + localStorage),
+  // e.g. produced by bin/login.ts, for extracting login-gated sites.
+  storageState?: string;
 }
 
 function parseArgs(argv: string[]): ExtractOptions {
@@ -53,6 +56,7 @@ function parseArgs(argv: string[]): ExtractOptions {
   let verbose = false;
   let waitFor: WaitStrategy | undefined;
   let mergeWith: string | undefined;
+  let storageState: string | undefined;
 
   let i = 0;
   while (i < args.length) {
@@ -77,6 +81,8 @@ function parseArgs(argv: string[]): ExtractOptions {
       waitFor = val;
     } else if (arg === '--merge-with') {
       mergeWith = args[++i];
+    } else if (arg === '--storage-state') {
+      storageState = args[++i];
     } else if (arg === '--no-dark-mode') {
       noDarkMode = true;
     } else if (arg === '--no-interaction') {
@@ -137,6 +143,7 @@ function parseArgs(argv: string[]): ExtractOptions {
     verbose,
     waitFor,
     mergeWith,
+    storageState,
   };
 }
 
@@ -151,6 +158,7 @@ Options:
   --extra-urls <file>    File with additional URLs (one per line)
   --wait-for <strategy>  Wait strategy: networkidle (default), css, selector:<css>
   --merge-with <path>    Merge with existing tokens.json (incremental extraction)
+  --storage-state <path> Playwright storageState JSON (cookies/session) for login-gated sites
   --no-dark-mode         Skip dark mode detection
   --no-interaction       Skip interaction state capture (default: skipped)
   --with-interaction     Enable interaction state capture (hover/focus/active)
@@ -209,6 +217,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
     extraUrls: options.extraUrls,
     verbose: options.verbose,
     waitFor: options.waitFor,
+    storageState: options.storageState,
   });
 
   console.log(`  Crawled ${crawlResult.pages.length} pages in ${(crawlResult.totalTime / 1000).toFixed(1)}s`);
@@ -247,6 +256,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
     const context = await browser.newContext({
       viewport: { width: 1440, height: 900 },
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+      storageState: options.storageState,
     });
     const page = await context.newPage();
 
@@ -343,6 +353,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
       const context = await browser.newContext({
         viewport: { width: 1440, height: 900 },
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        storageState: options.storageState,
       });
       const page = await context.newPage();
       try {
@@ -386,6 +397,7 @@ async function extract(options: ExtractOptions): Promise<PageExtraction[]> {
     log(options.verbose, 'Detecting frameworks...');
     const context = await browser.newContext({
       viewport: { width: 1440, height: 900 },
+      storageState: options.storageState,
     });
     const page = await context.newPage();
     try {
